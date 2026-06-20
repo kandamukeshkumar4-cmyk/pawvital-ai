@@ -1,6 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import type { HealthLog, ContextSignals } from "./types";
-import { summarizeDailyLogsForContext } from "./context";
+import {
+  summarizeDailyLogsForContext,
+  summarizeFollowupsForContext,
+  type FollowupContextRow,
+} from "./context";
 
 /**
  * Load a compact, owner-reported context string for the symptom-checker AI.
@@ -123,8 +127,13 @@ export async function loadDogBrainContext({
     // Fetch all sources in parallel — single round-trip set. The vet-record
     // query is best-effort: a missing table returns {data:null} (never throws),
     // so it degrades cleanly until the migration is applied.
-    const [logsResult, checksResult, journalResult, vetRecordsResult] =
-      await Promise.all([
+    const [
+      logsResult,
+      checksResult,
+      journalResult,
+      vetRecordsResult,
+      followupsResult,
+    ] = await Promise.all([
         supabase
           .from("daily_health_logs")
           .select("*")
@@ -152,6 +161,16 @@ export async function loadDogBrainContext({
           .eq("pet_id", petId)
           .order("created_at", { ascending: false })
           .limit(5),
+        // Active-concern pack: pending follow-ups + recent owner outcomes
+        // (better/worse/same) so an owner's answer feeds back into Brain
+        // reasoning. Best-effort — a missing table returns {data:null}.
+        supabase
+          .from("dog_brain_followups")
+          .select("prompt, status, due_at, updated_at, created_at")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("updated_at", { ascending: false })
+          .limit(20),
       ]);
 
     const sections: string[] = [];
@@ -241,6 +260,11 @@ export async function loadDogBrainContext({
         `Imported vet records (extracted from owner-uploaded documents; ${disclaimer}):\n${vrLines.join("\n")}`,
       );
     }
+
+    // ── Follow-up loop (#E: owner outcomes feed Brain reasoning) ──
+    const followups = (followupsResult.data ?? []) as FollowupContextRow[];
+    const followupSummary = summarizeFollowupsForContext(followups, petName);
+    if (followupSummary) sections.push(followupSummary);
 
     if (sections.length === 0) return null;
     return sections.join("\n\n");
