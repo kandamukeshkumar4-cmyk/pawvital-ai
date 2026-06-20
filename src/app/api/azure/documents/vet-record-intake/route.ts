@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { intakeVetRecordDocument } from "@/lib/azure/document-intelligence";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import {
@@ -11,6 +12,44 @@ import {
 export const runtime = "nodejs";
 
 const MAX_VET_RECORD_BYTES = 10 * 1024 * 1024;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * VET-DOG-BRAIN #3: persist the extracted vet-record summary as durable,
+ * pet-scoped Dog Brain memory. Best-effort and strictly additive — runs only
+ * when the caller passes an owned pet_id, the extraction succeeded, and the
+ * table exists. A missing table or any failure is swallowed so document intake
+ * keeps working exactly as before.
+ */
+async function persistVetRecordSummary(
+  supabase: SupabaseClient,
+  userId: string,
+  petId: string,
+  fileName: string,
+  result: Awaited<ReturnType<typeof intakeVetRecordDocument>>,
+): Promise<void> {
+  if (!result.enabled || !result.ok) return;
+  try {
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!pet) return; // not the owner's pet — never persist
+    await supabase.from("vet_record_summaries").insert({
+      user_id: userId,
+      pet_id: petId,
+      file_name: fileName,
+      context_text: result.contextText ?? null,
+      extracted_fields: result.fields ?? null,
+      page_count: result.pageCount ?? null,
+    });
+  } catch {
+    /* table missing or transient error — intake still succeeds */
+  }
+}
 const NO_STORE_HEADERS = {
   "Cache-Control": "no-store",
 };
@@ -125,6 +164,21 @@ export async function POST(request: Request) {
     contentType: "application/pdf",
     fileName: safeFileStem(file.name),
   });
+
+  // Durable Dog Brain memory (#3): persist the summary when an owned pet_id is
+  // supplied. Best-effort — never affects the intake response.
+  const petIdRaw = formData.get("pet_id");
+  const petId =
+    typeof petIdRaw === "string" && UUID_RE.test(petIdRaw) ? petIdRaw : null;
+  if (petId) {
+    await persistVetRecordSummary(
+      auth.supabase,
+      auth.user.id,
+      petId,
+      safeFileStem(file.name),
+      result,
+    );
+  }
 
   return responseForIntakeResult(result);
 }
