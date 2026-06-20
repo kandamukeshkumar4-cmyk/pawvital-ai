@@ -1022,7 +1022,7 @@ export default function SymptomCheckerPage() {
           <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
             {sessionStarted && (
               <Button
-                variant="secondary"
+                variant="outline"
                 onClick={startNewSession}
                 className="w-full flex-shrink-0 sm:w-auto"
               >
