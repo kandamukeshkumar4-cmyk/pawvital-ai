@@ -964,6 +964,35 @@ export async function POST(request: Request) {
       void queueTriageLiveUpdate(liveUpdateTarget, "processing");
     }
 
+    // VET-DOG-BRAIN #2: surface the 90-day Dog Brain memory DURING the check
+    // (question turns), not only at report time. SUPPORTIVE context only — it is
+    // written to case_memory.daily_log_context, which is read solely by the
+    // narrative report prompt (carrying an explicit "do NOT override matrix
+    // urgency / red flags" instruction) and never by the deterministic triage
+    // engine (triage-engine.ts / clinical-matrix.ts type the field but never read
+    // it for urgency). Best-effort: any failure is swallowed and never blocks or
+    // alters the deterministic turn. Runs after the async-offload check so the
+    // load happens on the inline path or the worker replay, not the offloaded
+    // original request.
+    if (action === "chat" && verifiedUserId && effectivePet) {
+      try {
+        const brainContext = await loadDogBrainContext({
+          userId: verifiedUserId,
+          petName: effectivePet.name,
+          petId: effectivePet.id,
+        });
+        if (brainContext) {
+          const memory = ensureStructuredCaseMemory(session);
+          session = {
+            ...session,
+            case_memory: { ...memory, daily_log_context: brainContext },
+          };
+        }
+      } catch {
+        /* best-effort — Brain memory must never block the clinical turn */
+      }
+    }
+
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
       if (reportBlockingCriticalInfo) {
