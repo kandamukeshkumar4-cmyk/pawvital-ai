@@ -77,7 +77,10 @@ Tests to add (TDD, red→green):
 Backend closed loop is wired + test-proven end to end: log → signal → symptom-checker question tiebreak → follow-up (durable, deduped, server due_at) → owner outcome → Brain context updates next actions → report/context cites it.
 
 ## Remaining (NOT done — do not claim full "done" yet)
-- **Gap #5 UI surfacing** (every-tab-reflects-Brain contract): Reminders page must show Brain follow-ups alongside owner reminders; History needs a Brain timeline; Supplements follow-up linkage. Backend (`GET /api/dog-brain/followups`, signals) already exists — this is client wiring.
+- **Gap #5 UI surfacing** (every-tab-reflects-Brain contract):
+  - ~~Reminders shows Brain follow-ups~~ ✅ DONE (run 5). Extracted `FollowupsPanel` out of `health-brief.tsx` into shared `src/components/dog-brain/followups-panel.tsx` (DRY — dashboard + Reminders reuse one fetch/resolve loop; `signals` now optional so Reminders is display+resolve only, no auto-create). Wired into `reminders/page.tsx` under the header. PROOF: `tests/dog-brain-followups-panel.test.tsx` (jsdom) — pending follow-up renders, resolving "worse" PATCHes status:worse + optimistically removes, empty renders nothing. typecheck+lint clean; 91 dog-brain tests pass.
+  - History Brain timeline — still open.
+  - Supplements follow-up linkage — still open.
 - **Browser walkthrough** (manual): needs an authenticated session; demo-mode preview stalls (see memory). The full chain is proven by tests but not yet demonstrated live.
 - **Gap #6 signal breadth**: water/urination, breathing, mobility, skin/ear, energy, supplement-improvement; carry stool DIRECTION (checker nit); enrich shape (confidence, vet_handoff_text, suggested_followup_date).
 - **Gap #7 fast-follow (thermo)**: fold detectDogBrainSignals into loadDogBrainContext (90-log superset) to delete priority-symptoms-server.ts + duplicate ownership/logs query.
