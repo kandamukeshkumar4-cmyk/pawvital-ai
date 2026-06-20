@@ -66,6 +66,8 @@ Tests to add (TDD, red→green):
 - Pending. Browser walkthrough (Daily Log → signal → Symptom Checker uses Brain question → follow-up) deferred until the checker clears #5 and more of the chain lands.
 
 ## Next iteration
-- Independent CHECKER pass on #5 (clinical-reviewer): confirm candidate set unchanged, urgency/red-flags untouched, wiring real (not "API exists"). Run `/thermo-review` on the diff before handoff.
-- Then gaps 2–4: test (d) duplicate-pending followup; test (c) vet-record persistence; follow-up outcome → Brain memory feedback (feature + test (e)).
-- Then UI surfacing (Reminders/History) + signal breadth.
+- DONE this run: Blocker #5 (maker + clinical checker APPROVE-WITH-NITS + thermo APPROVE-WITH-NITS, Promise.all fix) committed facb000 + 53d34ef; proof (d) committed 796e7eb.
+- NEXT: gap #3 proof (c) — vet-record durable pet-scoped persistence to `vet_record_summaries` (extend `tests/vet-record-intake-button.test.ts` / `azure-document-intake-route.test.ts`; feature done, assert the row write incl. pet_id+user_id).
+- THEN gap #4 — follow-up outcome → Brain memory: `followups/[id]` PATCH only flips status; make the outcome feed back into context/next-actions + test (e). This is a real feature gap, not just a test.
+- THEN UI surfacing (Reminders/History) + signal breadth (#6) + the fold fast-follow (#7).
+- Browser walkthrough still pending (needs auth session) — defer until the follow-up loop (gap #4) lands so the full chain is demonstrable.
