@@ -11,24 +11,25 @@
 -- Apply via Supabase SQL editor:
 --   https://supabase.com/dashboard/project/aammaxdsjhezmbvdkqee/sql/new
 
+-- Confirmed root cause in prod: Postgres 23502 (not_null_violation) on a legacy
+-- column the insert omits. Drop NOT NULL on every journal_entries column EXCEPT
+-- the genuinely-required ones, so a create can never be blocked by a stale
+-- legacy constraint regardless of the exact column name.
 DO $$
 DECLARE
   col TEXT;
 BEGIN
-  FOREACH col IN ARRAY ARRAY['type', 'title', 'content', 'date', 'photo_url']
+  FOR col IN
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'journal_entries'
+      AND is_nullable = 'NO'
+      AND column_name NOT IN ('id', 'user_id', 'pet_id', 'entry_date')
   LOOP
-    IF EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'journal_entries'
-        AND column_name = col
-        AND is_nullable = 'NO'
-    ) THEN
-      EXECUTE format(
-        'ALTER TABLE public.journal_entries ALTER COLUMN %I DROP NOT NULL',
-        col
-      );
-    END IF;
+    EXECUTE format(
+      'ALTER TABLE public.journal_entries ALTER COLUMN %I DROP NOT NULL',
+      col
+    );
   END LOOP;
 END;
 $$;
