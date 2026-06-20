@@ -23,6 +23,9 @@ import {
   buildVetHandoffPacket,
   isEscalatedReport,
 } from "@/lib/report-handoff";
+import { BrainTimelineSection } from "@/components/analytics/brain-timeline-section";
+
+type HistoryView = "checks" | "timeline";
 
 const PAGE_SIZE = 10;
 
@@ -203,6 +206,7 @@ export default function HistoryPage() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [view, setView] = useState<HistoryView>("checks");
 
   const petId = activePet?.id;
 
@@ -327,6 +331,33 @@ export default function HistoryPage() {
           View your dog&apos;s past health assessments
         </p>
       </div>
+
+      <div className="flex gap-2">
+        {(
+          [
+            ["checks", "Symptom Checks"],
+            ["timeline", "Brain Timeline"],
+          ] as const
+        ).map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+              view === v
+                ? "border-[#15795a] bg-[#15795a] text-white"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "timeline" ? (
+        <BrainTimelineSection petId={petId ?? null} petName={activePet.name} />
+      ) : (
+      <>
 
       {shareMessage && (
         <p className="text-sm text-[#15795a] bg-[#e7f4ee] border border-[#cfe6da] rounded-lg px-3 py-2">
@@ -471,6 +502,8 @@ export default function HistoryPage() {
           <Loader2 className="w-4 h-4 animate-spin" />
           Loading…
         </p>
+      )}
+      </>
       )}
     </div>
   );
