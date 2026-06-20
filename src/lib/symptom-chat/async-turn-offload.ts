@@ -73,6 +73,18 @@ export async function maybeOffloadSymptomChatTurn(
   params: MaybeOffloadParams
 ): Promise<AsyncOffloadResult | null> {
   const { userId, sessionId, action } = params;
+
+  // Async offload is opt-in. The turn is enqueued to Service Bus and a separate
+  // worker must consume the queue and replay it; in serverless prod without that
+  // consumer wired, the job enqueues but never completes and the client polls
+  // 202 forever ("Thinking…" hangs). Default OFF → process synchronously (single
+  // question turns finish well under the platform timeout). Set
+  // SYMPTOM_CHAT_ASYNC_OFFLOAD_ENABLED=true only once a Service Bus consumer is
+  // confirmed to invoke /api/azure/service-bus/worker in that environment.
+  if (process.env.SYMPTOM_CHAT_ASYNC_OFFLOAD_ENABLED !== "true") {
+    return null;
+  }
+
   // Delivery rides the per-user Web PubSub channel; without a verified user and
   // a live session there is no way to push the result, so stay synchronous.
   if (!userId || !sessionId) {

@@ -49,6 +49,29 @@ describe("isAsyncWorkerReplay", () => {
 });
 
 describe("maybeOffloadSymptomChatTurn", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    // Offload is opt-in; enable it so the user/session/storage guards below are
+    // genuinely exercised rather than short-circuited by the disabled default.
+    process.env = { ...originalEnv, SYMPTOM_CHAT_ASYNC_OFFLOAD_ENABLED: "true" };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("stays synchronous when async offload is not enabled (default)", async () => {
+    process.env = { ...originalEnv };
+    delete process.env.SYMPTOM_CHAT_ASYNC_OFFLOAD_ENABLED;
+    const result = await maybeOffloadSymptomChatTurn({
+      ...baseParams(),
+      sessionId: SESSION_ID,
+      userId: "user_1",
+    });
+    expect(result).toBeNull();
+  });
+
   it("stays synchronous without a verified user", async () => {
     const result = await maybeOffloadSymptomChatTurn({
       ...baseParams(),
