@@ -213,7 +213,15 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (insertError || !inserted) {
-    console.error("[Journal] Insert error:", insertError);
+    // Log code/message/details on separate lines — a single object gets
+    // truncated in the log viewer, hiding the failing column.
+    console.error(
+      "[Journal] Insert error:",
+      `code=${insertError?.code}`,
+      `message=${insertError?.message}`,
+      `details=${insertError?.details}`,
+      `hint=${insertError?.hint}`,
+    );
     return NextResponse.json(
       { error: "Failed to create journal entry" },
       { status: 500 }
