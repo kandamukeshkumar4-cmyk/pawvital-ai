@@ -160,6 +160,7 @@ import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orches
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { loadDogBrainContext } from "@/lib/health-log/dog-brain-context";
+import { loadDogBrainPrioritySymptoms } from "@/lib/dog-brain/priority-symptoms-server";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -974,6 +975,10 @@ export async function POST(request: Request) {
     // alters the deterministic turn. Runs after the async-offload check so the
     // load happens on the inline path or the worker replay, not the offloaded
     // original request.
+    // SUPPORTIVE only: recurring-signal symptom keys used as a tiebreak when the
+    // deterministic planner picks the next question (never overrides complaint or
+    // red-flag selection, never reaches urgency logic). Empty on any failure.
+    let brainPrioritySymptoms: string[] = [];
     if (action === "chat" && verifiedUserId && effectivePet) {
       try {
         const brainContext = await loadDogBrainContext({
@@ -988,6 +993,10 @@ export async function POST(request: Request) {
             case_memory: { ...memory, daily_log_context: brainContext },
           };
         }
+        brainPrioritySymptoms = await loadDogBrainPrioritySymptoms({
+          userId: verifiedUserId,
+          petId: effectivePet.id,
+        });
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2435,6 +2444,7 @@ export async function POST(request: Request) {
       pendingQResolvedThisTurn,
       turnFocusSymptoms,
       visualEvidence,
+      brainPrioritySymptoms,
     });
     session = nextQuestionState.session;
     const nextQuestionId = nextQuestionState.nextQuestionId;

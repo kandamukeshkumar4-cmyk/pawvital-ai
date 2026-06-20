@@ -22,6 +22,13 @@ interface OrchestrateNextQuestionInput {
   pendingQResolvedThisTurn: boolean;
   turnFocusSymptoms: string[];
   visualEvidence: VisionClinicalEvidence | null;
+  /**
+   * SUPPORTIVE Dog Brain memory: symptom keys from recurring owner-logged
+   * signals. Passed to the selector as a tiebreak only — never overrides a
+   * pending-clarification re-ask (resolved first below) or the current turn's
+   * complaint. Optional; absent / empty preserves pre-Brain behavior exactly.
+   */
+  brainPrioritySymptoms?: string[];
 }
 
 interface OrchestrateNextQuestionResult {
@@ -37,7 +44,11 @@ export function orchestrateNextQuestion(
   const needsClarificationQuestionId = resolveNeedsClarificationQuestionId(input);
   const nextQuestionId =
     needsClarificationQuestionId ??
-    getNextQuestionAvoidingRepeat(input.session, input.turnFocusSymptoms);
+    getNextQuestionAvoidingRepeat(
+      input.session,
+      input.turnFocusSymptoms,
+      input.brainPrioritySymptoms ?? []
+    );
 
   let session = recordRepeatSuppressionTelemetry(
     input.session,
