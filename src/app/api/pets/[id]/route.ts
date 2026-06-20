@@ -11,6 +11,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingTableError } from "@/lib/api/table-missing";
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -23,10 +24,6 @@ function errorMessage(err: unknown): string {
     return (err as { message: string }).message;
   }
   return String(err);
-}
-
-function isMissingTableError(err: unknown): boolean {
-  return isMissingRelationSupabaseError(extractSafeSupabaseErrorDetails(err));
 }
 
 function petPersistenceErrorResponse(error: unknown) {

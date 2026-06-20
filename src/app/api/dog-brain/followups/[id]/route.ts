@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
+import { isMissingTable } from "@/lib/api/table-missing";
 import {
   checkRateLimit,
   generalApiLimiter,
   getRateLimitId,
 } from "@/lib/rate-limit";
-
-function isMissingTable(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code === "42P01" || error.code === "PGRST205") return true;
-  return /relation .* does not exist|could not find the table/i.test(
-    error.message ?? "",
-  );
-}
 
 const ParamsSchema = z.object({ id: z.string().uuid() });
 const PatchSchema = z.object({
