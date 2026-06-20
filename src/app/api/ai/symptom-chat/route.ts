@@ -159,8 +159,10 @@ import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-promp
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
-import { loadDogBrainContext } from "@/lib/health-log/dog-brain-context";
-import { loadDogBrainPrioritySymptoms } from "@/lib/dog-brain/priority-symptoms-server";
+import {
+  loadDogBrainContext,
+  loadDogBrainContextWithSignals,
+} from "@/lib/health-log/dog-brain-context";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -981,18 +983,14 @@ export async function POST(request: Request) {
     let brainPrioritySymptoms: string[] = [];
     if (action === "chat" && verifiedUserId && effectivePet) {
       try {
-        // Independent best-effort loads — run concurrently, never block the turn.
-        const [brainContext, prioritySymptoms] = await Promise.all([
-          loadDogBrainContext({
+        // Single best-effort load: the narrative context AND the question-tiebreak
+        // priority symptoms come from one fetch (no duplicate logs/ownership query).
+        const { context: brainContext, prioritySymptoms } =
+          await loadDogBrainContextWithSignals({
             userId: verifiedUserId,
             petName: effectivePet.name,
             petId: effectivePet.id,
-          }),
-          loadDogBrainPrioritySymptoms({
-            userId: verifiedUserId,
-            petId: effectivePet.id,
-          }),
-        ]);
+          });
         if (brainContext) {
           const memory = ensureStructuredCaseMemory(session);
           session = {

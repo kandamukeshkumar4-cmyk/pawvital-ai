@@ -83,7 +83,7 @@ Backend closed loop is wired + test-proven end to end: log → signal → sympto
   - Supplements follow-up linkage — still open.
 - **Browser walkthrough** (manual): needs an authenticated session; demo-mode preview stalls (see memory). The full chain is proven by tests but not yet demonstrated live.
 - **Gap #6 signal breadth**: water/urination, breathing, mobility, skin/ear, energy, supplement-improvement; carry stool DIRECTION (checker nit); enrich shape (confidence, vet_handoff_text, suggested_followup_date).
-- **Gap #7 fast-follow (thermo)**: fold detectDogBrainSignals into loadDogBrainContext (90-log superset) to delete priority-symptoms-server.ts + duplicate ownership/logs query.
+- ~~**Gap #7 fast-follow (thermo)**~~ ✅ DONE (run 7). `loadDogBrainContextWithSignals` is the single impl (one fetch → `{ context, prioritySymptoms }`, signals derived from the 90-log superset already loaded); `loadDogBrainContext` kept as a thin string wrapper so the report path + integration test are untouched. Chat path calls the combined loader once (was 2 loads + 2 ownership checks); `priority-symptoms-server.ts` DELETED. typecheck + 504 tests pass (incl. report-context integration + symptom-chat route); lint clean (no new warnings).
 - **Before PR/handoff**: full `npm run lint`, full test gate `clinical|dog-brain|symptom|health-log|followups|vet-record`, remote build, and `/thermo-review` on the cumulative diff.
 
 ## Next iteration
