@@ -29,6 +29,7 @@ const BRAIN_SIGNAL_SYMPTOM_KEYS: Record<SignalType, readonly string[]> = {
   mobility_pain_change: ["limping", "generalized_stiffness"],
   breathing_cough_change: ["coughing", "difficulty_breathing"],
   skin_ear_change: ["excessive_scratching", "recurrent_skin", "recurrent_ear"],
+  energy_behavior_change: ["lethargy", "behavior_change"],
   // No owner-observable symptom maps cleanly to a medication note; it informs
   // the report/follow-up loop, not which clinical question to ask next.
   possible_med_side_effect: [],

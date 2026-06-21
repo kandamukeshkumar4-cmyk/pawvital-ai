@@ -93,6 +93,18 @@ describe("brainPrioritySymptomsFromSignals (pure mapping)", () => {
     }
   });
 
+  it("maps the energy/behavior signal to lethargy + behavior-change keys", () => {
+    const keys = brainPrioritySymptomsFromSignals([
+      signal({ signal_type: "energy_behavior_change", severity: "watch" }),
+    ]);
+    expect(keys).toEqual(
+      expect.arrayContaining(["lethargy", "behavior_change"]),
+    );
+    for (const key of keys) {
+      expect(SYMPTOM_MAP[key]).toBeDefined();
+    }
+  });
+
   it("orders higher-severity signals first and dedupes", () => {
     const keys = brainPrioritySymptomsFromSignals([
       signal({ signal_type: "appetite_drop", severity: "info" }),

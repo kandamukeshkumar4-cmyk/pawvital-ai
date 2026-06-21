@@ -339,6 +339,31 @@ function skinEarSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function energyBehaviorSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  // Only LOW energy is a concern; high energy is not flagged. Behavior-change
+  // notes (if the owner logged them) reinforce a low-energy day.
+  const lowDays = recent.filter((log) => log.energy === "low");
+  if (lowDays.length === 0) return null;
+
+  const severity: SignalSeverity = lowDays.length >= 2 ? "watch" : "info";
+
+  return {
+    signal_type: "energy_behavior_change",
+    severity,
+    owner_message:
+      lowDays.length >= 2
+        ? `Owner logged low energy on ${lowDays.length} of the last ${recent.length} logged days.`
+        : "The latest log shows energy was lower than normal.",
+    dedupe_key: `energy_behavior:${latest.log_date}`,
+    next_action:
+      "Low energy can have many causes — log appetite, water, and any other changes, and start a symptom check if it persists.",
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -354,6 +379,7 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, mobilityPainSignal(ordered));
   pushSignal(signals, breathingCoughSignal(ordered));
   pushSignal(signals, skinEarSignal(ordered));
+  pushSignal(signals, energyBehaviorSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
   const state = combineState(signals);

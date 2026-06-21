@@ -23,6 +23,7 @@ import {
   Footprints,
   Wind,
   Bug,
+  BatteryLow,
   Scale,
   AlertCircle,
   Pill,
@@ -39,6 +40,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   mobility_pain_change: "Mobility & pain",
   breathing_cough_change: "Breathing & cough",
   skin_ear_change: "Skin & ear",
+  energy_behavior_change: "Energy & behavior",
   possible_med_side_effect: "Medication note",
 };
 
@@ -51,6 +53,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   mobility_pain_change: Footprints,
   breathing_cough_change: Wind,
   skin_ear_change: Bug,
+  energy_behavior_change: BatteryLow,
   possible_med_side_effect: Pill,
 };
 

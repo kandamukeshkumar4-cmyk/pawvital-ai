@@ -11,6 +11,7 @@ export type SignalType =
   | "mobility_pain_change"
   | "breathing_cough_change"
   | "skin_ear_change"
+  | "energy_behavior_change"
   | "possible_med_side_effect";
 
 export interface DetectedSignal {

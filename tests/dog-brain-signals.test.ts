@@ -290,4 +290,33 @@ describe("detectDogBrainSignals", () => {
       result.signals.find((s) => s.signal_type === "skin_ear_change"),
     ).toBeUndefined();
   });
+
+  it("flags sustained low energy as a watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "low" }),
+      log({ log_date: "2026-06-04", energy: "low" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "energy_behavior_change");
+    expect(sig?.severity).toBe("watch");
+  });
+
+  it("treats a single low-energy day as info", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "low" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "energy_behavior_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("does not flag high energy", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "high" }),
+      log({ log_date: "2026-06-04", energy: "high" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "energy_behavior_change"),
+    ).toBeUndefined();
+  });
 });
