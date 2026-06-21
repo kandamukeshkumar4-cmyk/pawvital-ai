@@ -6,6 +6,7 @@ import {
   Utensils,
   Waves,
   Droplets,
+  Footprints,
   Scale,
   AlertCircle,
   Pill,
@@ -55,6 +56,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   vomiting_trend: AlertCircle,
   weight_downtrend: Scale,
   water_urination_change: Droplets,
+  mobility_pain_change: Footprints,
   possible_med_side_effect: Pill,
 };
 
@@ -64,6 +66,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   vomiting_trend: "Vomiting trend",
   weight_downtrend: "Weight check",
   water_urination_change: "Thirst & urination",
+  mobility_pain_change: "Mobility & pain",
   possible_med_side_effect: "Medication note",
 };
 
@@ -104,6 +107,7 @@ const SIGNAL_REASON: Record<SignalType, string> = {
   vomiting_trend: "repeated vomiting",
   weight_downtrend: "weight trending down",
   water_urination_change: "thirst or urination changed",
+  mobility_pain_change: "limping or stiffness",
   possible_med_side_effect: "medication note",
 };
 

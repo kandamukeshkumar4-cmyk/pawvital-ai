@@ -53,6 +53,18 @@ describe("brainPrioritySymptomsFromSignals (pure mapping)", () => {
     }
   });
 
+  it("maps the mobility/pain signal to limping + stiffness symptom keys", () => {
+    const keys = brainPrioritySymptomsFromSignals([
+      signal({ signal_type: "mobility_pain_change", severity: "watch" }),
+    ]);
+    expect(keys).toEqual(
+      expect.arrayContaining(["limping", "generalized_stiffness"]),
+    );
+    for (const key of keys) {
+      expect(SYMPTOM_MAP[key]).toBeDefined();
+    }
+  });
+
   it("orders higher-severity signals first and dedupes", () => {
     const keys = brainPrioritySymptomsFromSignals([
       signal({ signal_type: "appetite_drop", severity: "info" }),

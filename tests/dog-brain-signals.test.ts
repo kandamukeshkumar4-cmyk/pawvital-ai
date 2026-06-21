@@ -164,4 +164,43 @@ describe("detectDogBrainSignals", () => {
       result.signals.find((s) => s.signal_type === "water_urination_change"),
     ).toBeUndefined();
   });
+
+  it("detects sustained limping as a mobility/pain watch signal with the limb noted", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { mobility: { limping: true, limb: "left hind" } },
+      }),
+      log({
+        log_date: "2026-06-04",
+        context_signals: { mobility: { limping: true } },
+      }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "mobility_pain_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message).toContain("left hind");
+  });
+
+  it("treats a single reluctant-to-move day as info, not watch", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { mobility: { reluctance_to_move: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "mobility_pain_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("stays silent on normal mobility", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "mobility_pain_change"),
+    ).toBeUndefined();
+  });
 });

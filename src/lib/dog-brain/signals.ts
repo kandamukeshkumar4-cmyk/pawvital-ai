@@ -225,6 +225,42 @@ function waterUrinationSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function mobilityPainSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const limpDays = recent.filter((log) => log.context_signals?.mobility?.limping);
+  const reluctanceDays = recent.filter(
+    (log) => log.context_signals?.mobility?.reluctance_to_move,
+  );
+  if (limpDays.length === 0 && reluctanceDays.length === 0) return null;
+
+  const limb = recent
+    .map((log) => log.context_signals?.mobility?.limb)
+    .find((value): value is string => Boolean(value));
+
+  // Limping on 2+ days, or limping together with reluctance to move, reads as a
+  // sustained pattern worth a vet mention. Supportive only — never urgency.
+  const severity: SignalSeverity =
+    limpDays.length >= 2 || (limpDays.length > 0 && reluctanceDays.length > 0)
+      ? "watch"
+      : "info";
+
+  const parts: string[] = [];
+  if (limpDays.length > 0) parts.push(limb ? `limping (${limb})` : "limping");
+  if (reluctanceDays.length > 0) parts.push("reluctant to move");
+
+  return {
+    signal_type: "mobility_pain_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(" and ")} on ${Math.max(limpDays.length, reluctanceDays.length)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `mobility_pain:${latest.log_date}`,
+    next_action:
+      "Rest from stairs and jumping, note which leg, and mention the limping or stiffness to your vet if it persists.",
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -237,6 +273,7 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, vomitingSignal(ordered));
   pushSignal(signals, weightSignal(ordered));
   pushSignal(signals, waterUrinationSignal(ordered));
+  pushSignal(signals, mobilityPainSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
   const state = combineState(signals);

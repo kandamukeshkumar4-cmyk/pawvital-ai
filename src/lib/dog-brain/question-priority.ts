@@ -26,6 +26,7 @@ const BRAIN_SIGNAL_SYMPTOM_KEYS: Record<SignalType, readonly string[]> = {
   vomiting_trend: ["vomiting"],
   weight_downtrend: ["weight_loss"],
   water_urination_change: ["drinking_more", "urination_problem"],
+  mobility_pain_change: ["limping", "generalized_stiffness"],
   // No owner-observable symptom maps cleanly to a medication note; it informs
   // the report/follow-up loop, not which clinical question to ask next.
   possible_med_side_effect: [],
