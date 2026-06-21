@@ -203,4 +203,40 @@ describe("detectDogBrainSignals", () => {
       result.signals.find((s) => s.signal_type === "mobility_pain_change"),
     ).toBeUndefined();
   });
+
+  it("flags labored breathing as a watch signal with an urgent next action", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { breathing: { labored: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "breathing_cough_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.next_action.toLowerCase()).toContain("vet");
+  });
+
+  it("treats a single cough day as info", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { breathing: { coughing: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "breathing_cough_change");
+    expect(sig?.severity).toBe("info");
+    expect(sig?.owner_message.toLowerCase()).toContain("coughing");
+  });
+
+  it("stays silent on normal breathing", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "breathing_cough_change"),
+    ).toBeUndefined();
+  });
 });

@@ -21,6 +21,7 @@ import {
   Waves,
   Droplets,
   Footprints,
+  Wind,
   Scale,
   AlertCircle,
   Pill,
@@ -35,6 +36,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   weight_downtrend: "Weight downtrend",
   water_urination_change: "Thirst & urination",
   mobility_pain_change: "Mobility & pain",
+  breathing_cough_change: "Breathing & cough",
   possible_med_side_effect: "Medication note",
 };
 
@@ -45,6 +47,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   weight_downtrend: Scale,
   water_urination_change: Droplets,
   mobility_pain_change: Footprints,
+  breathing_cough_change: Wind,
   possible_med_side_effect: Pill,
 };
 

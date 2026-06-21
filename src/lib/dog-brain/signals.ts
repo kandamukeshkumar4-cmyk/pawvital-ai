@@ -261,6 +261,43 @@ function mobilityPainSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function breathingCoughSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const coughDays = recent.filter((log) => log.context_signals?.breathing?.coughing);
+  const laboredDays = recent.filter((log) => log.context_signals?.breathing?.labored);
+  const exerciseIntolerance = recent.some(
+    (log) => log.context_signals?.breathing?.exercise_intolerance,
+  );
+  if (coughDays.length === 0 && laboredDays.length === 0 && !exerciseIntolerance) {
+    return null;
+  }
+
+  // Labored breathing is the most concerning owner-observable here — surface it
+  // as a watch so the owner runs a check. Deterministic urgency still owns true
+  // emergencies; this is supportive only and never lowers urgency.
+  const severity: SignalSeverity =
+    laboredDays.length > 0 || coughDays.length >= 2 ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (coughDays.length > 0) parts.push("coughing");
+  if (laboredDays.length > 0) parts.push("labored breathing");
+  if (exerciseIntolerance && parts.length === 0) parts.push("tiring quickly on walks");
+
+  return {
+    signal_type: "breathing_cough_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(" and ")} on ${Math.max(coughDays.length, laboredDays.length, 1)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `breathing_cough:${latest.log_date}`,
+    next_action:
+      laboredDays.length > 0
+        ? "Labored breathing can be urgent — start a symptom check now and contact your vet."
+        : "Note when the cough happens (rest vs. activity) and mention it to your vet if it continues.",
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -274,6 +311,7 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, weightSignal(ordered));
   pushSignal(signals, waterUrinationSignal(ordered));
   pushSignal(signals, mobilityPainSignal(ordered));
+  pushSignal(signals, breathingCoughSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
   const state = combineState(signals);

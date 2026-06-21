@@ -16,8 +16,8 @@ WORKDIR /app
 
 # CPU-only PyTorch to keep the image size manageable for dev builds.
 RUN pip install --no-cache-dir \
-    "torch==2.5.1+cpu" \
-    "torchvision==0.20.1+cpu" \
+    "torch==2.12.1+cpu" \
+    "torchvision==0.27.1+cpu" \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .

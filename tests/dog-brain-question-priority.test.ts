@@ -65,6 +65,18 @@ describe("brainPrioritySymptomsFromSignals (pure mapping)", () => {
     }
   });
 
+  it("maps the breathing/cough signal to cough + difficulty-breathing keys", () => {
+    const keys = brainPrioritySymptomsFromSignals([
+      signal({ signal_type: "breathing_cough_change", severity: "watch" }),
+    ]);
+    expect(keys).toEqual(
+      expect.arrayContaining(["coughing", "difficulty_breathing"]),
+    );
+    for (const key of keys) {
+      expect(SYMPTOM_MAP[key]).toBeDefined();
+    }
+  });
+
   it("orders higher-severity signals first and dedupes", () => {
     const keys = brainPrioritySymptomsFromSignals([
       signal({ signal_type: "appetite_drop", severity: "info" }),
