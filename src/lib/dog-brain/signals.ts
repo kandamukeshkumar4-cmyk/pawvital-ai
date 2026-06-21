@@ -298,6 +298,47 @@ function breathingCoughSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function skinEarSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const scratchDays = recent.filter((log) => log.context_signals?.skin_ear?.scratching);
+  const headShakeDays = recent.filter(
+    (log) => log.context_signals?.skin_ear?.head_shaking,
+  );
+  const odor = recent.some((log) => log.context_signals?.skin_ear?.odor);
+  const hotSpot = recent.some((log) => log.context_signals?.skin_ear?.hot_spot);
+  if (
+    scratchDays.length === 0 &&
+    headShakeDays.length === 0 &&
+    !odor &&
+    !hotSpot
+  ) {
+    return null;
+  }
+
+  // A hot spot or a recurring (2+ day) itch/head-shake reads as a sustained skin
+  // or ear problem worth a vet mention. Supportive only — never urgency.
+  const recurring = scratchDays.length >= 2 || headShakeDays.length >= 2;
+  const severity: SignalSeverity = hotSpot || recurring ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (scratchDays.length > 0) parts.push("scratching");
+  if (headShakeDays.length > 0) parts.push("head shaking");
+  if (odor) parts.push("unusual odor");
+  if (hotSpot) parts.push("a hot spot");
+
+  return {
+    signal_type: "skin_ear_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(", ")} on ${Math.max(scratchDays.length, headShakeDays.length, 1)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `skin_ear:${latest.log_date}`,
+    next_action:
+      "Note the spot (skin vs. ear) and take a photo; recurring itch, odor, or head shaking is worth a vet mention.",
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -312,6 +353,7 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, waterUrinationSignal(ordered));
   pushSignal(signals, mobilityPainSignal(ordered));
   pushSignal(signals, breathingCoughSignal(ordered));
+  pushSignal(signals, skinEarSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
   const state = combineState(signals);

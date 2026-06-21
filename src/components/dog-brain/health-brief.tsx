@@ -8,6 +8,7 @@ import {
   Droplets,
   Footprints,
   Wind,
+  Bug,
   Scale,
   AlertCircle,
   Pill,
@@ -59,6 +60,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   water_urination_change: Droplets,
   mobility_pain_change: Footprints,
   breathing_cough_change: Wind,
+  skin_ear_change: Bug,
   possible_med_side_effect: Pill,
 };
 
@@ -70,6 +72,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   water_urination_change: "Thirst & urination",
   mobility_pain_change: "Mobility & pain",
   breathing_cough_change: "Breathing & cough",
+  skin_ear_change: "Skin & ear",
   possible_med_side_effect: "Medication note",
 };
 
@@ -112,6 +115,7 @@ const SIGNAL_REASON: Record<SignalType, string> = {
   water_urination_change: "thirst or urination changed",
   mobility_pain_change: "limping or stiffness",
   breathing_cough_change: "breathing or cough change",
+  skin_ear_change: "skin or ear irritation",
   possible_med_side_effect: "medication note",
 };
 

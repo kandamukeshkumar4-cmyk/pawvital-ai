@@ -77,6 +77,22 @@ describe("brainPrioritySymptomsFromSignals (pure mapping)", () => {
     }
   });
 
+  it("maps the skin/ear signal to scratching + recurrent skin/ear keys", () => {
+    const keys = brainPrioritySymptomsFromSignals([
+      signal({ signal_type: "skin_ear_change", severity: "watch" }),
+    ]);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "excessive_scratching",
+        "recurrent_skin",
+        "recurrent_ear",
+      ]),
+    );
+    for (const key of keys) {
+      expect(SYMPTOM_MAP[key]).toBeDefined();
+    }
+  });
+
   it("orders higher-severity signals first and dedupes", () => {
     const keys = brainPrioritySymptomsFromSignals([
       signal({ signal_type: "appetite_drop", severity: "info" }),

@@ -239,4 +239,55 @@ describe("detectDogBrainSignals", () => {
       result.signals.find((s) => s.signal_type === "breathing_cough_change"),
     ).toBeUndefined();
   });
+
+  it("flags a hot spot as a skin/ear watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { hot_spot: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message.toLowerCase()).toContain("hot spot");
+  });
+
+  it("treats a single scratching day as info", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { scratching: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("escalates recurring head shaking to watch", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { head_shaking: true } },
+      }),
+      log({
+        log_date: "2026-06-04",
+        context_signals: { skin_ear: { head_shaking: true } },
+      }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("watch");
+  });
+
+  it("stays silent on normal skin and ears", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "skin_ear_change"),
+    ).toBeUndefined();
+  });
 });

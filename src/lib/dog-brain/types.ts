@@ -10,6 +10,7 @@ export type SignalType =
   | "water_urination_change"
   | "mobility_pain_change"
   | "breathing_cough_change"
+  | "skin_ear_change"
   | "possible_med_side_effect";
 
 export interface DetectedSignal {
