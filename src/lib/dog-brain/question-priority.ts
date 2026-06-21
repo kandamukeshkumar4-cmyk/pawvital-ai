@@ -20,9 +20,12 @@ import type { DetectedSignal, SignalType } from "@/lib/dog-brain/types";
 
 const BRAIN_SIGNAL_SYMPTOM_KEYS: Record<SignalType, readonly string[]> = {
   appetite_drop: ["not_eating"],
-  stool_change: ["diarrhea", "blood_in_stool", "constipation"],
+  // Daily-log stool is normal/soft/diarrhea/none/blood — never constipation — so
+  // a stool_change signal always points at loose/bloody stool, not constipation.
+  stool_change: ["diarrhea", "blood_in_stool"],
   vomiting_trend: ["vomiting"],
   weight_downtrend: ["weight_loss"],
+  water_urination_change: ["drinking_more", "urination_problem"],
   // No owner-observable symptom maps cleanly to a medication note; it informs
   // the report/follow-up loop, not which clinical question to ask next.
   possible_med_side_effect: [],

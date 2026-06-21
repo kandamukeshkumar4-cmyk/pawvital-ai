@@ -7,6 +7,7 @@ export type SignalType =
   | "stool_change"
   | "vomiting_trend"
   | "weight_downtrend"
+  | "water_urination_change"
   | "possible_med_side_effect";
 
 export interface DetectedSignal {

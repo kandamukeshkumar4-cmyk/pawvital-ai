@@ -26,14 +26,28 @@ describe("brainPrioritySymptomsFromSignals (pure mapping)", () => {
       expect.arrayContaining([
         "diarrhea",
         "blood_in_stool",
-        "constipation",
         "vomiting",
         "not_eating",
         "weight_loss",
       ]),
     );
+    // stool_change can never mean constipation (not in the daily-log enum), so the
+    // mapping must NOT surface a constipation follow-up.
+    expect(keys).not.toContain("constipation");
     // Every emitted key must be a real symptom (so the selector can never invent
     // a question from Brain memory).
+    for (const key of keys) {
+      expect(SYMPTOM_MAP[key]).toBeDefined();
+    }
+  });
+
+  it("maps the water/urination signal to drinking + urination symptom keys", () => {
+    const keys = brainPrioritySymptomsFromSignals([
+      signal({ signal_type: "water_urination_change", severity: "watch" }),
+    ]);
+    expect(keys).toEqual(
+      expect.arrayContaining(["drinking_more", "urination_problem"]),
+    );
     for (const key of keys) {
       expect(SYMPTOM_MAP[key]).toBeDefined();
     }

@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Utensils,
   Waves,
+  Droplets,
   Scale,
   AlertCircle,
   Pill,
@@ -31,6 +32,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   stool_change: "Stool change",
   vomiting_trend: "Vomiting",
   weight_downtrend: "Weight downtrend",
+  water_urination_change: "Thirst & urination",
   possible_med_side_effect: "Medication note",
 };
 
@@ -39,6 +41,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   stool_change: Waves,
   vomiting_trend: AlertCircle,
   weight_downtrend: Scale,
+  water_urination_change: Droplets,
   possible_med_side_effect: Pill,
 };
 

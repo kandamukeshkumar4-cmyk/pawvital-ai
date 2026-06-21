@@ -172,6 +172,59 @@ function medicationSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function waterUrinationSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const waterOff = recent.filter((log) => log.water === "more" || log.water === "less");
+  const urineOff = recent.filter(
+    (log) =>
+      log.urination === "more" ||
+      log.urination === "less" ||
+      log.urination === "straining",
+  );
+  const thirstNoted = recent.filter(
+    (log) => log.context_signals?.urinary?.increased_thirst,
+  ).length;
+  const accidents = recent.some((log) => log.context_signals?.urinary?.accidents);
+  const straining = recent.some((log) => log.urination === "straining");
+
+  const offCount = Math.max(waterOff.length, urineOff.length);
+  if (offCount === 0 && thirstNoted === 0 && !accidents) return null;
+
+  // Increased thirst + increased urination together is the classic PU/PD pattern
+  // worth a vet mention (kidney/diabetes/Cushing's-adjacent). Supportive only —
+  // never feeds deterministic urgency.
+  const puPd =
+    (latest.water === "more" || thirstNoted > 0) &&
+    recent.some((log) => log.urination === "more");
+
+  const severity: SignalSeverity = straining ? "alert" : puPd || offCount >= 2 ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (waterOff.length > 0) {
+    parts.push(`water intake ${latest.water === "more" ? "up" : "down"}`);
+  }
+  if (straining) parts.push("straining to urinate");
+  else if (urineOff.length > 0) parts.push("urination changed");
+  else if (accidents) parts.push("urinary accidents");
+  if (thirstNoted > 0 && waterOff.length === 0) parts.push("increased thirst noted");
+
+  return {
+    signal_type: "water_urination_change",
+    severity,
+    owner_message:
+      parts.length > 0
+        ? `Owner logged ${parts.join(" and ")} on ${Math.max(offCount, thirstNoted, 1)} of the last ${recent.length} logged day(s).`
+        : "Water or urination was different from normal recently.",
+    dedupe_key: `water_urination:${latest.log_date}`,
+    next_action: straining
+      ? "Straining to urinate can be urgent — start a symptom check and contact your vet."
+      : "Note water bowls and bathroom trips; a thirst or urination change is worth a vet mention.",
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -183,6 +236,7 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, stoolSignal(ordered));
   pushSignal(signals, vomitingSignal(ordered));
   pushSignal(signals, weightSignal(ordered));
+  pushSignal(signals, waterUrinationSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
   const state = combineState(signals);

@@ -120,4 +120,48 @@ describe("detectDogBrainSignals", () => {
     ]);
     expect(result.signals.find((s) => s.signal_type === "weight_downtrend")).toBeUndefined();
   });
+
+  it("detects the thirst+urination (PU/PD) pattern as a watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", water: "more", urination: "more" }),
+      log({ log_date: "2026-06-04", water: "more", urination: "more" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "water_urination_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message.toLowerCase()).toContain("water intake");
+  });
+
+  it("flags straining to urinate as an alert with an urgent next action", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", urination: "straining" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "water_urination_change");
+    expect(sig?.severity).toBe("alert");
+    expect(sig?.next_action.toLowerCase()).toContain("vet");
+  });
+
+  it("picks up increased thirst from context_signals.urinary alone", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { urinary: { increased_thirst: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "water_urination_change"),
+    ).toBeDefined();
+  });
+
+  it("stays silent on normal water and urination", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "water_urination_change"),
+    ).toBeUndefined();
+  });
 });

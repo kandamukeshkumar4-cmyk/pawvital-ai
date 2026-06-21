@@ -5,6 +5,7 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import {
   Utensils,
   Waves,
+  Droplets,
   Scale,
   AlertCircle,
   Pill,
@@ -53,6 +54,7 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   stool_change: Waves,
   vomiting_trend: AlertCircle,
   weight_downtrend: Scale,
+  water_urination_change: Droplets,
   possible_med_side_effect: Pill,
 };
 
@@ -61,6 +63,7 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   stool_change: "Stool changed",
   vomiting_trend: "Vomiting trend",
   weight_downtrend: "Weight check",
+  water_urination_change: "Thirst & urination",
   possible_med_side_effect: "Medication note",
 };
 
@@ -100,6 +103,7 @@ const SIGNAL_REASON: Record<SignalType, string> = {
   stool_change: "stool changed",
   vomiting_trend: "repeated vomiting",
   weight_downtrend: "weight trending down",
+  water_urination_change: "thirst or urination changed",
   possible_med_side_effect: "medication note",
 };
 
