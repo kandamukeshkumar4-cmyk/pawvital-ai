@@ -6,9 +6,14 @@
 ## Current HEAD / branch
 
 - Branch: `codex/dog-brain-ui-closeout`
-- HEAD at loop start: `050bdcf` ("docs(qa): vet-record upload->extract->persist VERIFIED live")
+- HEAD now: `39ae765` (breathing/cough family), 13 commits ahead of origin (unpushed). Base `050bdcf`.
 - Worktree: `G:\MY Website\pawvital-ai` (busy multi-agent env — plans/*.json churn from agent-watcher is NOT ours)
 - jest runs locally on G: (only `npm run build` is the known-broken-on-G: step → use Vercel remote for build proof)
+
+## ⚠️ INCIDENT (run 11) — worktree hijack + recovery
+Another agent (torch security work) checked this worktree from `codex/dog-brain-ui-closeout` over to `fix/torch-security-upgrade` then `-v2`. My breathing/cough commit `39ae765` had landed while the worktree was briefly on `fix/torch-security-upgrade`, so the `codex/dog-brain-ui-closeout` ref was left at `e5fc5b6` (mobility) and the breathing commit was orphaned (still in the object store).
+RECOVERY: `git branch -f codex/dog-brain-ui-closeout 39ae765` (fast-forward, parent was e5fc5b6) → `git checkout codex/dog-brain-ui-closeout`. Verified: full 13-commit chain intact, 33 dog-brain tests pass. **Zero work lost.**
+GUARD for next runs: FIRST verify `git branch --show-current` == codex/dog-brain-ui-closeout and `git rev-parse HEAD`; if the worktree was hijacked again, the commits survive on the branch ref / reflog — recover with `git branch -f` + checkout. Commit each bounded change FAST to shrink the uncommitted-work window. Do NOT push (origin push auto-opens a PR → auto-merge to master per AGENTS.md).
 
 ## Verified test baseline (AutoLab: never hand off worse than this)
 
