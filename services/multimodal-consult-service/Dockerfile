@@ -16,8 +16,8 @@ WORKDIR /app
 # CPU-only PyTorch (~800 MB vs ~2.5 GB for the default CUDA wheel).
 # Install before requirements.txt so pip reuses this torch for transformers/accelerate.
 RUN pip install --no-cache-dir \
-    "torch==2.5.1+cpu" \
-    "torchvision==0.20.1+cpu" \
+    "torch==2.12.1+cpu" \
+    "torchvision==0.27.1+cpu" \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .
