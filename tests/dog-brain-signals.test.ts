@@ -319,4 +319,26 @@ describe("detectDogBrainSignals", () => {
       result.signals.find((s) => s.signal_type === "energy_behavior_change"),
     ).toBeUndefined();
   });
+
+  it("enriches every detected signal with a confidence in [0,1] and vet handoff text", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", appetite: "none", stool: "blood", energy: "low" }),
+      log({ log_date: "2026-06-04", appetite: "reduced", energy: "low" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    expect(result.signals.length).toBeGreaterThan(0);
+    for (const sig of result.signals) {
+      expect(typeof sig.confidence).toBe("number");
+      expect(sig.confidence).toBeGreaterThanOrEqual(0);
+      expect(sig.confidence).toBeLessThanOrEqual(1);
+      expect(typeof sig.vet_handoff_text).toBe("string");
+      expect(sig.vet_handoff_text?.length).toBeGreaterThan(0);
+    }
+    // Higher-severity signals carry higher confidence than info-level ones.
+    const alert = result.signals.find((s) => s.severity === "alert");
+    const info = result.signals.find((s) => s.severity === "info");
+    if (alert && info) {
+      expect(alert.confidence!).toBeGreaterThan(info.confidence!);
+    }
+  });
 });

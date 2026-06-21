@@ -364,6 +364,28 @@ function energyBehaviorSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+const SEVERITY_CONFIDENCE: Record<SignalSeverity, number> = {
+  info: 0.5,
+  watch: 0.72,
+  alert: 0.88,
+};
+
+/**
+ * Add the contract's confidence + vet-handoff fields, derived from what the
+ * detector already produced (severity drives confidence; the owner message
+ * becomes a one-line vet-facing phrasing). Pure; a detector may set its own
+ * values and they are preserved.
+ */
+function enrichSignal(signal: DetectedSignal): DetectedSignal {
+  return {
+    ...signal,
+    confidence: signal.confidence ?? SEVERITY_CONFIDENCE[signal.severity],
+    vet_handoff_text:
+      signal.vet_handoff_text ??
+      `Owner-reported (${signal.severity}): ${signal.owner_message}`,
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -382,9 +404,10 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, energyBehaviorSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
-  const state = combineState(signals);
+  const enriched = signals.map(enrichSignal);
+  const state = combineState(enriched);
   return {
-    state: signals.length === 1 ? severityState(signals[0].severity) : state,
-    signals,
+    state: enriched.length === 1 ? severityState(enriched[0].severity) : state,
+    signals: enriched,
   };
 }

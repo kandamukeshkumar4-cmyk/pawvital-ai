@@ -255,6 +255,12 @@ function SignalDetailCard({ signal, logs }: { signal: DetectedSignal; logs: Heal
         )}
       </div>
 
+      {signal.vet_handoff_text && (
+        <p className="mt-3 rounded-lg bg-[#f3f9f6] px-3 py-2 text-[12px] leading-snug text-[#3f6b57]">
+          <span className="font-semibold">For your vet:</span> {signal.vet_handoff_text}
+        </p>
+      )}
+
       <a
         href="/analytics"
         target="_top"
