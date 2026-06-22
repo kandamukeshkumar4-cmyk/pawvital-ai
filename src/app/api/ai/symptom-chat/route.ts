@@ -159,7 +159,10 @@ import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-promp
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
-import { loadDogBrainContext } from "@/lib/health-log/dog-brain-context";
+import {
+  loadDogBrainContext,
+  loadDogBrainContextWithSignals,
+} from "@/lib/health-log/dog-brain-context";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -974,13 +977,20 @@ export async function POST(request: Request) {
     // alters the deterministic turn. Runs after the async-offload check so the
     // load happens on the inline path or the worker replay, not the offloaded
     // original request.
+    // SUPPORTIVE only: recurring-signal symptom keys used as a tiebreak when the
+    // deterministic planner picks the next question (never overrides complaint or
+    // red-flag selection, never reaches urgency logic). Empty on any failure.
+    let brainPrioritySymptoms: string[] = [];
     if (action === "chat" && verifiedUserId && effectivePet) {
       try {
-        const brainContext = await loadDogBrainContext({
-          userId: verifiedUserId,
-          petName: effectivePet.name,
-          petId: effectivePet.id,
-        });
+        // Single best-effort load: the narrative context AND the question-tiebreak
+        // priority symptoms come from one fetch (no duplicate logs/ownership query).
+        const { context: brainContext, prioritySymptoms } =
+          await loadDogBrainContextWithSignals({
+            userId: verifiedUserId,
+            petName: effectivePet.name,
+            petId: effectivePet.id,
+          });
         if (brainContext) {
           const memory = ensureStructuredCaseMemory(session);
           session = {
@@ -988,6 +998,7 @@ export async function POST(request: Request) {
             case_memory: { ...memory, daily_log_context: brainContext },
           };
         }
+        brainPrioritySymptoms = prioritySymptoms;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2435,6 +2446,7 @@ export async function POST(request: Request) {
       pendingQResolvedThisTurn,
       turnFocusSymptoms,
       visualEvidence,
+      brainPrioritySymptoms,
     });
     session = nextQuestionState.session;
     const nextQuestionId = nextQuestionState.nextQuestionId;

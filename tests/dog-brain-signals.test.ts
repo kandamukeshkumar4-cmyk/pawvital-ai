@@ -120,4 +120,225 @@ describe("detectDogBrainSignals", () => {
     ]);
     expect(result.signals.find((s) => s.signal_type === "weight_downtrend")).toBeUndefined();
   });
+
+  it("detects the thirst+urination (PU/PD) pattern as a watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", water: "more", urination: "more" }),
+      log({ log_date: "2026-06-04", water: "more", urination: "more" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "water_urination_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message.toLowerCase()).toContain("water intake");
+  });
+
+  it("flags straining to urinate as an alert with an urgent next action", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", urination: "straining" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "water_urination_change");
+    expect(sig?.severity).toBe("alert");
+    expect(sig?.next_action.toLowerCase()).toContain("vet");
+  });
+
+  it("picks up increased thirst from context_signals.urinary alone", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { urinary: { increased_thirst: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "water_urination_change"),
+    ).toBeDefined();
+  });
+
+  it("stays silent on normal water and urination", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "water_urination_change"),
+    ).toBeUndefined();
+  });
+
+  it("detects sustained limping as a mobility/pain watch signal with the limb noted", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { mobility: { limping: true, limb: "left hind" } },
+      }),
+      log({
+        log_date: "2026-06-04",
+        context_signals: { mobility: { limping: true } },
+      }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "mobility_pain_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message).toContain("left hind");
+  });
+
+  it("treats a single reluctant-to-move day as info, not watch", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { mobility: { reluctance_to_move: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "mobility_pain_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("stays silent on normal mobility", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "mobility_pain_change"),
+    ).toBeUndefined();
+  });
+
+  it("flags labored breathing as a watch signal with an urgent next action", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { breathing: { labored: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "breathing_cough_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.next_action.toLowerCase()).toContain("vet");
+  });
+
+  it("treats a single cough day as info", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { breathing: { coughing: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "breathing_cough_change");
+    expect(sig?.severity).toBe("info");
+    expect(sig?.owner_message.toLowerCase()).toContain("coughing");
+  });
+
+  it("stays silent on normal breathing", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "breathing_cough_change"),
+    ).toBeUndefined();
+  });
+
+  it("flags a hot spot as a skin/ear watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { hot_spot: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("watch");
+    expect(sig?.owner_message.toLowerCase()).toContain("hot spot");
+  });
+
+  it("treats a single scratching day as info", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { scratching: true } },
+      }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("escalates recurring head shaking to watch", () => {
+    const result = detectDogBrainSignals([
+      log({
+        log_date: "2026-06-05",
+        context_signals: { skin_ear: { head_shaking: true } },
+      }),
+      log({
+        log_date: "2026-06-04",
+        context_signals: { skin_ear: { head_shaking: true } },
+      }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "skin_ear_change");
+    expect(sig?.severity).toBe("watch");
+  });
+
+  it("stays silent on normal skin and ears", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "skin_ear_change"),
+    ).toBeUndefined();
+  });
+
+  it("flags sustained low energy as a watch signal", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "low" }),
+      log({ log_date: "2026-06-04", energy: "low" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "energy_behavior_change");
+    expect(sig?.severity).toBe("watch");
+  });
+
+  it("treats a single low-energy day as info", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "low" }),
+      log({ log_date: "2026-06-04" }),
+    ]);
+    const sig = result.signals.find((s) => s.signal_type === "energy_behavior_change");
+    expect(sig?.severity).toBe("info");
+  });
+
+  it("does not flag high energy", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", energy: "high" }),
+      log({ log_date: "2026-06-04", energy: "high" }),
+    ]);
+    expect(
+      result.signals.find((s) => s.signal_type === "energy_behavior_change"),
+    ).toBeUndefined();
+  });
+
+  it("enriches every detected signal with a confidence in [0,1] and vet handoff text", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", appetite: "none", stool: "blood", energy: "low" }),
+      log({ log_date: "2026-06-04", appetite: "reduced", energy: "low" }),
+      log({ log_date: "2026-06-03" }),
+    ]);
+    expect(result.signals.length).toBeGreaterThan(0);
+    for (const sig of result.signals) {
+      expect(typeof sig.confidence).toBe("number");
+      expect(sig.confidence).toBeGreaterThanOrEqual(0);
+      expect(sig.confidence).toBeLessThanOrEqual(1);
+      expect(typeof sig.vet_handoff_text).toBe("string");
+      expect(sig.vet_handoff_text?.length).toBeGreaterThan(0);
+    }
+    // Higher-severity signals carry higher confidence than info-level ones.
+    const alert = result.signals.find((s) => s.severity === "alert");
+    const info = result.signals.find((s) => s.severity === "info");
+    if (alert && info) {
+      expect(alert.confidence!).toBeGreaterThan(info.confidence!);
+    }
+  });
 });

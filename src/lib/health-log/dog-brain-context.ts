@@ -1,6 +1,24 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import type { HealthLog, ContextSignals } from "./types";
-import { summarizeDailyLogsForContext } from "./context";
+import {
+  summarizeDailyLogsForContext,
+  summarizeFollowupsForContext,
+  type FollowupContextRow,
+} from "./context";
+import { detectDogBrainSignals } from "@/lib/dog-brain/signals";
+import { brainPrioritySymptomsFromSignals } from "@/lib/dog-brain/question-priority";
+
+export interface DogBrainContextData {
+  /** Supportive narrative for the report prompt; null = skip context. */
+  context: string | null;
+  /** Recurring-signal symptom keys for the symptom-checker question tiebreak. */
+  prioritySymptoms: string[];
+}
+
+const EMPTY_DOG_BRAIN_DATA: DogBrainContextData = {
+  context: null,
+  prioritySymptoms: [],
+};
 
 /**
  * Load a compact, owner-reported context string for the symptom-checker AI.
@@ -82,7 +100,7 @@ function contextSignalsSummary(signals: ContextSignals): string {
   return parts.length > 0 ? parts.join("; ") : "";
 }
 
-export async function loadDogBrainContext({
+export async function loadDogBrainContextWithSignals({
   userId,
   petName,
   petId: petIdArg,
@@ -91,8 +109,8 @@ export async function loadDogBrainContext({
   petName: string;
   /** Pass when available to skip the name-lookup query and avoid duplicate-name null context. */
   petId?: string;
-}): Promise<string | null> {
-  if (!userId) return null;
+}): Promise<DogBrainContextData> {
+  if (!userId) return EMPTY_DOG_BRAIN_DATA;
 
   try {
     const supabase = await createServerSupabaseClient();
@@ -106,25 +124,30 @@ export async function loadDogBrainContext({
         .eq("id", petIdArg)
         .eq("user_id", userId)
         .limit(1);
-      if (!ownedPets || ownedPets.length === 0) return null;
+      if (!ownedPets || ownedPets.length === 0) return EMPTY_DOG_BRAIN_DATA;
       petId = (ownedPets[0] as { id: string }).id;
     } else {
-      if (!petName.trim()) return null;
+      if (!petName.trim()) return EMPTY_DOG_BRAIN_DATA;
       const { data: pets } = await supabase
         .from("pets")
         .select("id")
         .eq("user_id", userId)
         .eq("name", petName)
         .limit(2);
-      if (!pets || pets.length !== 1) return null;
+      if (!pets || pets.length !== 1) return EMPTY_DOG_BRAIN_DATA;
       petId = pets[0].id as string;
     }
 
     // Fetch all sources in parallel — single round-trip set. The vet-record
     // query is best-effort: a missing table returns {data:null} (never throws),
     // so it degrades cleanly until the migration is applied.
-    const [logsResult, checksResult, journalResult, vetRecordsResult] =
-      await Promise.all([
+    const [
+      logsResult,
+      checksResult,
+      journalResult,
+      vetRecordsResult,
+      followupsResult,
+    ] = await Promise.all([
         supabase
           .from("daily_health_logs")
           .select("*")
@@ -152,6 +175,16 @@ export async function loadDogBrainContext({
           .eq("pet_id", petId)
           .order("created_at", { ascending: false })
           .limit(5),
+        // Active-concern pack: pending follow-ups + recent owner outcomes
+        // (better/worse/same) so an owner's answer feeds back into Brain
+        // reasoning. Best-effort — a missing table returns {data:null}.
+        supabase
+          .from("dog_brain_followups")
+          .select("prompt, status, due_at, updated_at, created_at")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("updated_at", { ascending: false })
+          .limit(20),
       ]);
 
     const sections: string[] = [];
@@ -242,9 +275,36 @@ export async function loadDogBrainContext({
       );
     }
 
-    if (sections.length === 0) return null;
-    return sections.join("\n\n");
+    // ── Follow-up loop (#E: owner outcomes feed Brain reasoning) ──
+    const followups = (followupsResult.data ?? []) as FollowupContextRow[];
+    const followupSummary = summarizeFollowupsForContext(followups, petName);
+    if (followupSummary) sections.push(followupSummary);
+
+    // Recurring-signal symptom keys for the symptom-checker question tiebreak,
+    // derived from the SAME logs already loaded above (detectDogBrainSignals
+    // uses the 14 newest internally) — no extra query, no duplicate ownership
+    // check. Replaces the former standalone loadDogBrainPrioritySymptoms loader.
+    const prioritySymptoms = brainPrioritySymptomsFromSignals(
+      detectDogBrainSignals(logs).signals,
+    );
+
+    return {
+      context: sections.length === 0 ? null : sections.join("\n\n"),
+      prioritySymptoms,
+    };
   } catch {
-    return null;
+    return EMPTY_DOG_BRAIN_DATA;
   }
+}
+
+/**
+ * Backwards-compatible string view — the supportive narrative only. Used by the
+ * report path (and tests) that don't need the question-planning priority keys.
+ */
+export async function loadDogBrainContext(args: {
+  userId: string | null;
+  petName: string;
+  petId?: string;
+}): Promise<string | null> {
+  return (await loadDogBrainContextWithSignals(args)).context;
 }

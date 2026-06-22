@@ -5,6 +5,11 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import {
   Utensils,
   Waves,
+  Droplets,
+  Footprints,
+  Wind,
+  Bug,
+  BatteryLow,
   Scale,
   AlertCircle,
   Pill,
@@ -31,6 +36,7 @@ import type {
   SignalType,
 } from "@/lib/dog-brain/types";
 import type { HealthLog } from "@/lib/health-log/types";
+import { FollowupsPanel } from "./followups-panel";
 
 const STATE_META: Record<
   BriefState,
@@ -52,6 +58,11 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   stool_change: Waves,
   vomiting_trend: AlertCircle,
   weight_downtrend: Scale,
+  water_urination_change: Droplets,
+  mobility_pain_change: Footprints,
+  breathing_cough_change: Wind,
+  skin_ear_change: Bug,
+  energy_behavior_change: BatteryLow,
   possible_med_side_effect: Pill,
 };
 
@@ -60,6 +71,11 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   stool_change: "Stool changed",
   vomiting_trend: "Vomiting trend",
   weight_downtrend: "Weight check",
+  water_urination_change: "Thirst & urination",
+  mobility_pain_change: "Mobility & pain",
+  breathing_cough_change: "Breathing & cough",
+  skin_ear_change: "Skin & ear",
+  energy_behavior_change: "Energy & behavior",
   possible_med_side_effect: "Medication note",
 };
 
@@ -99,6 +115,11 @@ const SIGNAL_REASON: Record<SignalType, string> = {
   stool_change: "stool changed",
   vomiting_trend: "repeated vomiting",
   weight_downtrend: "weight trending down",
+  water_urination_change: "thirst or urination changed",
+  mobility_pain_change: "limping or stiffness",
+  breathing_cough_change: "breathing or cough change",
+  skin_ear_change: "skin or ear irritation",
+  energy_behavior_change: "low energy",
   possible_med_side_effect: "medication note",
 };
 
@@ -233,6 +254,12 @@ function SignalDetailCard({ signal, logs }: { signal: DetectedSignal; logs: Heal
           </div>
         )}
       </div>
+
+      {signal.vet_handoff_text && (
+        <p className="mt-3 rounded-lg bg-[#f3f9f6] px-3 py-2 text-[12px] leading-snug text-[#3f6b57]">
+          <span className="font-semibold">For your vet:</span> {signal.vet_handoff_text}
+        </p>
+      )}
 
       <a
         href="/analytics"
@@ -646,100 +673,8 @@ function FirstTime({ petName }: { petName: string }) {
 }
 
 // ─── FOLLOW-UPS ───────────────────────────────────────────────────────────────
-
-interface Followup {
-  id: string;
-  signal_key: string;
-  prompt: string;
-  due_at: string | null;
-}
-
-/** Durable follow-up loop: ensures a follow-up exists for each active watch/alert
- *  pattern (idempotent server-side), lists pending ones, and lets the owner
- *  resolve better / same / worse. Renders nothing until there's a pending item. */
-function FollowupsPanel({ petId, signals }: { petId: string | null; signals: DetectedSignal[] }) {
-  const [items, setItems] = useState<Followup[]>([]);
-  const signalKey = useMemo(
-    () => signals.map((s) => `${s.signal_type}:${s.severity}`).join(","),
-    [signals],
-  );
-
-  useEffect(() => {
-    if (!petId) return;
-    let cancelled = false;
-    const actionable = signals.filter((s) => s.severity === "watch" || s.severity === "alert");
-    (async () => {
-      if (actionable.length > 0) {
-        await Promise.allSettled(
-          actionable.map((s) =>
-            fetch("/api/dog-brain/followups", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                pet_id: petId,
-                signal_key: s.signal_type,
-                prompt: `${s.owner_message} Is it better, the same, or worse today?`,
-              }),
-            }).catch(() => undefined),
-          ),
-        );
-      }
-      if (cancelled) return;
-      try {
-        const r = await fetch(`/api/dog-brain/followups?pet_id=${petId}`);
-        const j = (await r.json().catch(() => null)) as { data?: Followup[] } | null;
-        if (!cancelled) setItems(Array.isArray(j?.data) ? j!.data : []);
-      } catch {
-        /* best-effort */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // signalKey makes the effect re-run only when the set of signals changes.
-  }, [petId, signalKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const resolve = (id: string, status: "better" | "same" | "worse") => {
-    setItems((prev) => prev.filter((f) => f.id !== id)); // optimistic
-    void fetch(`/api/dog-brain/followups/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    }).catch(() => undefined);
-  };
-
-  if (items.length === 0) return null;
-
-  return (
-    <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <Bell className="h-4 w-4 text-[#15795a]" aria-hidden />
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f]">
-          Follow-ups from PawVital
-        </p>
-      </div>
-      <ul className="space-y-3">
-        {items.map((f) => (
-          <li key={f.id} className="rounded-xl border border-[#eef1ef] bg-[#f9fbfa] p-3.5">
-            <p className="text-[13px] leading-snug text-[#1c2522]">{f.prompt}</p>
-            <div className="mt-2.5 flex gap-2">
-              {(["better", "same", "worse"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => resolve(f.id, s)}
-                  className="flex-1 rounded-lg border border-[#cfe6da] bg-white py-1.5 text-xs font-medium capitalize text-[#15795a] transition-colors hover:bg-[#f3f9f6]"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+// FollowupsPanel now lives in ./followups-panel so the Reminders queue reuses the
+// same fetch / resolve loop (imported above).
 
 // ─── ROOT EXPORT ──────────────────────────────────────────────────────────────
 

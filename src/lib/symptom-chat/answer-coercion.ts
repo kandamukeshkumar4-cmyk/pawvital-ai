@@ -10,10 +10,17 @@ import { isEmergencyGradeCriticalQuestionId } from "@/lib/clinical/emergency-gra
 
 export function getNextQuestionAvoidingRepeat(
   session: TriageSession,
-  preferredSymptoms: string[] = []
+  preferredSymptoms: string[] = [],
+  // SUPPORTIVE Dog Brain memory: symptom keys derived from recurring owner-logged
+  // signals. Consulted ONLY as a tiebreak — after the current turn's complaint is
+  // exhausted and before the generic fallback — so it can surface an already-legal
+  // follow-up the owner's history makes relevant, without changing the candidate
+  // set or overriding complaint-driven / red-flag selection. Empty = no-op.
+  brainPrioritySymptoms: string[] = []
 ): string | null {
   const nextQuestionId =
     getNextQuestionForPreferredSymptoms(session, preferredSymptoms) ||
+    getNextQuestionForPreferredSymptoms(session, brainPrioritySymptoms) ||
     getNextQuestion(session);
   if (!nextQuestionId) return null;
 

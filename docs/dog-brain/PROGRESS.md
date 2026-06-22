@@ -1,0 +1,121 @@
+# Dog Brain — Closed-Loop Progress
+
+> Loop memory for the "Complete PawVital Dog Brain as a bounded closed loop" goal.
+> DISCOVER → PLAN → EXECUTE → VERIFY → ITERATE. Do not claim done until hard verification passes.
+
+## Current HEAD / branch
+
+- Branch: `codex/dog-brain-ui-closeout`
+- HEAD now: `39ae765` (breathing/cough family), 13 commits ahead of origin (unpushed). Base `050bdcf`.
+- Worktree: `G:\MY Website\pawvital-ai` (busy multi-agent env — plans/*.json churn from agent-watcher is NOT ours)
+- jest runs locally on G: (only `npm run build` is the known-broken-on-G: step → use Vercel remote for build proof)
+
+## ⚠️ INCIDENT (run 11) — worktree hijack + recovery
+Another agent (torch security work) checked this worktree from `codex/dog-brain-ui-closeout` over to `fix/torch-security-upgrade` then `-v2`. My breathing/cough commit `39ae765` had landed while the worktree was briefly on `fix/torch-security-upgrade`, so the `codex/dog-brain-ui-closeout` ref was left at `e5fc5b6` (mobility) and the breathing commit was orphaned (still in the object store).
+RECOVERY: `git branch -f codex/dog-brain-ui-closeout 39ae765` (fast-forward, parent was e5fc5b6) → `git checkout codex/dog-brain-ui-closeout`. Verified: full 13-commit chain intact, 33 dog-brain tests pass. **Zero work lost.**
+GUARD for next runs: FIRST verify `git branch --show-current` == codex/dog-brain-ui-closeout and `git rev-parse HEAD`; if the worktree was hijacked again, the commits survive on the branch ref / reflog — recover with `git branch -f` + checkout. Commit each bounded change FAST to shrink the uncommitted-work window. Do NOT push (origin push auto-opens a PR → auto-merge to master per AGENTS.md).
+
+## Verified test baseline (AutoLab: never hand off worse than this)
+
+- `npx jest --runInBand "dog-brain"` → **8 suites / 67 tests PASS** (2.8s)
+- `npx jest --runInBand "followups|next-question|question-phrasing|triage-engine"` → **8 suites / 233 tests PASS** (2.8s)
+
+## Discovery — what the checker actually verified (not just "API exists")
+
+### DONE (code-verified)
+- **Blocker #1 — VetRecordIntakeButton passes pet_id.** `src/components/symptom-checker/vet-record-intake-button.tsx:66` sets `formData.set("pet_id", petId)`; route `src/app/api/azure/documents/vet-record-intake/route.ts:170-180` validates ownership and `persistVetRecordSummary` writes `user_id`+`pet_id` into `vet_record_summaries`. ✅
+- **Blocker #2 — follow-up idempotency.** `src/app/api/dog-brain/followups/route.ts:89-137` does pre-query for pending (user+pet+signal_key+status=pending) → insert → catches 23505 as deduped. Does NOT rely on a non-matching onConflict target. ✅
+- **Blocker #3 — 90-day context not silently capped.** `src/lib/health-log/dog-brain-context.ts` uses `MAX_LOGS=90`, passes full window to `summarizeDailyLogsForContext(logs, petName, MAX_LOGS)`; the 14-day `RECENT_PACK_WINDOW` is an intentional *additional* detail layer, not a cap. Test-covered (`dog-brain-90day-window.test.ts`). ✅
+- **Blocker #4 — server-side due_at.** `followups/route.ts:109-111` defaults `due_at` to +3d server-side. ✅ (scheduling is minimal but durable)
+- **Urgency safety.** Deterministic emergency/red-flag path (`route.ts:2327-2387`) runs before planning; Brain context lives only in `case_memory.daily_log_context`, read solely by `buildNarrativeReportPrompt`. Test-covered (`dog-brain-context-urgency-guard.test.ts`). ✅
+
+### OPEN (real gaps, priority order)
+1. **Blocker #5 — Brain influences question planning.** ✅ DONE — maker (run 2) + independent clinical checker **APPROVE-WITH-NITS, no required fixes** (run 3). Checker independently code-traced all 8 safety checks PASS: candidate set unchanged, complaint + pending-clarification priority, urgency/red-flag isolation, no-op + best-effort safety, wiring real end-to-end. SIA Goodhart guard: verified against deterministic SYMPTOM_MAP, not the maker's tests.
+   - Checker nit (future, non-blocking): `stool_change → [diarrhea, blood_in_stool, constipation]` can't distinguish direction; after complaint exhaustion the highest-urgency sibling is surfaced, so a constipation-only history could surface a diarrhea follow-up. Tiebreak-only → safety intact. Tracked under gap #6 (enrich signal shape to carry stool direction).
+   - **Thermo-review verdict: APPROVE-WITH-NITS.** Applied the interim fix (commit 2): the two independent best-effort Brain loads in the chat block now run via `Promise.all` instead of sequentially. Re-verified: typecheck pass, 468 tests pass (incl. symptom-chat route). Recorded FAST-FOLLOW (gap #7 below): fold signal detection into `loadDogBrainContext` (it already loads the 90-log superset) and return `{ context, prioritySymptoms }`, deleting `priority-symptoms-server.ts` + one ownership/logs round-trip per turn.
+   - Design shipped: **tiebreak-only** — `getNextQuestionAvoidingRepeat(session, preferred, brainPrioritySymptoms=[])` inserts a Brain term BETWEEN the current complaint and the generic fallback. Current complaint always wins; Brain only surfaces an already-legal follow-up after the complaint is exhausted; empty Brain = byte-identical no-op.
+   - Files: NEW `src/lib/dog-brain/question-priority.ts` (pure map signal→symptom keys), NEW `src/lib/dog-brain/priority-symptoms-server.ts` (best-effort loader), edited `answer-coercion.ts` (+3rd param), `next-question-orchestration.ts` (+optional input field), `route.ts` (import + load in existing best-effort chat block + pass to orchestrate).
+   - Tests: NEW `tests/dog-brain-question-priority.test.ts` (7) + `tests/dog-brain-question-priority.orchestration.test.ts` (3) → proof (g) targeted question from Brain; complaint-wins; empty=no-op; pending-clarification overrides Brain; severity ordering/dedup; every emitted key ∈ SYMPTOM_MAP.
+2. ~~**Test (d)** duplicate-pending follow-up~~ ✅ DONE (run 3) — `tests/dog-brain-followups-route.test.ts` POST block: proof (d) asserts an existing pending row → `deduped:true`, status 200, `insert` never called; plus create-path (201, insert once) + invalid-body-before-DB. 6/6 pass.
+3. ~~**Test (c)** vet-record durable persistence~~ ✅ DONE (run 4) — `tests/azure-document-intake-route.test.ts`: owned pet → `vet_record_summaries` insert asserted with full row (user_id, pet_id, file_name, context_text, extracted_fields, page_count); unowned pet → insert never called (pet-scoping). 8/8 pass.
+4. ~~**Follow-up outcome → Brain memory (feature + test (e)).**~~ ✅ DONE (run 4). FEATURE: `loadDogBrainContext` now reads `dog_brain_followups` (5th parallel query) and emits an active-concern/outcome section via new pure `summarizeFollowupsForContext` (`context.ts`) — outcome-aware next actions (worse→consider vet, better→de-escalate, same→keep monitoring, pending→active concern, dismissed→dropped). Supportive-only, same report-prompt safety envelope (benign-memory urgency-guard test still passes). PROOF (e): `tests/dog-brain-followup-context.test.ts` (same follow-up → 3 distinct next actions) + `tests/dog-brain-followup-outcome.route.test.ts` (PATCH persists outcome + returns updated row, 404 unowned, 400 invalid). 30 + 121-area tests pass.
+5. **UI (layer G):** Reminders page does not surface Brain follow-ups; History has no Brain timeline; Supplements follow-up linkage weak. (Dashboard/DailyLog/SymptomChecker/Supplements already read signals.)
+6. **Signal breadth (layer C):** only 5 of ~11 families (appetite, stool, vomiting, weight, medication). Missing water/urination, breathing/cough, mobility/pain, skin/ear, low-energy/behavior, supplement-improvement. Signal shape also lighter than contract (no `confidence`, `vet_handoff_text`, `suggested_followup_date`). Also: carry **stool direction** (diarrhea vs constipation) on `stool_change` so the Brain question tiebreak surfaces the matching follow-up (checker nit from #5); when adding families, extend `BRAIN_SIGNAL_SYMPTOM_KEYS` in `question-priority.ts` (water→`drinking_more`/`urination_problem`).
+
+## PLAN — next bounded change (Blocker #5), clinically safe
+
+**Scope:** make the Dog Brain *supportively* bias WHICH already-legal missing question is asked first — tiebreak only. Never invent questions, never change the candidate set, never touch urgency/red-flag/pending-clarification selection.
+
+Design:
+1. In the route chat path, after Brain memory loads, compute a small `brainPriorityTopics: string[]` from structured `detectDogBrainSignals(logs)` (map signal_type → symptom/question topic key). Pass it into `orchestrateNextQuestion` via a new optional input field.
+2. In `getNextQuestionAvoidingRepeat` (or a thin wrapper in the orchestrator), when `needsClarificationQuestionId` is null AND there is no red-flag-mandated question AND there are ≥2 legal missing questions, prefer the missing question whose topic ∈ `brainPriorityTopics`. Otherwise unchanged.
+3. Record a telemetry/evidence-chain line "Brain memory influenced next question: <id>" (internal only).
+
+Tests to add (TDD, red→green):
+- (g) given a session with 2 missing questions and Brain memory of a recurring skin signal, the skin-topic question is selected first.
+- urgency regression: when a red-flag/emergency question is mandated, Brain preference does NOT fire (selection identical to baseline).
+- no-Brain fallback: with empty Brain memory, selection is byte-identical to current behavior (guards against regressions in the 233-test baseline).
+
+## Failed attempts
+- (none this loop)
+
+## Known pre-existing failure (NOT introduced by this work)
+- `tests/symptom-checker.tester-onboarding.test.ts:139` — `fetchMock.toHaveBeenCalledTimes(1)` jsdom/`waitFor` timing flake. Fails in isolation; its import graph (`SymptomCheckerPage`, `request-timeout`, `useAppStore`, types) contains NONE of the 7 files changed this run. Matches project's documented pre-existing fails.
+
+## Tests run this loop
+- Baseline (run 1): `dog-brain` 67 pass; `followups|next-question|question-phrasing|triage-engine` 233 pass.
+- Run 2 (blocker #5): new `dog-brain-question-priority*` = **10/10 pass**; `dog-brain|followups|next-question|question-phrasing|triage-engine|answer-coercion` = **363/363 pass** (no regression); full gate `clinical|dog-brain|symptom|health-log|followups|vet-record` = **2241 pass / 1 pre-existing-unrelated fail**.
+- `npm run typecheck` = exit 0. `eslint` touched files = 0 errors (6 pre-existing route.ts warnings, none new). `npm run build` not run locally (broken on G: → CI/Vercel remote).
+
+## Production / manual verification
+- Pending. Browser walkthrough (Daily Log → signal → Symptom Checker uses Brain question → follow-up) deferred until the checker clears #5 and more of the chain lands.
+
+## 7 required proofs — ALL COVERED ✅
+- (a) 90-day event affects context — `dog-brain-90day-window.test.ts`
+- (b) emergency urgency can't be lowered by benign memory — `dog-brain-context-urgency-guard.test.ts`
+- (c) vet-record durable pet-scoped persistence — `azure-document-intake-route.test.ts` (run 4)
+- (d) duplicate pending follow-up not created — `dog-brain-followups-route.test.ts` (run 3)
+- (e) follow-up outcome updates Brain memory + next actions — `dog-brain-followup-context.test.ts` + `dog-brain-followup-outcome.route.test.ts` (run 4)
+- (f) daily-log abnormal input creates a signal — `dog-brain-signals.test.ts`
+- (g) symptom checker asks a targeted question from Brain context — `dog-brain-question-priority.test.ts` (run 2)
+
+Backend closed loop is wired + test-proven end to end: log → signal → symptom-checker question tiebreak → follow-up (durable, deduped, server due_at) → owner outcome → Brain context updates next actions → report/context cites it.
+
+## Remaining (NOT done — do not claim full "done" yet)
+- **Gap #5 UI surfacing** (every-tab-reflects-Brain contract):
+  - ~~Reminders shows Brain follow-ups~~ ✅ DONE (run 5). Extracted `FollowupsPanel` out of `health-brief.tsx` into shared `src/components/dog-brain/followups-panel.tsx` (DRY — dashboard + Reminders reuse one fetch/resolve loop; `signals` now optional so Reminders is display+resolve only, no auto-create). Wired into `reminders/page.tsx` under the header. PROOF: `tests/dog-brain-followups-panel.test.tsx` (jsdom) — pending follow-up renders, resolving "worse" PATCHes status:worse + optimistically removes, empty renders nothing. typecheck+lint clean; 91 dog-brain tests pass.
+  - ~~History Brain timeline~~ ✅ DONE (run 6). The `VetTimeline` component already existed (filters/vet-summary/recurring-signs/log-next) but was wired to NO page. New `src/components/analytics/brain-timeline-section.tsx` fetches `/api/analytics/vet-timeline` and renders it; History page gains a "Symptom Checks | Brain Timeline" tab toggle. PROOF: `tests/brain-timeline-section.test.tsx` (jsdom) — fetches + renders a dated owner event + vet summary; empty state; never fetches without a pet. typecheck+lint clean; 13 timeline/analytics tests pass.
+  - ~~Supplements follow-up linkage~~ ✅ DONE (run 14). Wired the shared `FollowupsPanel` into the SupplementRail (below the Brain-evidence card) so owners resolve evidence-linked Brain follow-ups (better/same/worse, incl. supplement-trial check-ins) where they manage supplement support. Reuses the proven component (behavior covered by `tests/dog-brain-followups-panel.test.tsx`); renders nothing until a follow-up is pending. typecheck+lint clean. NOTE (future): auto-CREATE a follow-up on supplement START needs persisted "started supplement" state — the page currently shows AI recommendations only, not a persisted supplement record — so that is larger future work, not this bounded slice.
+- **Browser walkthrough** (manual): needs an authenticated session; demo-mode preview stalls (see memory). The full chain is proven by tests but not yet demonstrated live.
+- **Gap #6 signal breadth** (in progress):
+  - ✅ run 8: **water/urination (PU/PD)** family — `water_urination_change` SignalType + `waterUrinationSignal` detector (straining→alert, thirst+urination→watch, single→info). Wired into all 6 `Record<SignalType>` maps (question-priority + 3 health-brief + 2 context-rail; typecheck enforces exhaustiveness). Stool checker-nit RESOLVED: dropped `constipation` from `stool_change` mapping (daily-log Stool enum has no constipation). Tests: dog-brain-signals + question-priority. 53 tests pass.
+  - ✅ run 9: **mobility/pain** family — `mobility_pain_change` SignalType + `mobilityPainSignal` (context_signals.mobility limping/limb/reluctance_to_move; limping 2+ days or limping+reluctance → watch, else info). Maps to `limping`+`generalized_stiffness`. All 6 maps + tests. typecheck/lint/jest pass.
+  - ✅ run 10: **breathing/cough** family — `breathing_cough_change` SignalType + `breathingCoughSignal` (context_signals.breathing coughing/labored/exercise_intolerance; labored or cough 2+ days → watch with urgent next action, single cough → info). Maps to `coughing`+`difficulty_breathing`. All 6 maps (Wind icon) + tests. typecheck/lint/jest pass.
+  - ✅ run 12: **skin/ear** family — `skin_ear_change` SignalType + `skinEarSignal` (context_signals.skin_ear scratching/head_shaking/odor/hot_spot; hot_spot or recurring 2+ days → watch, single → info). Maps to `excessive_scratching`+`recurrent_skin`+`recurrent_ear`. All 6 maps (Bug icon) + tests. typecheck/lint/jest pass (38).
+  - ✅ run 13: **low-energy/behavior** family — `energy_behavior_change` SignalType + `energyBehaviorSignal` (top-level log.energy === "low"; 2+ days → watch, single → info; high energy ignored). Maps to `lethargy`+`behavior_change`. All 6 maps (BatteryLow icon) + tests. typecheck/lint/jest pass (42).
+  - ✅ SIGNAL FAMILIES COMPLETE: 10 detectors now (appetite, stool, vomiting, weight, water/urination, mobility/pain, breathing/cough, skin/ear, energy/behavior, medication). All wired to question tiebreak + dashboard + symptom-checker rail.
+  - ✅ run 15: signal-shape ENRICHMENT — DetectedSignal now carries optional `confidence` (0–1, severity-derived) + `vet_handoff_text` (one-line vet phrasing), added via a pure `enrichSignal` pass in detectDogBrainSignals (behavior-preserving). Surfaced as a "For your vet:" line on the dashboard signal card; included in /api/dog-brain/signals. Tests assert confidence∈[0,1] + non-empty handoff text + alert>info confidence. Signal layer is now contract-complete (signal_key/dedupe_key, severity, evidence/owner_message, confidence, next_action, vet_handoff_text).
+- ~~**Gap #7 fast-follow (thermo)**~~ ✅ DONE (run 7). `loadDogBrainContextWithSignals` is the single impl (one fetch → `{ context, prioritySymptoms }`, signals derived from the 90-log superset already loaded); `loadDogBrainContext` kept as a thin string wrapper so the report path + integration test are untouched. Chat path calls the combined loader once (was 2 loads + 2 ownership checks); `priority-symptoms-server.ts` DELETED. typecheck + 504 tests pass (incl. report-context integration + symptom-chat route); lint clean (no new warnings).
+- **Before PR/handoff**: full `npm run lint`, full test gate `clinical|dog-brain|symptom|health-log|followups|vet-record`, remote build, and `/thermo-review` on the cumulative diff.
+
+## ✅ CODE-COMPLETE (run 15, tip 0959aee)
+Every contract layer is implemented, committed, and test-backed on `codex/dog-brain-ui-closeout` (19 commits, base 050bdcf). The ONLY remaining item is the **human-authenticated browser walkthrough** (gap 8), which cannot be done from here — demo-mode preview stalls and there are no test credentials.
+
+Final verification: `npm run typecheck` pass; `eslint` clean on touched files (no new warnings); full gate `clinical|dog-brain|symptom|health-log|followups|vet-record` = **2278 pass / 1 fail** (the 1 is the documented pre-existing `symptom-checker.tester-onboarding:139` jsdom flake — unrelated). `npm run build` not run locally (broken on G: → CI/Vercel remote).
+
+**Thermo-review (cumulative diff `050bdcf..HEAD`, run 16): APPROVE.** No structural regression, no >1k file, no new spaghetti; the diff net-deletes duplication (FollowupsPanel extraction + loadDogBrainContextWithSignals fold). Findings: (1) 10-detector parallelism in signals.ts is defensible — distinct per-signal clinical thresholds, explicitness preferred under the clinical-safety override; (2) nit: vet_handoff_text generic derivation could be per-signal (future). Blocker #5 separately had clinical-reviewer + thermo APPROVE-WITH-NITS earlier.
+
+**Deploy decision (Claude, run 16): NOT pushing.** The goal requires authenticated browser verification before "done"; I have no credentials and demo preview stalls. Origin push auto-opens a PR → auto-merge to master → prod deploy (AGENTS.md), so shipping clinical changes to a live app without the mandated browser walkthrough would violate the goal's own stop condition. The branch is ready; a human runs the walkthrough checklist below, then pushes when satisfied.
+
+### Browser walkthrough checklist for a human (gap 8) — run with a real logged-in account
+1. Daily Log → save an abnormal day (e.g. low energy + reduced appetite) → Dashboard "What PawVital Noticed" shows the matching signal(s) with a "For your vet:" line.
+2. Health Signals/Analytics → same signal appears in the 14-day grid + 90-day timeline.
+3. Symptom Checker → start a check on a related complaint → the context rail shows Brain memory and a targeted follow-up question is asked (proof g).
+4. Dashboard/Reminders/Supplements → a pending Brain follow-up appears with a due date; answer better/same/worse.
+5. Re-open the Brain context (report or History timeline) → the resolved outcome is reflected and next-actions changed (gap 4 / proof e).
+6. Upload a vet record (Symptom Checker intake) for the owned pet → it persists and appears in History/timeline + future Brain context (proof c).
+7. Vet report (Analytics "Create vet-safe summary" / Vet timeline PDF) → cites dated logs/signals/follow-ups/vet records.
+8. EMERGENCY SAFETY: run a symptom check with a red-flag complaint while benign Brain memory exists → urgency stays emergency (proof b — also locked by `dog-brain-context-urgency-guard.test.ts`).
+
+### If continuing the loop anyway
+Only gap 8 (human) remains. Optional future polish, not required by the goal: auto-create a follow-up on supplement START (needs persisted started-supplement state); Brain observability log; Brain eval suite with fixed dog timelines; privacy export/delete controls; notification delivery for due follow-ups. Each is a fresh bounded ticket.

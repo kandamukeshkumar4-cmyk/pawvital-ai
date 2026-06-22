@@ -18,6 +18,7 @@ import type { DetectedSignal } from "@/lib/dog-brain/types";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
+import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
 
 interface SupplementItem {
   name: string;
@@ -255,6 +256,11 @@ function SupplementRail({ petId, petName }: { petId: string | null; petName: str
           <p className="text-[13px] text-[#8a978f]">No active patterns — keep logging to build evidence.</p>
         )}
       </div>
+
+      {/* Evidence-linked follow-up loop: pending Brain follow-ups the owner can
+          resolve better/same/worse (incl. supplement-trial check-ins). Reuses the
+          shared panel; renders nothing until there is a pending follow-up. */}
+      <FollowupsPanel petId={petId} />
 
       <a
         href="/analytics"

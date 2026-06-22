@@ -40,6 +40,31 @@ async function postFile(file: File) {
   );
 }
 
+async function postFileWithPet(file: File, petId: string) {
+  const formData = new FormData();
+  formData.set("file", file);
+  formData.set("pet_id", petId);
+  const { POST } =
+    await import("@/app/api/azure/documents/vet-record-intake/route");
+  return POST(
+    new Request("http://localhost/api/azure/documents/vet-record-intake", {
+      body: formData,
+      method: "POST",
+    }),
+  );
+}
+
+function petOwnershipChain(result: unknown) {
+  const c: Record<string, unknown> = {
+    select: jest.fn(() => c),
+    eq: jest.fn(() => c),
+    maybeSingle: jest.fn(async () => result),
+  };
+  return c;
+}
+
+const VET_PET_ID = "11111111-1111-4111-8111-111111111111";
+
 describe("POST /api/azure/documents/vet-record-intake", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -169,5 +194,51 @@ describe("POST /api/azure/documents/vet-record-intake", () => {
       pageCount: 1,
     });
     expect(JSON.stringify(payload)).not.toContain("Violence");
+  });
+
+  it("(proof c) persists durable pet-scoped Dog Brain memory for an owned pet", async () => {
+    const insertMock = jest.fn(async () => ({ error: null }));
+    const petQuery = petOwnershipChain({ data: { id: VET_PET_ID }, error: null });
+    mockRequireAuthenticatedApiUser.mockResolvedValue({
+      supabase: {
+        from: jest.fn((table: string) =>
+          table === "pets" ? petQuery : { insert: insertMock },
+        ),
+      },
+      user: { id: "user-1" },
+    });
+
+    const response = await postFileWithPet(pdfFile("labs.pdf"), VET_PET_ID);
+
+    // Intake still returns the context (persistence is additive + best-effort)…
+    expect(response.status).toBe(200);
+    // …and the extracted summary is written as a durable, pet-scoped row.
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock.mock.calls[0][0]).toEqual({
+      user_id: "user-1",
+      pet_id: VET_PET_ID,
+      file_name: "labs.pdf",
+      context_text: "Vet record context from uploaded PDF",
+      extracted_fields: [{ key: "ALT", value: "70" }],
+      page_count: 1,
+    });
+  });
+
+  it("(proof c) never persists a summary for a pet the user does not own", async () => {
+    const insertMock = jest.fn(async () => ({ error: null }));
+    const petQuery = petOwnershipChain({ data: null, error: null });
+    mockRequireAuthenticatedApiUser.mockResolvedValue({
+      supabase: {
+        from: jest.fn((table: string) =>
+          table === "pets" ? petQuery : { insert: insertMock },
+        ),
+      },
+      user: { id: "user-1" },
+    });
+
+    const response = await postFileWithPet(pdfFile(), VET_PET_ID);
+
+    expect(response.status).toBe(200);
+    expect(insertMock).not.toHaveBeenCalled();
   });
 });

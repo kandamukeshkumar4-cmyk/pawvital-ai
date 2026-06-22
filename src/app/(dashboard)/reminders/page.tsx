@@ -20,6 +20,7 @@ import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
+import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
 
 type ReminderType = "medication" | "vet_appointment" | "flea_tick" | "vaccination" | "custom";
 type Frequency = "daily" | "weekly" | "monthly" | "yearly" | "once";
@@ -197,6 +198,10 @@ function RemindersPageContent() {
           <Plus className="w-4 h-4 mr-2" /> Add Reminder
         </Button>
       </div>
+
+      {/* Brain-created follow-ups share the queue with owner reminders. Renders
+          nothing until the Dog Brain has a pending follow-up for this pet. */}
+      {petId && <FollowupsPanel petId={petId} />}
 
       {!petId ? (
         <Card className="p-8 text-center">

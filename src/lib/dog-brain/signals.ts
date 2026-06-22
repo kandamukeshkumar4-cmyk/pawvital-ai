@@ -172,6 +172,220 @@ function medicationSignal(logs: HealthLog[]): DetectedSignal | null {
   };
 }
 
+function waterUrinationSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const waterOff = recent.filter((log) => log.water === "more" || log.water === "less");
+  const urineOff = recent.filter(
+    (log) =>
+      log.urination === "more" ||
+      log.urination === "less" ||
+      log.urination === "straining",
+  );
+  const thirstNoted = recent.filter(
+    (log) => log.context_signals?.urinary?.increased_thirst,
+  ).length;
+  const accidents = recent.some((log) => log.context_signals?.urinary?.accidents);
+  const straining = recent.some((log) => log.urination === "straining");
+
+  const offCount = Math.max(waterOff.length, urineOff.length);
+  if (offCount === 0 && thirstNoted === 0 && !accidents) return null;
+
+  // Increased thirst + increased urination together is the classic PU/PD pattern
+  // worth a vet mention (kidney/diabetes/Cushing's-adjacent). Supportive only —
+  // never feeds deterministic urgency.
+  const puPd =
+    (latest.water === "more" || thirstNoted > 0) &&
+    recent.some((log) => log.urination === "more");
+
+  const severity: SignalSeverity = straining ? "alert" : puPd || offCount >= 2 ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (waterOff.length > 0) {
+    parts.push(`water intake ${latest.water === "more" ? "up" : "down"}`);
+  }
+  if (straining) parts.push("straining to urinate");
+  else if (urineOff.length > 0) parts.push("urination changed");
+  else if (accidents) parts.push("urinary accidents");
+  if (thirstNoted > 0 && waterOff.length === 0) parts.push("increased thirst noted");
+
+  return {
+    signal_type: "water_urination_change",
+    severity,
+    owner_message:
+      parts.length > 0
+        ? `Owner logged ${parts.join(" and ")} on ${Math.max(offCount, thirstNoted, 1)} of the last ${recent.length} logged day(s).`
+        : "Water or urination was different from normal recently.",
+    dedupe_key: `water_urination:${latest.log_date}`,
+    next_action: straining
+      ? "Straining to urinate can be urgent — start a symptom check and contact your vet."
+      : "Note water bowls and bathroom trips; a thirst or urination change is worth a vet mention.",
+  };
+}
+
+function mobilityPainSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const limpDays = recent.filter((log) => log.context_signals?.mobility?.limping);
+  const reluctanceDays = recent.filter(
+    (log) => log.context_signals?.mobility?.reluctance_to_move,
+  );
+  if (limpDays.length === 0 && reluctanceDays.length === 0) return null;
+
+  const limb = recent
+    .map((log) => log.context_signals?.mobility?.limb)
+    .find((value): value is string => Boolean(value));
+
+  // Limping on 2+ days, or limping together with reluctance to move, reads as a
+  // sustained pattern worth a vet mention. Supportive only — never urgency.
+  const severity: SignalSeverity =
+    limpDays.length >= 2 || (limpDays.length > 0 && reluctanceDays.length > 0)
+      ? "watch"
+      : "info";
+
+  const parts: string[] = [];
+  if (limpDays.length > 0) parts.push(limb ? `limping (${limb})` : "limping");
+  if (reluctanceDays.length > 0) parts.push("reluctant to move");
+
+  return {
+    signal_type: "mobility_pain_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(" and ")} on ${Math.max(limpDays.length, reluctanceDays.length)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `mobility_pain:${latest.log_date}`,
+    next_action:
+      "Rest from stairs and jumping, note which leg, and mention the limping or stiffness to your vet if it persists.",
+  };
+}
+
+function breathingCoughSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const coughDays = recent.filter((log) => log.context_signals?.breathing?.coughing);
+  const laboredDays = recent.filter((log) => log.context_signals?.breathing?.labored);
+  const exerciseIntolerance = recent.some(
+    (log) => log.context_signals?.breathing?.exercise_intolerance,
+  );
+  if (coughDays.length === 0 && laboredDays.length === 0 && !exerciseIntolerance) {
+    return null;
+  }
+
+  // Labored breathing is the most concerning owner-observable here — surface it
+  // as a watch so the owner runs a check. Deterministic urgency still owns true
+  // emergencies; this is supportive only and never lowers urgency.
+  const severity: SignalSeverity =
+    laboredDays.length > 0 || coughDays.length >= 2 ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (coughDays.length > 0) parts.push("coughing");
+  if (laboredDays.length > 0) parts.push("labored breathing");
+  if (exerciseIntolerance && parts.length === 0) parts.push("tiring quickly on walks");
+
+  return {
+    signal_type: "breathing_cough_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(" and ")} on ${Math.max(coughDays.length, laboredDays.length, 1)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `breathing_cough:${latest.log_date}`,
+    next_action:
+      laboredDays.length > 0
+        ? "Labored breathing can be urgent — start a symptom check now and contact your vet."
+        : "Note when the cough happens (rest vs. activity) and mention it to your vet if it continues.",
+  };
+}
+
+function skinEarSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  const scratchDays = recent.filter((log) => log.context_signals?.skin_ear?.scratching);
+  const headShakeDays = recent.filter(
+    (log) => log.context_signals?.skin_ear?.head_shaking,
+  );
+  const odor = recent.some((log) => log.context_signals?.skin_ear?.odor);
+  const hotSpot = recent.some((log) => log.context_signals?.skin_ear?.hot_spot);
+  if (
+    scratchDays.length === 0 &&
+    headShakeDays.length === 0 &&
+    !odor &&
+    !hotSpot
+  ) {
+    return null;
+  }
+
+  // A hot spot or a recurring (2+ day) itch/head-shake reads as a sustained skin
+  // or ear problem worth a vet mention. Supportive only — never urgency.
+  const recurring = scratchDays.length >= 2 || headShakeDays.length >= 2;
+  const severity: SignalSeverity = hotSpot || recurring ? "watch" : "info";
+
+  const parts: string[] = [];
+  if (scratchDays.length > 0) parts.push("scratching");
+  if (headShakeDays.length > 0) parts.push("head shaking");
+  if (odor) parts.push("unusual odor");
+  if (hotSpot) parts.push("a hot spot");
+
+  return {
+    signal_type: "skin_ear_change",
+    severity,
+    owner_message: `Owner logged ${parts.join(", ")} on ${Math.max(scratchDays.length, headShakeDays.length, 1)} of the last ${recent.length} logged day(s).`,
+    dedupe_key: `skin_ear:${latest.log_date}`,
+    next_action:
+      "Note the spot (skin vs. ear) and take a photo; recurring itch, odor, or head shaking is worth a vet mention.",
+  };
+}
+
+function energyBehaviorSignal(logs: HealthLog[]): DetectedSignal | null {
+  const recent = logs.slice(0, RECENT_WINDOW);
+  const latest = recent[0];
+  if (!latest) return null;
+
+  // Only LOW energy is a concern; high energy is not flagged. Behavior-change
+  // notes (if the owner logged them) reinforce a low-energy day.
+  const lowDays = recent.filter((log) => log.energy === "low");
+  if (lowDays.length === 0) return null;
+
+  const severity: SignalSeverity = lowDays.length >= 2 ? "watch" : "info";
+
+  return {
+    signal_type: "energy_behavior_change",
+    severity,
+    owner_message:
+      lowDays.length >= 2
+        ? `Owner logged low energy on ${lowDays.length} of the last ${recent.length} logged days.`
+        : "The latest log shows energy was lower than normal.",
+    dedupe_key: `energy_behavior:${latest.log_date}`,
+    next_action:
+      "Low energy can have many causes — log appetite, water, and any other changes, and start a symptom check if it persists.",
+  };
+}
+
+const SEVERITY_CONFIDENCE: Record<SignalSeverity, number> = {
+  info: 0.5,
+  watch: 0.72,
+  alert: 0.88,
+};
+
+/**
+ * Add the contract's confidence + vet-handoff fields, derived from what the
+ * detector already produced (severity drives confidence; the owner message
+ * becomes a one-line vet-facing phrasing). Pure; a detector may set its own
+ * values and they are preserved.
+ */
+function enrichSignal(signal: DetectedSignal): DetectedSignal {
+  return {
+    ...signal,
+    confidence: signal.confidence ?? SEVERITY_CONFIDENCE[signal.severity],
+    vet_handoff_text:
+      signal.vet_handoff_text ??
+      `Owner-reported (${signal.severity}): ${signal.owner_message}`,
+  };
+}
+
 export function detectDogBrainSignals(logs: HealthLog[]): {
   state: BriefState;
   signals: DetectedSignal[];
@@ -183,11 +397,17 @@ export function detectDogBrainSignals(logs: HealthLog[]): {
   pushSignal(signals, stoolSignal(ordered));
   pushSignal(signals, vomitingSignal(ordered));
   pushSignal(signals, weightSignal(ordered));
+  pushSignal(signals, waterUrinationSignal(ordered));
+  pushSignal(signals, mobilityPainSignal(ordered));
+  pushSignal(signals, breathingCoughSignal(ordered));
+  pushSignal(signals, skinEarSignal(ordered));
+  pushSignal(signals, energyBehaviorSignal(ordered));
   pushSignal(signals, medicationSignal(ordered));
 
-  const state = combineState(signals);
+  const enriched = signals.map(enrichSignal);
+  const state = combineState(enriched);
   return {
-    state: signals.length === 1 ? severityState(signals[0].severity) : state,
-    signals,
+    state: enriched.length === 1 ? severityState(enriched[0].severity) : state,
+    signals: enriched,
   };
 }

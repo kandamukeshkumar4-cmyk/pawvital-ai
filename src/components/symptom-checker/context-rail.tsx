@@ -19,6 +19,11 @@ import {
   ShieldCheck,
   Utensils,
   Waves,
+  Droplets,
+  Footprints,
+  Wind,
+  Bug,
+  BatteryLow,
   Scale,
   AlertCircle,
   Pill,
@@ -31,6 +36,11 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   stool_change: "Stool change",
   vomiting_trend: "Vomiting",
   weight_downtrend: "Weight downtrend",
+  water_urination_change: "Thirst & urination",
+  mobility_pain_change: "Mobility & pain",
+  breathing_cough_change: "Breathing & cough",
+  skin_ear_change: "Skin & ear",
+  energy_behavior_change: "Energy & behavior",
   possible_med_side_effect: "Medication note",
 };
 
@@ -39,6 +49,11 @@ const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
   stool_change: Waves,
   vomiting_trend: AlertCircle,
   weight_downtrend: Scale,
+  water_urination_change: Droplets,
+  mobility_pain_change: Footprints,
+  breathing_cough_change: Wind,
+  skin_ear_change: Bug,
+  energy_behavior_change: BatteryLow,
   possible_med_side_effect: Pill,
 };
 
