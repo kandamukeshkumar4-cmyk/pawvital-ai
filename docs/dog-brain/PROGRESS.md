@@ -101,7 +101,11 @@ Backend closed loop is wired + test-proven end to end: log → signal → sympto
 ## ✅ CODE-COMPLETE (run 15, tip 0959aee)
 Every contract layer is implemented, committed, and test-backed on `codex/dog-brain-ui-closeout` (19 commits, base 050bdcf). The ONLY remaining item is the **human-authenticated browser walkthrough** (gap 8), which cannot be done from here — demo-mode preview stalls and there are no test credentials.
 
-Final verification: `npm run typecheck` pass; `eslint` clean on touched files (no new warnings); full gate `clinical|dog-brain|symptom|health-log|followups|vet-record` = **2278 pass / 1 fail** (the 1 is the documented pre-existing `symptom-checker.tester-onboarding:139` jsdom flake — unrelated). `npm run build` not run locally (broken on G: → CI/Vercel remote). `/thermo-review` was run on the sensitive blocker-#5 diff (APPROVE-WITH-NITS); subsequent slices were small, mechanical, and test-backed.
+Final verification: `npm run typecheck` pass; `eslint` clean on touched files (no new warnings); full gate `clinical|dog-brain|symptom|health-log|followups|vet-record` = **2278 pass / 1 fail** (the 1 is the documented pre-existing `symptom-checker.tester-onboarding:139` jsdom flake — unrelated). `npm run build` not run locally (broken on G: → CI/Vercel remote).
+
+**Thermo-review (cumulative diff `050bdcf..HEAD`, run 16): APPROVE.** No structural regression, no >1k file, no new spaghetti; the diff net-deletes duplication (FollowupsPanel extraction + loadDogBrainContextWithSignals fold). Findings: (1) 10-detector parallelism in signals.ts is defensible — distinct per-signal clinical thresholds, explicitness preferred under the clinical-safety override; (2) nit: vet_handoff_text generic derivation could be per-signal (future). Blocker #5 separately had clinical-reviewer + thermo APPROVE-WITH-NITS earlier.
+
+**Deploy decision (Claude, run 16): NOT pushing.** The goal requires authenticated browser verification before "done"; I have no credentials and demo preview stalls. Origin push auto-opens a PR → auto-merge to master → prod deploy (AGENTS.md), so shipping clinical changes to a live app without the mandated browser walkthrough would violate the goal's own stop condition. The branch is ready; a human runs the walkthrough checklist below, then pushes when satisfied.
 
 ### Browser walkthrough checklist for a human (gap 8) — run with a real logged-in account
 1. Daily Log → save an abnormal day (e.g. low energy + reduced appetite) → Dashboard "What PawVital Noticed" shows the matching signal(s) with a "For your vet:" line.
