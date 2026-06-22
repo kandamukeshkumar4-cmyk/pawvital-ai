@@ -242,7 +242,7 @@ function ChangedFromNormalTile({ items }: { items: ChangedSignal[] }) {
     <div className={`${CARD} flex flex-col p-4`}>
       <div className="flex items-center gap-2">
         <TrendingUp className="h-4 w-4 text-[#0a7d5b]" aria-hidden />
-        <p className={LABEL}>Changed from normal</p>
+        <p className={LABEL}>What changed from normal</p>
       </div>
       {items.length === 0 ? (
         <p className="mt-3 text-sm leading-relaxed text-[#6b665d]">
@@ -251,9 +251,19 @@ function ChangedFromNormalTile({ items }: { items: ChangedSignal[] }) {
       ) : (
         <ul className="mt-3 space-y-2">
           {items.slice(0, 4).map((item) => (
-            <li key={item.label} className="flex items-center justify-between gap-2">
-              <span className="text-sm text-[#4a463f]">{item.label}</span>
-              <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: TONE_TEXT[item.tone] }}>
+            <li
+              key={item.label}
+              className="flex items-center justify-between gap-2 rounded-r-[10px] py-1.5 pl-3 pr-2.5"
+              style={{
+                borderLeft: `3px solid ${TONE_DOT[item.tone]}`,
+                background: TONE_SOFT_BG[item.tone],
+              }}
+            >
+              <span className="text-sm font-medium text-[#3a3b34]">{item.label}</span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold"
+                style={{ color: TONE_TEXT[item.tone] }}
+              >
                 <ChangeArrow arrow={item.arrow} tone={item.tone} />
                 {item.value}
               </span>
@@ -369,16 +379,73 @@ function ChangeBadge({ change }: { change: ChangeDirection }) {
   );
 }
 
+const GRID_EYEBROW = "text-xs font-semibold uppercase tracking-wide text-[#0b7a4d]";
+
+const GRID_LEGEND: { label: string; color: string }[] = [
+  { label: "Good", color: "#15a06a" },
+  { label: "Watch", color: "#e0890a" },
+  { label: "Alert", color: "#d64545" },
+  { label: "No data", color: "#c8c9c0" },
+];
+
+function GridLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {GRID_LEGEND.map((l) => (
+        <span key={l.label} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6f7069]">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: l.color }} aria-hidden />
+          {l.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const PREVIEW_EXAMPLE_ROWS: { label: string; tones: SignalTone[] }[] = [
+  { label: "Appetite", tones: ["good", "good", "watch", "good", "good"] },
+  { label: "Water", tones: ["good", "good", "good", "good", "good"] },
+  { label: "Stool", tones: ["good", "watch", "alert", "watch", "good"] },
+  { label: "Energy", tones: ["good", "good", "good", "watch", "good"] },
+];
+
 export function SignalGrid({ grid }: { grid: SignalGridModel }) {
   if (!grid.hasData) {
     return (
       <section className={`${CARD} p-5`}>
-        <p className={LABEL}>14-day signal grid</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className={GRID_EYEBROW}>14-day signal grid</p>
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            style={{ background: "rgba(11,122,77,0.10)", color: "#0b7a4d" }}
+          >
+            Preview
+          </span>
+        </div>
         <p className="mt-3 text-sm leading-relaxed text-[#6b665d]">
-          No daily logs yet this week. A 30-second daily log fills this grid so you can see
-          whether each signal is steady or changing.
+          Log ~14 days and your Health Signals will look like this.
         </p>
-        <Link href="/health-log" className="mt-3 inline-block text-sm font-medium text-[#0a7d5b] hover:underline">
+        <div className="relative mt-4 select-none" aria-hidden style={{ opacity: 0.45 }}>
+          <span className="absolute right-0 top-0 rounded-full bg-[#ecebe5] px-2 py-0.5 text-[10px] font-semibold text-[#6f7069]">
+            Example
+          </span>
+          <div className="space-y-2 pt-5">
+            {PREVIEW_EXAMPLE_ROWS.map((r) => (
+              <div key={r.label} className="flex items-center gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-[#8a857a]">{r.label}</span>
+                <div className="flex flex-1 gap-1.5">
+                  {r.tones.map((t, i) => (
+                    <span
+                      key={i}
+                      className="h-5 flex-1 rounded-[5px]"
+                      style={{ background: TONE_DOT[t] }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Link href="/health-log" className="mt-4 inline-block text-sm font-medium text-[#0a7d5b] hover:underline">
           Log today&apos;s check-in →
         </Link>
       </section>
@@ -387,8 +454,9 @@ export function SignalGrid({ grid }: { grid: SignalGridModel }) {
 
   return (
     <section className={`${CARD} overflow-hidden`}>
-      <div className="border-b border-[#f0ebe2] px-5 py-4">
-        <p className={LABEL}>14-day signal grid</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ebeae5] px-5 py-4">
+        <p className={GRID_EYEBROW}>14-day signal grid</p>
+        <GridLegend />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-sm">
@@ -425,7 +493,7 @@ export function SignalGrid({ grid }: { grid: SignalGridModel }) {
                         </span>
                       </span>
                     ) : (
-                      <span className="text-[#d6cfc4] text-base">—</span>
+                      <span className="text-base" style={{ color: "#cbccc3" }}>—</span>
                     )}
                   </td>
                 ))}
@@ -461,38 +529,39 @@ export function PatternTimeline({ events }: { events: TimelineEvent[] }) {
 
   return (
     <section className={`${CARD} p-5`}>
-      <p className={LABEL}>Pattern timeline</p>
-      <div className="mt-4 overflow-x-auto pb-2">
-        <div className="flex min-w-max items-stretch gap-3">
-          {ordered.map((ev, i) => {
-            const meta = SOURCE_META[ev.source];
-            const Icon = meta.icon;
-            return (
-              <div key={`${ev.date}-${ev.source}-${i}`} className="flex w-40 shrink-0 flex-col items-center text-center">
-                <span className="text-[11px] font-medium text-[#a8a097]">{ev.monthDay}</span>
-                <div className="mt-1.5 flex w-full items-center">
-                  <span className="h-px flex-1" style={{ background: i === 0 ? "transparent" : "#e8e2d8" }} />
-                  <span
-                    className="flex h-9 w-9 items-center justify-center rounded-full border"
-                    style={{ background: TONE_SOFT_BG[ev.tone], borderColor: TONE_DOT[ev.tone], color: TONE_TEXT[ev.tone] }}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="h-px flex-1" style={{ background: i === ordered.length - 1 ? "transparent" : "#e8e2d8" }} />
+      <p className={GRID_EYEBROW}>Pattern timeline</p>
+      <ul className="mt-4 space-y-2.5">
+        {ordered.map((ev, i) => {
+          const meta = SOURCE_META[ev.source];
+          const Icon = meta.icon;
+          return (
+            <li
+              key={`${ev.date}-${ev.source}-${i}`}
+              className="flex items-start gap-3 rounded-xl border border-[#f0ebe2] px-3 py-2.5"
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
+                style={{ background: TONE_SOFT_BG[ev.tone], color: TONE_TEXT[ev.tone] }}
+              >
+                <Icon className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-[11px] font-medium text-[#a8a097]">{ev.monthDay}</span>
+                  <p className="text-sm font-semibold text-[#2c2a26]">{ev.title}</p>
                 </div>
-                <p className="mt-2 text-sm font-semibold text-[#2c2a26]">{ev.title}</p>
                 <p className="mt-0.5 text-xs leading-snug text-[#6b665d]">{ev.detail}</p>
-                <span
-                  className="mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: TONE_SOFT_BG[meta.tone], color: TONE_TEXT[meta.tone] }}
-                >
-                  {meta.label}
-                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                style={{ background: TONE_SOFT_BG[meta.tone], color: TONE_TEXT[meta.tone] }}
+              >
+                {meta.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

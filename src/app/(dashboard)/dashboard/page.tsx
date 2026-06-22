@@ -124,21 +124,26 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+          <h1
+            className="text-[30px] font-bold leading-tight text-[#1d1d1b]"
+            style={{ letterSpacing: "-0.6px" }}
+          >
             {activePet ? `${titleCasePetName(activePet.name)}'s Health Brief` : "Health Brief"}
           </h1>
-          <p className="mt-1 text-[15px] text-[#8a978f]">
-            Your daily overview of what matters most.
+          <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-[#6f7069]">
+            PawVital remembers every log, photo, symptom check and vet record — so
+            nothing about {activePet ? `${titleCasePetName(activePet.name)}` : "your dog"}&apos;s
+            health slips through the cracks.
           </p>
         </div>
         <a
           href="/analytics"
           target="_top"
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e2e6e3] bg-white px-4 py-2.5 text-sm font-medium text-[#3f4a45] hover:bg-[#f7f9f8]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ebeae5] bg-white px-4 py-2.5 text-sm font-medium text-[#3f4a45] transition-colors hover:bg-[#f7f9f8]"
         >
           <Upload className="h-4 w-4" />
           Share summary
