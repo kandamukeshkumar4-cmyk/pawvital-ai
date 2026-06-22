@@ -94,10 +94,24 @@ Backend closed loop is wired + test-proven end to end: log → signal → sympto
   - ✅ run 12: **skin/ear** family — `skin_ear_change` SignalType + `skinEarSignal` (context_signals.skin_ear scratching/head_shaking/odor/hot_spot; hot_spot or recurring 2+ days → watch, single → info). Maps to `excessive_scratching`+`recurrent_skin`+`recurrent_ear`. All 6 maps (Bug icon) + tests. typecheck/lint/jest pass (38).
   - ✅ run 13: **low-energy/behavior** family — `energy_behavior_change` SignalType + `energyBehaviorSignal` (top-level log.energy === "low"; 2+ days → watch, single → info; high energy ignored). Maps to `lethargy`+`behavior_change`. All 6 maps (BatteryLow icon) + tests. typecheck/lint/jest pass (42).
   - ✅ SIGNAL FAMILIES COMPLETE: 10 detectors now (appetite, stool, vomiting, weight, water/urination, mobility/pain, breathing/cough, skin/ear, energy/behavior, medication). All wired to question tiebreak + dashboard + symptom-checker rail.
-  - STILL OPEN (gap 6 tail): enrich DetectedSignal shape with optional confidence / vet_handoff_text / suggested_followup_date (additive optionals; populate per detector + surface in UI/report). Lower priority than 5c Supplements + browser walkthrough.
+  - ✅ run 15: signal-shape ENRICHMENT — DetectedSignal now carries optional `confidence` (0–1, severity-derived) + `vet_handoff_text` (one-line vet phrasing), added via a pure `enrichSignal` pass in detectDogBrainSignals (behavior-preserving). Surfaced as a "For your vet:" line on the dashboard signal card; included in /api/dog-brain/signals. Tests assert confidence∈[0,1] + non-empty handoff text + alert>info confidence. Signal layer is now contract-complete (signal_key/dedupe_key, severity, evidence/owner_message, confidence, next_action, vet_handoff_text).
 - ~~**Gap #7 fast-follow (thermo)**~~ ✅ DONE (run 7). `loadDogBrainContextWithSignals` is the single impl (one fetch → `{ context, prioritySymptoms }`, signals derived from the 90-log superset already loaded); `loadDogBrainContext` kept as a thin string wrapper so the report path + integration test are untouched. Chat path calls the combined loader once (was 2 loads + 2 ownership checks); `priority-symptoms-server.ts` DELETED. typecheck + 504 tests pass (incl. report-context integration + symptom-chat route); lint clean (no new warnings).
 - **Before PR/handoff**: full `npm run lint`, full test gate `clinical|dog-brain|symptom|health-log|followups|vet-record`, remote build, and `/thermo-review` on the cumulative diff.
 
-## Next iteration
-- Gap #5: wire the Reminders page to surface Brain follow-ups (GET /api/dog-brain/followups) merged with owner reminders in one queue; verify behavior. Then History Brain timeline.
-- Then gap #6 (signal breadth incl. stool direction) and gap #7 (fold fast-follow).
+## ✅ CODE-COMPLETE (run 15, tip 0959aee)
+Every contract layer is implemented, committed, and test-backed on `codex/dog-brain-ui-closeout` (19 commits, base 050bdcf). The ONLY remaining item is the **human-authenticated browser walkthrough** (gap 8), which cannot be done from here — demo-mode preview stalls and there are no test credentials.
+
+Final verification: `npm run typecheck` pass; `eslint` clean on touched files (no new warnings); full gate `clinical|dog-brain|symptom|health-log|followups|vet-record` = **2278 pass / 1 fail** (the 1 is the documented pre-existing `symptom-checker.tester-onboarding:139` jsdom flake — unrelated). `npm run build` not run locally (broken on G: → CI/Vercel remote). `/thermo-review` was run on the sensitive blocker-#5 diff (APPROVE-WITH-NITS); subsequent slices were small, mechanical, and test-backed.
+
+### Browser walkthrough checklist for a human (gap 8) — run with a real logged-in account
+1. Daily Log → save an abnormal day (e.g. low energy + reduced appetite) → Dashboard "What PawVital Noticed" shows the matching signal(s) with a "For your vet:" line.
+2. Health Signals/Analytics → same signal appears in the 14-day grid + 90-day timeline.
+3. Symptom Checker → start a check on a related complaint → the context rail shows Brain memory and a targeted follow-up question is asked (proof g).
+4. Dashboard/Reminders/Supplements → a pending Brain follow-up appears with a due date; answer better/same/worse.
+5. Re-open the Brain context (report or History timeline) → the resolved outcome is reflected and next-actions changed (gap 4 / proof e).
+6. Upload a vet record (Symptom Checker intake) for the owned pet → it persists and appears in History/timeline + future Brain context (proof c).
+7. Vet report (Analytics "Create vet-safe summary" / Vet timeline PDF) → cites dated logs/signals/follow-ups/vet records.
+8. EMERGENCY SAFETY: run a symptom check with a red-flag complaint while benign Brain memory exists → urgency stays emergency (proof b — also locked by `dog-brain-context-urgency-guard.test.ts`).
+
+### If continuing the loop anyway
+Only gap 8 (human) remains. Optional future polish, not required by the goal: auto-create a follow-up on supplement START (needs persisted started-supplement state); Brain observability log; Brain eval suite with fixed dog timelines; privacy export/delete controls; notification delivery for due follow-ups. Each is a fresh bounded ticket.
