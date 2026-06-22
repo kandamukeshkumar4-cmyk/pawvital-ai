@@ -554,7 +554,10 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
 
   logs.slice(0, 6).forEach((log, i) => {
     const raw = log as { log_date?: string; created_at?: string };
-    const dateStr = raw.created_at ?? raw.log_date ?? "";
+    // Label/sort by the day the log is FOR (log_date), not when the row was
+    // written (created_at). Backfilled or bulk-entered logs share a created_at,
+    // which would otherwise collapse several distinct days into one "Today".
+    const dateStr = raw.log_date ?? raw.created_at ?? "";
     const at = new Date(dateStr).getTime() || 0;
     const { label, accent } = timelineDateLabel(dateStr);
     const photos = (log as { photo_urls?: string[] }).photo_urls;
