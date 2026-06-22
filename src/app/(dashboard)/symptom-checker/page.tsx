@@ -20,12 +20,14 @@ import {
   ImagePlus,
   X,
   ShieldCheck,
+  Check,
+  Clock,
+  FileText,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button, { buttonClassName } from "@/components/ui/button";
 import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import {
-  ProgressBar,
   StateBadge,
   TerminalOutcomePanel,
   TerminalOutcomeStatusBadge,
@@ -182,8 +184,10 @@ function ChatBubble({
         )}
       </div>
       <div
-        className="max-w-[min(85%,32rem)] px-4 py-3 text-[#1d1d1b] sm:max-w-[80%]"
+        className="text-[#1d1d1b]"
         style={{
+          maxWidth: isUser ? "420px" : "560px",
+          padding: isUser ? "11px 15px" : "12px 15px",
           borderRadius: isUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
           background: isUser
             ? "#dcefe2"
@@ -245,45 +249,46 @@ function ChatBubble({
             <span>Let me clarify...</span>
           </p>
         )}
+        <p
+          className="text-[14.5px] leading-relaxed whitespace-pre-wrap"
+          style={{ color: isUser ? "#1d3a2a" : undefined }}
+        >
+          {message.content}
+        </p>
         {message.askingBecause && !isUser && (
           <p
-            className="mb-2 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs"
-            style={{
-              background: "#f0f5fb",
-              border: "1px solid #d5e4f2",
-              color: "#3a5a82",
-            }}
+            className="mt-[7px] flex items-start gap-[5px] text-[12.5px]"
+            style={{ color: "#4d7cb5" }}
           >
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden />
+            <ShieldCheck className="mt-0.5 h-[13px] w-[13px] flex-shrink-0" aria-hidden />
             <span>
-              <span className="font-bold">Why I&apos;m asking: </span>
+              <span className="font-semibold">Why I&apos;m asking: </span>
               {message.askingBecause}
             </span>
           </p>
         )}
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </p>
-        <p
-          className="mt-1 text-[10px]"
-          style={{
-            color: isUser
-              ? "#1d3a2a"
-              : isEmergency
-                ? "#cf4338"
-                : isCannotAssess || isImageGate
-                  ? "#b5740a"
-                  : isOutOfScope
-                    ? "#9a9b93"
-                    : "#9a9b93",
-            opacity: isUser ? 0.7 : 1,
-          }}
-        >
-          {message.timestamp.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span
+            className="text-[11.5px]"
+            style={{
+              color: isUser
+                ? "#6f9a82"
+                : isEmergency
+                  ? "#cf4338"
+                  : isCannotAssess || isImageGate
+                    ? "#b5740a"
+                    : "#a8a99f",
+            }}
+          >
+            {message.timestamp.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          {isUser && (
+            <Check className="h-3.5 w-3.5" style={{ color: "#0b7a4d" }} aria-hidden />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1036,6 +1041,19 @@ export default function SymptomCheckerPage() {
     }
   };
 
+  // Real, reactive counts for the "Vet summary — building" tiles. All derived
+  // from live conversation/session state — never hardcoded.
+  const photoCount = messages.filter((m) => m.role === "user" && m.image).length;
+  // "Brain used" = number of remembered-pattern references the assistant cited
+  // this session (each "Why I'm asking" is backed by Dog Brain memory).
+  const memoriesUsed = messages.filter(
+    (m) => m.role === "assistant" && m.askingBecause,
+  ).length;
+  const remainingQuestions = Math.max(
+    Math.max(totalQuestions, 5) - answeredCount,
+    0,
+  );
+
   return (
     <TesterOnboardingGate>
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
@@ -1063,49 +1081,63 @@ export default function SymptomCheckerPage() {
             </p>
           </div>
           <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
-            {sessionStarted && (
-              <Button
-                variant="outline"
-                onClick={startNewSession}
-                className="w-full flex-shrink-0 sm:w-auto"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                New Session
-              </Button>
-            )}
+            <button
+              type="button"
+              onClick={startNewSession}
+              className="flex w-full flex-shrink-0 items-center justify-center gap-2 text-[13.5px] font-semibold transition-colors hover:bg-[#f3f9f6] sm:w-auto"
+              style={{
+                background: "#fff",
+                border: "1px solid #bfe2cf",
+                color: "#0b7a4d",
+                borderRadius: "10px",
+                padding: "9px 15px",
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Start new check
+            </button>
           </div>
         </div>
 
         {/* Emergency banner (mockup #2) */}
         <div
-          className="flex flex-wrap items-center gap-3 px-4 py-3"
+          className="flex flex-wrap items-center gap-[14px]"
           style={{
             background: "linear-gradient(90deg,#fdeeec,#fdf6f4)",
             border: "1px solid #f6dad5",
             borderRadius: "13px",
+            padding: "14px 18px",
           }}
         >
           <AlertTriangle
-            className="h-5 w-5 flex-shrink-0"
+            className="h-6 w-6 flex-shrink-0"
             style={{ color: "#cf4338" }}
             aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold" style={{ color: "#cf4338" }}>
+            <p className="text-[15px] font-bold" style={{ color: "#cf4338" }}>
               Emergency signs detected?
             </p>
-            <p className="text-[13px] leading-snug" style={{ color: "#9c5b53" }}>
-              If your dog has difficulty breathing, collapses, has repeated seizures, severe bleeding, or is
-              unable to stand or urinate, go to an emergency vet now.
+            <p className="mt-0.5 text-[13.5px] leading-snug" style={{ color: "#7a5a56" }}>
+              If your dog has difficulty breathing, collapses, seizures, severe bleeding, or is
+              unable to stand, go to an emergency vet now.
             </p>
           </div>
+          <a
+            href="/emergency"
+            target="_top"
+            className="flex-shrink-0 cursor-pointer text-[13.5px] font-semibold text-white"
+            style={{ background: "#cf4338", borderRadius: "10px", padding: "10px 16px" }}
+          >
+            View emergency signs
+          </a>
         </div>
 
         {/* Dog Brain context strip (mockup #2) — real counts */}
         <SymptomContextStrip petId={activePet?.id ?? null} petName={displayPetName} />
 
         {/* Chat (left) + What PawVital remembers (right) */}
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="grid gap-[22px] lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
           <div className="min-w-0 space-y-4 sm:space-y-6">
 
         {/* Pre-session: Welcome + Quick Start */}
@@ -1225,12 +1257,30 @@ export default function SymptomCheckerPage() {
               )}
             </div>
             {!report && !isTerminalConversation && (
-              <div className="px-4 pb-3">
-                <ProgressBar
-                  answered={answeredCount}
-                  total={totalQuestions}
-                  state={conversationState}
-                />
+              <div className="px-4 pb-3 pt-3">
+                <div className="flex items-center gap-[14px]">
+                  <span className="text-[13px] font-medium" style={{ color: "#6f7069" }}>
+                    Progress
+                  </span>
+                  <div className="flex flex-1 gap-[5px]">
+                    {Array.from({ length: Math.max(totalQuestions, 5) }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-[7px] flex-1"
+                        style={{
+                          borderRadius: "4px",
+                          background: i < answeredCount ? "#15a06a" : "#e8e7e2",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span
+                    className="flex-shrink-0 text-[13px] font-semibold"
+                    style={{ color: "#6f7069" }}
+                  >
+                    {answeredCount} of {Math.max(totalQuestions, 5)} questions
+                  </span>
+                </div>
               </div>
             )}
 
@@ -1354,20 +1404,27 @@ export default function SymptomCheckerPage() {
                     </p>
                   </div>
                 )}
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div
-                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5"
-                    style={{ border: "1px solid #e6e5e0", borderRadius: "13px", background: "#fff" }}
-                  >
-                    <Button
-                      variant="outline"
+                <div
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  style={{
+                    border: "1px solid #e6e5e0",
+                    borderRadius: "13px",
+                    padding: "8px 8px 8px 4px",
+                    background: "#fff",
+                  }}
+                >
+                  <div className="flex flex-shrink-0">
+                    <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="shrink-0 px-3"
-                      title="Attach Photo"
+                      className="flex cursor-pointer flex-col items-center gap-[3px] px-3 py-1.5"
+                      style={{ color: "#6f7069" }}
+                      title="Attach photo"
                       aria-label="Attach photo"
                     >
-                      <ImagePlus className="w-5 h-5" style={{ color: "#6f7069" }} />
-                    </Button>
+                      <ImagePlus className="h-[18px] w-[18px]" />
+                      <span className="text-[11px]">Attach photo</span>
+                    </button>
                     <SpeechInputButton
                       disabled={loading || awaitingAsyncResult}
                       onTranscript={appendTranscriptToInput}
@@ -1377,13 +1434,15 @@ export default function SymptomCheckerPage() {
                       petId={activePet?.id ?? null}
                       onContext={appendVetRecordContextToInput}
                     />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      ref={fileInputRef}
-                      className="hidden"
-                    />
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    ref={fileInputRef}
+                    className="hidden"
+                  />
+                  <div className="min-w-0 flex-1">
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -1392,24 +1451,25 @@ export default function SymptomCheckerPage() {
                       placeholder={
                         messages.length === 0
                           ? `Describe what's going on with ${displayPetName} or attach a photo...`
-                          : "Type your answer or attach a photo..."
+                          : "Type your answer here..."
                       }
-                      rows={2}
-                      className="min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-sm focus:outline-none focus:ring-0"
+                      rows={1}
+                      className="min-w-0 w-full resize-none border-0 bg-transparent px-2 py-1 text-[14px] focus:outline-none focus:ring-0"
                       style={{ color: "#1d1d1b" }}
                     />
+                    <p className="px-2 text-[11.5px]" style={{ color: "#b6b7af" }}>
+                      Press Enter to send
+                    </p>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => sendMessage()}
-                      disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
-                      className="flex h-[42px] w-full items-center justify-center rounded-full text-white transition-opacity disabled:opacity-50 sm:h-full sm:w-[42px]"
-                      style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)" }}
-                      aria-label="Send message"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
+                    className="flex h-[42px] w-full flex-shrink-0 items-center justify-center text-white transition-opacity disabled:opacity-50 sm:w-[42px]"
+                    style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)", borderRadius: "11px" }}
+                    aria-label="Send message"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
 
                 {/* Generate Report button */}
@@ -1601,6 +1661,129 @@ export default function SymptomCheckerPage() {
           </div>
           <SymptomRemembersPanel petId={activePet?.id ?? null} />
         </div>
+
+        {/* Vet summary — building (mockup #2) — real counts, never hardcoded */}
+        {sessionStarted && !report && (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #ebeae5",
+              borderRadius: "14px",
+              padding: "15px 22px",
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-[13px]">
+                <span
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center"
+                  style={{ background: "#e7eef5", color: "#4d7cb5", borderRadius: "9px" }}
+                >
+                  <FileText className="h-[18px] w-[18px]" aria-hidden />
+                </span>
+                <div>
+                  <div className="flex items-center gap-[9px]">
+                    <span className="text-[15px] font-bold" style={{ color: "#1d1d1b" }}>
+                      Vet summary — building
+                    </span>
+                    <span
+                      className="text-[11.5px] font-semibold"
+                      style={{
+                        background: "#e9f6ef",
+                        color: "#0b7a4d",
+                        padding: "2px 9px",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      In progress
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[13px]" style={{ color: "#85867e" }}>
+                    The Brain is assembling a vet-ready handoff from your answers and memory.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled
+                className="flex-shrink-0 text-[13.5px] font-semibold"
+                style={{
+                  background: "#fff",
+                  border: "1px solid #e3e2dd",
+                  color: "#3a3b34",
+                  borderRadius: "10px",
+                  padding: "9px 15px",
+                  cursor: "not-allowed",
+                }}
+              >
+                Preview (locked)
+              </button>
+            </div>
+            <div className="mt-[13px] flex flex-wrap gap-[10px]">
+              <div
+                className="flex flex-1 items-center gap-2"
+                style={{ border: "1px solid #efeee9", borderRadius: "10px", padding: "10px 12px", minWidth: "140px" }}
+              >
+                <Check className="h-[15px] w-[15px] flex-shrink-0" style={{ color: "#0b7a4d" }} aria-hidden />
+                <div>
+                  <div className="text-[13px] font-semibold" style={{ color: "#1d1d1b" }}>
+                    {answeredCount} answer{answeredCount === 1 ? "" : "s"}
+                  </div>
+                  <div className="text-[11.5px]" style={{ color: "#9a9b93" }}>
+                    Captured
+                  </div>
+                </div>
+              </div>
+              <div
+                className="flex flex-1 items-center gap-2"
+                style={{ border: "1px solid #efeee9", borderRadius: "10px", padding: "10px 12px", minWidth: "140px" }}
+              >
+                <Check className="h-[15px] w-[15px] flex-shrink-0" style={{ color: "#0b7a4d" }} aria-hidden />
+                <div>
+                  <div className="text-[13px] font-semibold" style={{ color: "#1d1d1b" }}>
+                    {photoCount} photo{photoCount === 1 ? "" : "s"}
+                  </div>
+                  <div className="text-[11.5px]" style={{ color: "#9a9b93" }}>
+                    Added
+                  </div>
+                </div>
+              </div>
+              <div
+                className="flex flex-1 items-center gap-2"
+                style={{ border: "1px solid #efeee9", borderRadius: "10px", padding: "10px 12px", minWidth: "140px" }}
+              >
+                <ShieldCheck className="h-[15px] w-[15px] flex-shrink-0" style={{ color: "#4d7cb5" }} aria-hidden />
+                <div>
+                  <div className="text-[13px] font-semibold" style={{ color: "#1d1d1b" }}>
+                    {memoriesUsed} memor{memoriesUsed === 1 ? "y" : "ies"}
+                  </div>
+                  <div className="text-[11.5px]" style={{ color: "#9a9b93" }}>
+                    Brain used
+                  </div>
+                </div>
+              </div>
+              <div
+                className="flex flex-1 items-center gap-2"
+                style={{
+                  border: "1px solid #e0890a",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  background: "#fffaf5",
+                  minWidth: "140px",
+                }}
+              >
+                <Clock className="h-[15px] w-[15px] flex-shrink-0" style={{ color: "#e0890a" }} aria-hidden />
+                <div>
+                  <div className="text-[13px] font-semibold" style={{ color: "#b5740a" }}>
+                    {remainingQuestions} more Q{remainingQuestions === 1 ? "" : "'s"}
+                  </div>
+                  <div className="text-[11.5px]" style={{ color: "#9a9b93" }}>
+                    To complete
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </TesterOnboardingGate>
   );

@@ -123,29 +123,30 @@ export default function DashboardPage() {
     return <PrivateTesterDashboard activePetName={activePet?.name ?? null} />;
   }
 
+  const displayName = activePet ? titleCasePetName(activePet.name) : "your dog";
+
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mx-auto max-w-7xl">
+      {/* Header — slide 6: h1 30/700/-0.6px, subtitle 15px #6f7069 max-w 580, mb 22px */}
+      <div className="mb-[22px] flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1
-            className="text-[30px] font-bold leading-tight text-[#1d1d1b]"
+            className="m-0 text-[30px] font-bold leading-tight text-[#1c1c1e]"
             style={{ letterSpacing: "-0.6px" }}
           >
             {activePet ? `${titleCasePetName(activePet.name)}'s Health Brief` : "Health Brief"}
           </h1>
-          <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-[#6f7069]">
-            PawVital remembers every log, photo, symptom check and vet record — so
-            nothing about {activePet ? `${titleCasePetName(activePet.name)}` : "your dog"}&apos;s
-            health slips through the cracks.
+          <p className="mt-[5px] max-w-[580px] text-[15px] leading-relaxed text-[#6f7069]">
+            PawVital remembers {displayName}&apos;s logs, photos, symptoms &amp; vet
+            records — so it can spot changes early and tell you what to do next.
           </p>
         </div>
         <a
           href="/analytics"
           target="_top"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ebeae5] bg-white px-4 py-2.5 text-sm font-medium text-[#3f4a45] transition-colors hover:bg-[#f7f9f8]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-[11px] border border-[#e3e2dd] bg-white px-[15px] py-[9px] text-[14px] font-semibold text-[#3a3b34] transition-colors hover:bg-[#f7f9f8]"
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="h-4 w-4" strokeWidth={1.8} />
           Share summary
         </a>
       </div>

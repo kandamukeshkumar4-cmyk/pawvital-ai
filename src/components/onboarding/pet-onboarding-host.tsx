@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { PET_ONBOARDING_DISMISSED_KEY } from "@/lib/demo-storage";
 import { navigateWithBrowser } from "@/lib/browser-navigation";
 import { useAppStore } from "@/store/app-store";
-import PetProfileModal from "@/components/onboarding/pet-profile-modal";
+import PetOnboardingFlow from "@/components/onboarding/pet-onboarding-flow";
 
 function subscribeToSessionDismissal() {
   return () => {};
@@ -33,7 +33,7 @@ export default function PetOnboardingHost() {
   const open = userDataLoaded && pets.length === 0 && !dismissed;
 
   return (
-    <PetProfileModal
+    <PetOnboardingFlow
       open={open}
       onSaved={() => {
         // First-time hand-off: the dog profile now feeds the AI, so take the

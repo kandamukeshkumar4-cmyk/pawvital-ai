@@ -2,20 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
-import { Loader2, ShieldCheck, Stethoscope } from "lucide-react";
+import { Calendar, Info, Loader2, Shield, Stethoscope, Upload } from "lucide-react";
 import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
 import {
   DecisionCard,
-  InsightTiles,
   SignalGrid,
   PatternTimeline,
-  TrendCards,
   VetPacketPanel,
   LogNextChecklist,
+  ChangedFromNormalRail,
 } from "@/components/analytics/health-board";
-import { VetReportButton } from "@/components/analytics/vet-report-button";
 import Select from "@/components/ui/select";
 import Card from "@/components/ui/card";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
@@ -47,6 +45,33 @@ const STATE_STRIP: Record<OwnerVerdict["state"], { word: string; color: string }
   urgent: { word: "Alert", color: "#d64545" },
   emergency: { word: "Alert", color: "#d64545" },
 };
+
+const MEMORY_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "May 10 – Aug 7, 2025" from the real span of logged data, or null. */
+function memoryDateRange(
+  entries: SymptomCheckEntry[],
+  logs: HealthLog[],
+): string | null {
+  const dates: Date[] = [];
+  for (const e of entries) {
+    const d = new Date(e.created_at);
+    if (!Number.isNaN(d.getTime())) dates.push(d);
+  }
+  for (const l of logs) {
+    const [y, m, day] = l.log_date.split("-").map((p) => parseInt(p, 10));
+    if (y && m && day) dates.push(new Date(y, m - 1, day));
+  }
+  if (dates.length === 0) return null;
+  const min = new Date(Math.min(...dates.map((d) => d.getTime())));
+  const max = new Date(Math.max(...dates.map((d) => d.getTime())));
+  const start = `${MEMORY_MONTHS[min.getMonth()]} ${min.getDate()}`;
+  const end = `${MEMORY_MONTHS[max.getMonth()]} ${max.getDate()}, ${max.getFullYear()}`;
+  return start === end.split(",")[0] ? end : `${start} – ${end}`;
+}
 
 function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boolean {
   if (rangeKey === "all") return true;
@@ -189,6 +214,9 @@ function HealthSignalsContent() {
   const noLogs = logs.length === 0;
   const empty = noChecks && noLogs;
 
+  // "90-day memory" date range, derived from the real span of logged data.
+  const memoryRange = useMemo(() => memoryDateRange(filtered, logs), [filtered, logs]);
+
   // The decision card needs a verdict. Symptom checks drive it; when the owner
   // only has daily logs, show a neutral "keep watching" card that still points
   // them to a check.
@@ -214,17 +242,40 @@ function HealthSignalsContent() {
               ? "Health Signals"
               : `${board.petName.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}'s Health Signals`}
           </h1>
-          <p className="mt-1 text-[15px] text-[#6f7069]">
+          <p className="mt-1 text-[14.5px] text-[#6f7069]">
             90 days of owner-logged memory, shown as a vet-ready story
             {!isSupabaseConfigured ? " (demo data)" : ""}.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="w-full sm:w-40">
-            <Select label="Dog" options={petOptions} value={petId} onChange={(e) => setPetId(e.target.value)} />
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-[11px]">
+            <Link
+              href="/health-log"
+              className="flex items-center gap-[7px] rounded-[11px] border border-[#e3e2dd] bg-white px-[14px] py-[9px] text-[13.5px] font-semibold text-[#3a3b34]"
+            >
+              <Info className="h-[15px] w-[15px]" style={{ color: "#6f7069" }} strokeWidth={1.8} aria-hidden />
+              How this works
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (navigator.clipboard?.writeText) {
+                  void navigator.clipboard.writeText(board.vetPacket.copyText);
+                }
+              }}
+              className="flex items-center gap-[7px] rounded-[11px] border border-[#e3e2dd] bg-white px-[14px] py-[9px] text-[13.5px] font-semibold text-[#3a3b34]"
+            >
+              <Upload className="h-[15px] w-[15px]" style={{ color: "#3a3b34" }} strokeWidth={1.8} aria-hidden />
+              Share
+            </button>
           </div>
-          <div className="w-full sm:w-40">
-            <Select label="Time range" options={RANGE_OPTIONS} value={range} onChange={(e) => setRange(e.target.value)} />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="w-full sm:w-40">
+              <Select label="Dog" options={petOptions} value={petId} onChange={(e) => setPetId(e.target.value)} />
+            </div>
+            <div className="w-full sm:w-40">
+              <Select label="Time range" options={RANGE_OPTIONS} value={range} onChange={(e) => setRange(e.target.value)} />
+            </div>
           </div>
         </div>
       </div>
@@ -268,74 +319,93 @@ function HealthSignalsContent() {
         </section>
       ) : (
         <>
+          {/* Emergency-only safety call-out (renders nothing otherwise). */}
           <DecisionCard
             verdict={verdict}
             petName={board.petName}
             lastCheckedLabel={board.lastCheckedLabel}
             vetCopyText={board.vetPacket.copyText}
           />
+
+          {/* OVERALL STATUS STRIP */}
           <section
-            className="grid grid-cols-2 divide-x divide-y divide-[#ecebe5] overflow-hidden rounded-[14px] border border-[#ecebe5] bg-[#fdfcf9] sm:grid-cols-5 sm:divide-y-0"
+            className="flex items-stretch overflow-hidden"
+            style={{ background: "#fdfcf9", border: "1px solid #ecebe5", borderRadius: 14 }}
             aria-label="Health memory summary"
           >
-            <div className="flex items-center gap-2.5 px-4 py-3.5">
-              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden style={{ color: STATE_STRIP[verdict.state].color }} />
+            <div
+              className="flex items-center"
+              style={{ flex: 1.3, padding: "16px 20px", gap: 12, borderRight: "1px solid #ecebe5" }}
+            >
+              <Shield
+                className="h-[34px] w-[34px] shrink-0"
+                style={{ color: STATE_STRIP[verdict.state].color }}
+                strokeWidth={1.7}
+                aria-hidden
+              />
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8a857a]">Current state</p>
-                <p className="text-[15px] font-bold leading-tight" style={{ color: STATE_STRIP[verdict.state].color }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.6px", color: "#9a9b93", textTransform: "uppercase" }}>
+                  Current state
+                </div>
+                <div style={{ fontSize: 19, fontWeight: 700, color: STATE_STRIP[verdict.state].color, letterSpacing: "-0.3px" }}>
                   {STATE_STRIP[verdict.state].word}
-                </p>
+                </div>
+                <Link href="/health-log" className="flex items-center" style={{ gap: 3, fontSize: 12.5, color: "#0b7a4d", fontWeight: 600 }}>
+                  See details ›
+                </Link>
               </div>
             </div>
-            <div className="flex flex-col justify-center px-4 py-3.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8a857a]">90-day memory</p>
-              <p className="text-[13px] font-semibold leading-tight text-[#3a3b34]">
-                {RANGE_OPTIONS.find((o) => o.value === range)?.label ?? "Last 90 days"}
-              </p>
+            <div
+              className="flex items-center"
+              style={{ flex: 1.5, padding: "16px 20px", gap: 12, borderRight: "1px solid #ecebe5" }}
+            >
+              <Calendar className="h-[30px] w-[30px] shrink-0" style={{ color: "#6f8a5c" }} strokeWidth={1.6} aria-hidden />
+              <div className="min-w-0">
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.6px", color: "#9a9b93", textTransform: "uppercase" }}>
+                  90-day memory
+                </div>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#1c2522" }}>
+                  {memoryRange ?? (RANGE_OPTIONS.find((o) => o.value === range)?.label ?? "Last 90 days")}
+                </div>
+                <Link href="/history" className="flex items-center" style={{ gap: 3, fontSize: 12.5, color: "#0b7a4d", fontWeight: 600 }}>
+                  See full timeline ›
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-col justify-center px-4 py-3.5">
-              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.dailyLogs}</p>
-              <p className="text-[11px] font-medium text-[#6f7069]">Daily logs</p>
+            <div className="flex items-center" style={{ flex: 1, padding: "16px 18px", gap: 11, borderRight: "1px solid #ecebe5" }}>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1, color: "#1c2522" }}>{board.evidence.dailyLogs}</div>
+                <div style={{ fontSize: 13, color: "#3a3b34", fontWeight: 500 }}>Daily logs</div>
+                <div style={{ fontSize: 11.5, color: "#9a9b93" }}>Last 90 days</div>
+              </div>
             </div>
-            <div className="flex flex-col justify-center px-4 py-3.5">
-              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.photos}</p>
-              <p className="text-[11px] font-medium text-[#6f7069]">Photos</p>
+            <div className="flex items-center" style={{ flex: 1, padding: "16px 18px", gap: 11, borderRight: "1px solid #ecebe5" }}>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1, color: "#1c2522" }}>{board.evidence.photos}</div>
+                <div style={{ fontSize: 13, color: "#3a3b34", fontWeight: 500 }}>Photos</div>
+                <div style={{ fontSize: 11.5, color: "#9a9b93" }}>Last 90 days</div>
+              </div>
             </div>
-            <div className="flex flex-col justify-center px-4 py-3.5">
-              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.symptomChecks}</p>
-              <p className="text-[11px] font-medium text-[#6f7069]">Symptom checks</p>
+            <div className="flex items-center" style={{ flex: 1.1, padding: "16px 18px", gap: 11 }}>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1, color: "#1c2522" }}>{board.evidence.symptomChecks}</div>
+                <div style={{ fontSize: 13, color: "#3a3b34", fontWeight: 500 }}>Symptom checks</div>
+                <div style={{ fontSize: 11.5, color: "#9a9b93" }}>Last 90 days</div>
+              </div>
             </div>
           </section>
-          <InsightTiles board={board} />
-          <SignalGrid grid={board.grid} />
-          <PatternTimeline events={board.timeline} />
-          <TrendCards cards={board.trends} />
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <VetPacketPanel packet={board.vetPacket} petName={board.petName} />
-            <LogNextChecklist items={board.logNext} />
-          </div>
 
-          {/* Copy vet summary — full-width CTA */}
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                if (navigator.clipboard?.writeText) {
-                  void navigator.clipboard.writeText(board.vetPacket.copyText);
-                }
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-semibold text-white transition-colors"
-              style={{ background: "#1f9d6b" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#15795a")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#1f9d6b")}
-            >
-              Copy vet summary
-            </button>
-          </div>
-
-          {/* Shareable vet-ready PDF built from the same timeline data. */}
-          <div className="flex justify-center">
-            <VetReportButton petId={isSupabaseConfigured ? resolvedPetId : null} />
+          {/* TWO COLUMNS: left flex 1, right rail 344px */}
+          <div className="flex items-start" style={{ gap: 22 }}>
+            <div className="flex min-w-0 flex-1 flex-col" style={{ gap: 20 }}>
+              <SignalGrid grid={board.grid} />
+              <PatternTimeline events={board.timeline} />
+            </div>
+            <div className="flex flex-none flex-col" style={{ width: 344, gap: 18 }}>
+              <ChangedFromNormalRail items={board.changedFromNormal} />
+              <VetPacketPanel packet={board.vetPacket} petName={board.petName} />
+              <LogNextChecklist items={board.logNext} />
+            </div>
           </div>
 
           <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
