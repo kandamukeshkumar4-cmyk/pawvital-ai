@@ -15,9 +15,11 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronRight as ChevronRightSmall,
   BarChart3,
   ClipboardList,
   PawPrint,
+  AlertTriangle,
 } from "lucide-react";
 import { filterPrivateTesterNavItems } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
@@ -101,28 +103,27 @@ export default function Sidebar() {
         }`}
         style={{
           background: "#ffffff",
-          borderRight: "1px solid #e8e2d8",
+          borderRight: "1px solid #ececea",
         }}
       >
         {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-5 py-5"
-          style={{ borderBottom: "1px solid #e8e2d8" }}
-        >
+        <div className="flex items-center gap-2.5 px-[22px] pt-[21px] pb-4">
           <div
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
-            style={{ background: "rgba(0,168,120,0.12)" }}
+            className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center"
+            style={{ background: "#e9f6ef", borderRadius: 10 }}
           >
-            <Heart className="h-6 w-6" style={{ color: "#00a878" }} />
+            <Heart className="h-5 w-5" style={{ color: "#0e8a59" }} />
           </div>
           {sidebarOpen && (
-            <div className="min-w-0">
-              <span className="text-lg font-bold text-gray-900">PawVital</span>
+            <div className="min-w-0 leading-none">
               <span
-                className="ml-1 rounded px-1.5 py-0.5 text-xs font-medium"
-                style={{ background: "rgba(0,168,120,0.1)", color: "#00a878" }}
+                className="text-[19px] font-bold"
+                style={{ color: "#1d1d1b", letterSpacing: "-0.4px" }}
               >
-                AI
+                PawVital
+              </span>
+              <span className="text-[19px] font-bold" style={{ color: "#0e8a59" }}>
+                {" "}AI
               </span>
             </div>
           )}
@@ -130,96 +131,120 @@ export default function Sidebar() {
 
         {/* Active Pet card */}
         {activePet && sidebarOpen && (
-          <div
-            className="mx-3 mt-4 rounded-2xl overflow-hidden"
-            style={{ border: "1px solid #e8e2d8" }}
+          <Link
+            href="/pets"
+            className="group mx-[14px] mb-[14px] mt-0.5 block rounded-[13px] p-[13px] transition-colors"
+            style={{ background: "#fafaf7", border: "1px solid #eeede8" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f4f3ee")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#fafaf7")}
           >
-            {/* Dog avatar header */}
-            <div
-              className="flex flex-col items-center py-5 px-4"
-              style={{ background: "linear-gradient(to bottom, #e7f4ee, #f7f4ef)" }}
-            >
+            <div className="flex items-center gap-3">
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold text-white mb-2 shadow-sm"
-                style={{ background: "#1f9d6b", border: "2px solid #c0dfd0" }}
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-lg font-bold"
+                style={{ background: "#dcefe2", color: "#0b7a4d" }}
                 aria-hidden
               >
                 {activePet.name.charAt(0).toUpperCase()}
               </div>
-              <p className="text-[15px] font-bold text-[#1c1814]">
-                {activePet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: "#8a7f74" }}>
-                {activePet.breed}
-              </p>
-            </div>
-            {/* Stats row */}
-            <div
-              className="flex items-center divide-x divide-[#e8e2d8] px-0"
-              style={{ background: "#f7f4ef", borderTop: "1px solid #e8e2d8" }}
-            >
-              <div className="flex-1 py-2 text-center">
-                <p className="text-xs font-semibold text-[#1c1814]">
-                  {activePet.age_months > 0
-                    ? `${activePet.age_years}y ${activePet.age_months}m`
-                    : `${activePet.age_years}y`}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15.5px] font-bold" style={{ color: "#1d1d1b" }}>
+                  {activePet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
                 </p>
-                <p className="text-[10px]" style={{ color: "#8a7f74" }}>Age</p>
+                <p className="truncate text-[12.5px]" style={{ color: "#7a7b73" }}>
+                  {[
+                    activePet.breed,
+                    activePet.age_years > 0
+                      ? activePet.age_months > 0
+                        ? `${activePet.age_years}y ${activePet.age_months}m`
+                        : `${activePet.age_years}y`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </div>
-              <Link
-                href="/pets"
-                className="flex-1 py-2 text-center text-xs font-medium transition-colors"
-                style={{ color: "#1f9d6b" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#15795a")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#1f9d6b")}
-              >
-                View profile
-              </Link>
             </div>
-          </div>
+            <span
+              className="mt-2.5 flex items-center gap-1 text-[12.5px] font-semibold"
+              style={{ color: "#0b7a4d" }}
+            >
+              View profile
+              <ChevronRightSmall className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          </Link>
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-1">
           {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200"
+                className="group flex items-center gap-[11px] rounded-[9px] px-3 py-[9px] transition-colors duration-150"
                 style={{
-                  background: isActive ? "rgba(0,168,120,0.08)" : "transparent",
-                  color: isActive ? "#00a878" : "#6b6057",
-                  fontWeight: isActive ? 600 : 400,
+                  background: isActive ? "#e9f6ef" : "transparent",
+                  color: isActive ? "#0b7a4d" : "#46473f",
+                  fontWeight: isActive ? 600 : 500,
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = "#f7f4ef";
-                    (e.currentTarget as HTMLElement).style.color = "#1c1814";
+                    (e.currentTarget as HTMLElement).style.background = "#f4f3ee";
+                    (e.currentTarget as HTMLElement).style.color = "#1d1d1b";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
                     (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = "#6b6057";
+                    (e.currentTarget as HTMLElement).style.color = "#46473f";
                   }
                 }}
               >
                 <item.icon
-                  className="h-5 w-5 flex-shrink-0"
-                  style={{ color: isActive ? "#00a878" : "inherit" }}
+                  className="h-[19px] w-[19px] flex-shrink-0"
+                  style={{ color: "inherit" }}
+                  strokeWidth={1.8}
                 />
-                {sidebarOpen && <span className="text-sm">{item.label}</span>}
+                {sidebarOpen && (
+                  <span className="text-[14.5px]" style={{ letterSpacing: "-0.1px" }}>
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
+        {/* Emergency card */}
+        {sidebarOpen && (
+          <div
+            className="mx-[14px] mb-3 mt-2 rounded-[13px] p-[14px]"
+            style={{ background: "#fdeeec", border: "1px solid #f7dad6" }}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: "#cf4338" }} strokeWidth={2} />
+              <span className="text-[14px] font-bold" style={{ color: "#cf4338" }}>
+                Emergency?
+              </span>
+            </div>
+            <p className="mt-1.5 text-[12.8px] leading-snug" style={{ color: "#8a6a66" }}>
+              Difficulty breathing, collapse, seizures, or severe bleeding need a vet now.
+            </p>
+            <Link
+              href="/symptom-checker"
+              className="mt-2.5 flex items-center justify-center rounded-[9px] py-2 text-[13px] font-semibold transition-colors"
+              style={{ background: "#fff", border: "1px solid #ecc4bf", color: "#cf4338" }}
+            >
+              View emergency signs
+            </Link>
+          </div>
+        )}
+
         {/* Collapse toggle */}
         <div
           className="px-3 py-3"
-          style={{ borderTop: "1px solid #e8e2d8" }}
+          style={{ borderTop: "1px solid #efeee9" }}
         >
           <button
             onClick={toggleSidebar}
@@ -259,6 +284,12 @@ export default function Sidebar() {
               <LogOut className="h-5 w-5" />
               <span className="text-sm">Sign Out</span>
             </button>
+          )}
+
+          {sidebarOpen && (
+            <p className="px-3 pt-3 text-[12px]" style={{ color: "#b6b7af" }}>
+              PawVital AI v1.0.0
+            </p>
           )}
         </div>
       </aside>

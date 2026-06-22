@@ -137,25 +137,72 @@ function TodaysHealthBriefCard({
   state,
   signals,
   petName,
+  logs,
+  reminders,
 }: {
   state: BriefState;
   signals: DetectedSignal[];
   petName: string;
+  logs: HealthLog[];
+  reminders: ReminderRow[];
 }) {
   const meta = STATE_META[state];
   const reason = mainReason(signals, petName);
   const hasSignals = signals.length > 0;
 
+  const photoCount = logs.reduce(
+    (sum, l) => sum + (Array.isArray(l.photo_urls) ? l.photo_urls.length : 0),
+    0,
+  );
+  const memoryChips: { label: string; warn?: boolean }[] = [
+    { label: `${logs.length} ${logs.length === 1 ? "log" : "logs"}` },
+  ];
+  if (photoCount > 0) {
+    memoryChips.push({ label: `${photoCount} ${photoCount === 1 ? "photo" : "photos"}` });
+  }
+  if (signals.length > 0) {
+    memoryChips.push({
+      label: `${signals.length} ${signals.length === 1 ? "pattern" : "patterns"}`,
+      warn: true,
+    });
+  }
+  if (reminders.length > 0) {
+    memoryChips.push({
+      label: `${reminders.length} ${reminders.length === 1 ? "reminder" : "reminders"}`,
+    });
+  }
+
   return (
-    <div className="rounded-2xl border border-[#eef1ef] bg-white overflow-hidden">
+    <div
+      className="rounded-[20px] bg-white overflow-hidden"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+    >
       <div className="px-6 pt-5 pb-5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#15795a] mb-5">
-          Today&apos;s Health Brief
-        </p>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#0b7a4d]">
+            Brain Brief
+          </p>
+          <span className="text-[#cbccc3]">·</span>
+          <div className="flex flex-wrap gap-1.5">
+            {memoryChips.map((chip) => (
+              <span
+                key={chip.label}
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                style={
+                  chip.warn
+                    ? { background: "#fdf3e3", color: "#b5740a" }
+                    : { background: "#f2f2f7", color: "#3f4a45" }
+                }
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           {/* Current state */}
           <div className="sm:w-[200px] sm:shrink-0">
-            <p className="text-[13px] text-[#8a978f] mb-2">Current state</p>
+            <p className="text-[13px] text-[#6f7069] mb-2">Current state</p>
             <div className="flex items-center gap-3">
               <span
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
@@ -163,38 +210,38 @@ function TodaysHealthBriefCard({
               >
                 <meta.Icon className="h-6 w-6" aria-hidden />
               </span>
-              <span className="text-[28px] font-bold leading-none" style={{ color: meta.fg }}>
+              <span className="text-[26px] font-bold leading-none" style={{ color: meta.fg }}>
                 {meta.label}
               </span>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="hidden sm:block sm:h-16 sm:w-px sm:bg-[#eef1ef]" aria-hidden />
+          <div className="hidden sm:block sm:h-16 sm:w-px sm:bg-[#ebeae5]" aria-hidden />
 
           {/* Main reason */}
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-[#8a978f] mb-2">Main reason</p>
-            <p className="text-[19px] font-bold leading-snug text-[#1c2522]">{reason}</p>
+            <p className="text-[13px] text-[#6f7069] mb-2">Headline</p>
+            <p className="text-[19px] font-bold leading-snug text-[#1d1d1b]">{reason}</p>
             {hasSignals && (
               <span
                 className="mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold"
                 style={{ background: meta.bg, color: meta.fg }}
               >
                 <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                Pattern detected by PawVital AI
+                Pattern detected
               </span>
             )}
           </div>
         </div>
       </div>
       <div className="px-6 pb-5 pt-1">
-        <p className="text-[13px] text-[#8a978f] mb-2.5">What you can do now</p>
+        <p className="text-[13px] text-[#6f7069] mb-2.5">Quick actions</p>
         <div className="flex flex-wrap gap-2.5">
           <a
             href="/symptom-checker"
             target="_top"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1f9d6b] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#15795a] transition-colors"
+            className="inline-flex items-center gap-2 rounded-[13px] bg-[#0b7a4d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0a6c44] transition-colors"
           >
             <Stethoscope className="h-4 w-4" aria-hidden />
             Start symptom check
@@ -202,13 +249,174 @@ function TodaysHealthBriefCard({
           <a
             href="/health-log"
             target="_top"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#cfe6da] bg-white px-4 py-2.5 text-sm font-medium text-[#15795a] hover:bg-[#f3f9f6] transition-colors"
+            className="inline-flex items-center gap-2 rounded-[13px] bg-[#f2f2f7] px-4 py-2.5 text-sm font-medium text-[#1c1c1e] hover:bg-[#e8e8ee] transition-colors"
           >
             <ClipboardList className="h-4 w-4" aria-hidden />
             Log tonight
           </a>
+          <a
+            href="/health-log"
+            target="_top"
+            className="inline-flex items-center gap-2 rounded-[13px] bg-[#f2f2f7] px-4 py-2.5 text-sm font-medium text-[#1c1c1e] hover:bg-[#e8e8ee] transition-colors"
+          >
+            <Camera className="h-4 w-4" aria-hidden />
+            Add photo
+          </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── WHAT CHANGED FROM NORMAL — mini-charts ───────────────────────────────────
+
+const CHANGED_METRICS: { type: SignalType; label: string; bar: string; grid: string }[] = [
+  { type: "appetite_drop", label: "Appetite", bar: "#15a06a", grid: "#D8EDE4" },
+  { type: "stool_change", label: "Stool", bar: "#e0890a", grid: "#F0EAD6" },
+  { type: "weight_downtrend", label: "Weight", bar: "#4d7cb5", grid: "#D8E4F4" },
+];
+
+const PREVIEW_SERIES = [3, 4, 4, 3, 2, 3, 4].map((v) => ({ v }));
+
+function MiniBarChart({
+  data,
+  color,
+  gridColor,
+  example = false,
+}: {
+  data: { v: number }[];
+  color: string;
+  gridColor: string;
+  example?: boolean;
+}) {
+  const values = data.map((d) => d.v);
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  return (
+    <div
+      className="flex h-14 items-end gap-[5px]"
+      style={example ? { opacity: 0.45 } : undefined}
+      aria-hidden
+    >
+      {data.map((d, i) => {
+        const h = 8 + ((d.v - min) / range) * 40;
+        return (
+          <span key={i} className="flex flex-1 flex-col justify-end" style={{ minWidth: 8 }}>
+            <span
+              className="block w-2 rounded-[3px]"
+              style={{ height: `${h}px`, background: color, borderBottom: `0.6px solid ${gridColor}` }}
+            />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function NoDataMiniChart() {
+  return (
+    <div className="flex h-14 items-center justify-center" aria-hidden>
+      <span className="text-[20px] font-semibold text-[#cbccc3]">—</span>
+    </div>
+  );
+}
+
+function ChangedMetricTile({
+  label,
+  series,
+  bar,
+  grid,
+  showPreview,
+}: {
+  label: string;
+  series: { v: number }[];
+  bar: string;
+  grid: string;
+  showPreview: boolean;
+}) {
+  const hasData = series.length >= 2;
+  return (
+    <div className="rounded-2xl border border-[#ebeae5] bg-white p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[13px] font-semibold text-[#1d1d1b]">{label}</p>
+        {!hasData && showPreview && (
+          <span
+            className="rounded-full bg-[#f2f2f7] px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[#85867e]"
+            style={{ opacity: 0.45 }}
+          >
+            Example
+          </span>
+        )}
+      </div>
+      {hasData ? (
+        <MiniBarChart data={series} color={bar} gridColor={grid} />
+      ) : showPreview ? (
+        <MiniBarChart data={PREVIEW_SERIES} color={bar} gridColor={grid} example />
+      ) : (
+        <NoDataMiniChart />
+      )}
+      <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-[#aeaeb2]">
+        14 days
+      </p>
+    </div>
+  );
+}
+
+function WhatChangedSection({ signals, logs }: { signals: DetectedSignal[]; logs: HealthLog[] }) {
+  const metricSeries = CHANGED_METRICS.map((m) => ({
+    ...m,
+    series: buildSeries(logs, m.type),
+  }));
+  const anyData = metricSeries.some((m) => m.series.length >= 2);
+  const showPreview = !anyData;
+  const stableSignals = signals.filter((s) => s.severity === "info");
+
+  return (
+    <div
+      className="rounded-[20px] bg-white p-5"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+    >
+      <div className="mb-4 flex items-center gap-2">
+        <TrendingDown className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069]">
+          What Changed From Normal
+        </p>
+      </div>
+
+      {showPreview && (
+        <div className="mb-3">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-[#85867e]">Preview</p>
+          <p className="text-[12px] text-[#6f7069]">
+            After ~14 daily logs your Health Brief will look like this.
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {metricSeries.map((m) => (
+          <ChangedMetricTile
+            key={m.type}
+            label={m.label}
+            series={m.series}
+            bar={m.bar}
+            grid={m.grid}
+            showPreview={showPreview}
+          />
+        ))}
+      </div>
+
+      {stableSignals.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#c8e6d5] bg-[#f2f9f5] px-4 py-3">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-[#15a06a]" aria-hidden />
+          <span className="text-[12px] font-semibold text-[#15795a]">Holding steady:</span>
+          {stableSignals.map((s) => (
+            <span key={s.dedupe_key} className="text-[12px] text-[#3f6b57]">
+              {SIGNAL_TITLE[s.signal_type]}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -221,7 +429,10 @@ function SignalDetailCard({ signal, logs }: { signal: DetectedSignal; logs: Heal
   const series = buildSeries(logs, signal.signal_type);
 
   return (
-    <div className="rounded-2xl border border-[#eef1ef] bg-white p-5 flex flex-col">
+    <div
+      className="rounded-[20px] bg-white p-5 flex flex-col"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+    >
       {/* Header: icon circle + title + severity badge */}
       <div className="flex items-center gap-3">
         <span
@@ -231,7 +442,7 @@ function SignalDetailCard({ signal, logs }: { signal: DetectedSignal; logs: Heal
           <Icon className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[15px] font-semibold text-[#1c2522] leading-tight">
+          <p className="text-[15px] font-semibold text-[#1d1d1b] leading-tight">
             {SIGNAL_TITLE[signal.signal_type]}
           </p>
           <span
@@ -264,7 +475,7 @@ function SignalDetailCard({ signal, logs }: { signal: DetectedSignal; logs: Heal
       <a
         href="/analytics"
         target="_top"
-        className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#1f9d6b] hover:underline"
+        className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#0b7a4d] hover:underline"
       >
         View details <ChevronRight className="h-3.5 w-3.5" aria-hidden />
       </a>
@@ -282,10 +493,10 @@ function NoticedSignalsSection({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f]">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069]">
           What PawVital Noticed
         </p>
-        <span className="rounded-full bg-[#e8a23c] px-2 py-0.5 text-[11px] font-semibold text-white">
+        <span className="rounded-full bg-[#e0890a] px-2 py-0.5 text-[11px] font-semibold text-white">
           {signals.length} {signals.length === 1 ? "signal" : "signals"}
         </span>
       </div>
@@ -410,8 +621,8 @@ function TimelineCard({ event }: { event: TimelineEvent }) {
           <s.Icon className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[#1c2522] leading-tight">{event.title}</p>
-          <p className="text-[11px] text-[#8a978f]">{event.timeLabel}</p>
+          <p className="text-[13px] font-semibold text-[#1d1d1b] leading-tight">{event.title}</p>
+          <p className="text-[11px] text-[#aeaeb2]">{event.timeLabel}</p>
         </div>
       </div>
       <p className="text-[13px] text-[#3f4a45] leading-snug">{event.subtitle}</p>
@@ -428,16 +639,19 @@ function PatternTimeline({ logs, reminders }: { logs: HealthLog[]; reminders: Re
   if (events.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f] mb-4">
-        Pattern Timeline
+    <div
+      className="rounded-[20px] bg-white p-5"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069] mb-4">
+        Brain Story
       </p>
       <div className="flex items-stretch gap-0">
         {events.map((event, i) => (
           <div key={event.id} className="flex flex-1 items-center">
             <TimelineCard event={event} />
             {i < events.length - 1 && (
-              <span className="mx-1.5 h-2 w-2 shrink-0 rounded-full bg-[#1c2522]" aria-hidden />
+              <span className="mx-1.5 h-2 w-2 shrink-0 rounded-full bg-[#c8c9c0]" aria-hidden />
             )}
           </div>
         ))}
@@ -445,7 +659,7 @@ function PatternTimeline({ logs, reminders }: { logs: HealthLog[]; reminders: Re
       <a
         href="/analytics"
         target="_top"
-        className="mt-4 block text-center text-[13px] font-medium text-[#1f9d6b] hover:underline"
+        className="mt-4 block text-center text-[13px] font-medium text-[#0b7a4d] hover:underline"
       >
         View full timeline →
       </a>
@@ -502,24 +716,63 @@ function RightSidebar({
   actions,
   reminders,
   petName,
+  logs,
+  signals,
 }: {
   actions: string[];
   reminders: ReminderRow[];
   petName: string;
+  logs: HealthLog[];
+  signals: DetectedSignal[];
 }) {
+  const photoCount = logs.reduce(
+    (sum, l) => sum + (Array.isArray(l.photo_urls) ? l.photo_urls.length : 0),
+    0,
+  );
+  const statTiles: { Icon: typeof ClipboardList; label: string; value: number }[] = [
+    { Icon: ClipboardList, label: "Daily logs", value: logs.length },
+    { Icon: Camera, label: "Photos", value: photoCount },
+    { Icon: Sparkles, label: "Patterns", value: signals.length },
+    { Icon: Bell, label: "Reminders", value: reminders.length },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f] mb-3.5">
-          Next Best Action
+      <div
+        className="rounded-[20px] bg-white p-5"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+      >
+        <div className="mb-3.5 flex items-center gap-2">
+          <Brain className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069]">
+            What PawVital Remembers
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {statTiles.map((tile) => (
+            <div key={tile.label} className="rounded-xl border border-[#ebeae5] bg-[#f9fbfa] p-3">
+              <tile.Icon className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+              <p className="mt-1.5 text-[22px] font-bold leading-none text-[#1d1d1b]">{tile.value}</p>
+              <p className="mt-1 text-[11px] text-[#6f7069]">{tile.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="rounded-[20px] bg-white p-5"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069] mb-3.5">
+          What To Do Next
         </p>
         <ul className="space-y-3">
           {actions.map((a, i) => (
             <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#3f4a45]">
               {i === 0 ? (
-                <CircleCheckBig className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#1f9d6b]" aria-hidden />
+                <CircleCheckBig className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#0b7a4d]" aria-hidden />
               ) : (
-                <Circle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#c3cfc9]" aria-hidden />
+                <Circle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#c8c9c0]" aria-hidden />
               )}
               <span>{a}</span>
             </li>
@@ -527,10 +780,13 @@ function RightSidebar({
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
+      <div
+        className="rounded-[20px] bg-white p-5"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+      >
         <div className="flex items-center gap-2 mb-3.5">
-          <Bell className="h-4 w-4 text-[#15795a]" aria-hidden />
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f]">
+          <Bell className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069]">
             Upcoming Reminders
           </p>
         </div>
@@ -545,8 +801,8 @@ function RightSidebar({
                     <Icon className="h-[18px] w-[18px]" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-[#1c2522] leading-tight truncate">{r.title}</p>
-                    <p className="text-[11px] text-[#8a978f]">{reminderSubtitle(r.next_due)}</p>
+                    <p className="text-[13px] font-semibold text-[#1d1d1b] leading-tight truncate">{r.title}</p>
+                    <p className="text-[11px] text-[#6f7069]">{reminderSubtitle(r.next_due)}</p>
                   </div>
                   <span
                     className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
@@ -559,32 +815,38 @@ function RightSidebar({
             })}
           </ul>
         ) : (
-          <p className="text-[13px] text-[#8a978f]">No upcoming reminders yet.</p>
+          <p className="text-[13px] text-[#6f7069]">No upcoming reminders yet.</p>
         )}
         <a
           href="/reminders"
           target="_top"
-          className="mt-4 block text-center text-[13px] font-medium text-[#1f9d6b] hover:underline"
+          className="mt-4 block text-center text-[13px] font-medium text-[#0b7a4d] hover:underline"
         >
           {reminders.length > 0 ? "View all reminders →" : "Add a reminder"}
         </a>
       </div>
 
-      <div className="rounded-2xl border border-[#d8ebe1] bg-[#f3f9f6] p-4">
+      <div
+        className="rounded-[20px] bg-white p-5"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+      >
         <div className="flex items-center gap-2 mb-1">
-          <FileText className="h-4 w-4 text-[#15795a]" aria-hidden />
-          <span className="text-sm font-semibold text-[#1c2522]">Share with your vet</span>
+          <FileText className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+          <span className="text-sm font-semibold text-[#1d1d1b]">Vet Summary</span>
         </div>
-        <p className="text-xs leading-relaxed text-[#6f8579] mb-3">
+        <p className="text-xs leading-relaxed text-[#6f7069] mb-3">
           A vet-ready report with {petName}&apos;s logs, signals &amp; history — one tap.
         </p>
         <a
           href="/analytics"
           target="_top"
-          className="block rounded-lg bg-[#1f9d6b] py-2.5 text-center text-sm font-medium text-white hover:bg-[#15795a] transition-colors"
+          className="block rounded-[13px] bg-[#0b7a4d] py-2.5 text-center text-sm font-medium text-white hover:bg-[#0a6c44] transition-colors"
         >
           Create vet report
         </a>
+        <p className="mt-3 rounded-lg bg-[#f2f2f7] px-3 py-2 text-[11px] leading-relaxed text-[#6f7069]">
+          PawVital is not a diagnosis. Always confirm urgent concerns with your veterinarian.
+        </p>
       </div>
     </div>
   );
@@ -762,17 +1024,30 @@ export default function HealthBrief({
   const displayName = petName.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
       {/* Main left column */}
       <div className="space-y-5">
-        <TodaysHealthBriefCard state={state} signals={signals} petName={displayName} />
+        <TodaysHealthBriefCard
+          state={state}
+          signals={signals}
+          petName={displayName}
+          logs={logs}
+          reminders={reminders}
+        />
+        <WhatChangedSection signals={signals} logs={logs} />
         {signals.length > 0 && <NoticedSignalsSection signals={signals} logs={logs} />}
         <FollowupsPanel petId={petId} signals={signals} />
         <PatternTimeline logs={logs} reminders={reminders} />
       </div>
 
       {/* Right sidebar */}
-      <RightSidebar actions={actions} reminders={reminders} petName={displayName} />
+      <RightSidebar
+        actions={actions}
+        reminders={reminders}
+        petName={displayName}
+        logs={logs}
+        signals={signals}
+      />
     </div>
   );
 }

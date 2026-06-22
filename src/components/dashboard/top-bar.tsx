@@ -81,7 +81,7 @@ export default function TopBar() {
   return (
     <header
       className="sticky top-0 z-30 backdrop-blur-md"
-      style={{ background: "rgba(255,255,255,0.95)", borderBottom: "1px solid #e8e2d8" }}
+      style={{ background: "rgba(255,255,255,0.95)", borderBottom: "1px solid #efeee9" }}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         {/* Left: hamburger + dog selector + last-log status */}
@@ -104,14 +104,14 @@ export default function TopBar() {
                 onClick={() => setPetMenuOpen((o) => !o)}
                 aria-haspopup="listbox"
                 aria-expanded={petMenuOpen}
-                className="flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors"
-                style={{ background: "#f7f4ef", border: "1px solid #e8e2d8", color: "#1c1814" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f0ede8")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f7f4ef")}
+                className="flex items-center gap-2 rounded-[11px] px-3 py-1.5 transition-colors"
+                style={{ background: "#ffffff", border: "1px solid #e6e5e0", color: "#1d1d1b" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f7f7f5")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#ffffff")}
               >
                 <span
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                  style={{ background: "#1f9d6b" }}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold"
+                  style={{ background: "#dcefe2", color: "#0b7a4d" }}
                   aria-hidden
                 >
                   {activePet.name.charAt(0).toUpperCase()}
@@ -180,12 +180,15 @@ export default function TopBar() {
 
           {/* Last log status pill */}
           {lastLog && (
-            <span
-              className="hidden md:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-              style={{ background: "#e7f4ee", color: "#15795a", border: "1px solid #c0dfd0" }}
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-              Last log: {lastLog} · Up to date
+            <span className="hidden md:inline-flex items-center gap-2 text-[12.5px]">
+              <span style={{ color: "#85867e" }}>Last log: {lastLog}</span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold"
+                style={{ background: "#e9f6ef", color: "#0b7a4d" }}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                Up to date
+              </span>
             </span>
           )}
         </div>
@@ -195,7 +198,11 @@ export default function TopBar() {
           <a
             href="/symptom-checker"
             target="_top"
-            className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-[#1f9d6b] px-3.5 py-2 text-sm font-medium text-white hover:bg-[#15795a] transition-colors"
+            className="hidden sm:inline-flex items-center gap-2 rounded-[11px] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-105"
+            style={{
+              background: "linear-gradient(180deg,#17a06d,#0a7048)",
+              boxShadow: "0 1px 2px rgba(10,90,60,.25)",
+            }}
           >
             <Stethoscope className="h-4 w-4" aria-hidden />
             <span className="hidden md:inline">Start symptom check</span>
@@ -215,10 +222,10 @@ export default function TopBar() {
               {badge}
             </span>
             <div
-              className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: "rgba(0,168,120,0.12)" }}
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full"
+              style={{ background: "#dcefe2" }}
             >
-              <span className="text-sm font-semibold" style={{ color: "#00a878" }}>
+              <span className="text-sm font-semibold" style={{ color: "#0b7a4d" }}>
                 {user?.full_name?.charAt(0) || "U"}
               </span>
             </div>

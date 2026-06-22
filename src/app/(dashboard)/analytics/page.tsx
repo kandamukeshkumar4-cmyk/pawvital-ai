@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
-import { Loader2, Stethoscope } from "lucide-react";
+import { Loader2, ShieldCheck, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
@@ -40,6 +40,13 @@ const RANGE_OPTIONS = [
   { value: "90", label: "Last 90 days" },
   { value: "all", label: "All time" },
 ];
+
+const STATE_STRIP: Record<OwnerVerdict["state"], { word: string; color: string }> = {
+  watch: { word: "Good", color: "#15a06a" },
+  schedule: { word: "Watch", color: "#e0890a" },
+  urgent: { word: "Alert", color: "#d64545" },
+  emergency: { word: "Alert", color: "#d64545" },
+};
 
 function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boolean {
   if (rangeKey === "all") return true;
@@ -199,12 +206,15 @@ function HealthSignalsContent() {
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+          <h1
+            className="text-[29px] font-bold leading-tight text-[#1c2522]"
+            style={{ letterSpacing: "-0.6px" }}
+          >
             {board.petName === "your dog"
               ? "Health Signals"
               : `${board.petName.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}'s Health Signals`}
           </h1>
-          <p className="mt-1 text-[15px] text-[#8a978f]">
+          <p className="mt-1 text-[15px] text-[#6f7069]">
             90 days of owner-logged memory, shown as a vet-ready story
             {!isSupabaseConfigured ? " (demo data)" : ""}.
           </p>
@@ -264,6 +274,38 @@ function HealthSignalsContent() {
             lastCheckedLabel={board.lastCheckedLabel}
             vetCopyText={board.vetPacket.copyText}
           />
+          <section
+            className="grid grid-cols-2 divide-x divide-y divide-[#ecebe5] overflow-hidden rounded-[14px] border border-[#ecebe5] bg-[#fdfcf9] sm:grid-cols-5 sm:divide-y-0"
+            aria-label="Health memory summary"
+          >
+            <div className="flex items-center gap-2.5 px-4 py-3.5">
+              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden style={{ color: STATE_STRIP[verdict.state].color }} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8a857a]">Current state</p>
+                <p className="text-[15px] font-bold leading-tight" style={{ color: STATE_STRIP[verdict.state].color }}>
+                  {STATE_STRIP[verdict.state].word}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col justify-center px-4 py-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8a857a]">90-day memory</p>
+              <p className="text-[13px] font-semibold leading-tight text-[#3a3b34]">
+                {RANGE_OPTIONS.find((o) => o.value === range)?.label ?? "Last 90 days"}
+              </p>
+            </div>
+            <div className="flex flex-col justify-center px-4 py-3.5">
+              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.dailyLogs}</p>
+              <p className="text-[11px] font-medium text-[#6f7069]">Daily logs</p>
+            </div>
+            <div className="flex flex-col justify-center px-4 py-3.5">
+              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.photos}</p>
+              <p className="text-[11px] font-medium text-[#6f7069]">Photos</p>
+            </div>
+            <div className="flex flex-col justify-center px-4 py-3.5">
+              <p className="text-[19px] font-bold leading-tight text-[#1c2522]">{board.evidence.symptomChecks}</p>
+              <p className="text-[11px] font-medium text-[#6f7069]">Symptom checks</p>
+            </div>
+          </section>
           <InsightTiles board={board} />
           <SignalGrid grid={board.grid} />
           <PatternTimeline events={board.timeline} />

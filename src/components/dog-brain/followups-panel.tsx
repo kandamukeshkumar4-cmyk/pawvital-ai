@@ -83,24 +83,27 @@ export function FollowupsPanel({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
+    <div
+      className="rounded-[20px] bg-white p-5"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.07)" }}
+    >
       <div className="mb-3 flex items-center gap-2">
-        <Bell className="h-4 w-4 text-[#15795a]" aria-hidden />
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f]">
-          Follow-ups from PawVital
+        <Bell className="h-4 w-4 text-[#0b7a4d]" aria-hidden />
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6f7069]">
+          Follow-ups due
         </p>
       </div>
       <ul className="space-y-3">
         {items.map((f) => (
-          <li key={f.id} className="rounded-xl border border-[#eef1ef] bg-[#f9fbfa] p-3.5">
-            <p className="text-[13px] leading-snug text-[#1c2522]">{f.prompt}</p>
+          <li key={f.id} className="rounded-xl border border-[#ebeae5] bg-[#f9fbfa] p-3.5">
+            <p className="text-[13px] leading-snug text-[#1d1d1b]">{f.prompt}</p>
             <div className="mt-2.5 flex gap-2">
               {(["better", "same", "worse"] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => resolve(f.id, s)}
-                  className="flex-1 rounded-lg border border-[#cfe6da] bg-white py-1.5 text-xs font-medium capitalize text-[#15795a] transition-colors hover:bg-[#f3f9f6]"
+                  className="flex-1 rounded-lg border border-[#cfe6da] bg-white py-1.5 text-xs font-medium capitalize text-[#0b7a4d] transition-colors hover:border-[#0b7a4d] hover:bg-[#e9f6ef]"
                 >
                   {s}
                 </button>

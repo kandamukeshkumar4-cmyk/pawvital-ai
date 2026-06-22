@@ -1,9 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, ChevronDown } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  ChevronDown,
+  Save,
+  UploadCloud,
+  Utensils,
+  Zap,
+  Droplets,
+  Activity,
+  Waves,
+  Wind,
+  Footprints,
+  Pill,
+  Scale,
+} from "lucide-react";
 import Card from "@/components/ui/card";
-import Button, { buttonClassName } from "@/components/ui/button";
+import Button from "@/components/ui/button";
 import Select from "@/components/ui/select";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -34,22 +49,39 @@ const TONE_BG: Record<"good" | "watch" | "alert", string> = {
   alert: "rgba(226,92,92,0.12)",
 };
 
-/** Emoji face selector row — replaces boring Select dropdowns for the core metrics. */
+/** Emoji face selector row — restyled to the redesign's 3-segment face selector. */
 function EmojiMetricRow<T extends string>({
   label,
   value,
   options,
   onChange,
+  icon,
+  tone = "good",
 }: {
   label: string;
   value: T;
   options: { value: T; emoji: string; label: string }[];
   onChange: (v: T) => void;
+  icon?: React.ReactNode;
+  tone?: "good" | "watch";
 }) {
+  const selBg = tone === "watch" ? "#fdf3e3" : "#e8f6ee";
+  const selBorder = tone === "watch" ? "#f0cd8e" : "#bfe6d0";
+  const selIcon = tone === "watch" ? "#dd8a0c" : "#15a06a";
   return (
-    <div className="flex items-center justify-between gap-2 py-3">
-      <span className="w-24 shrink-0 text-sm font-medium text-[#4a463f]">{label}</span>
-      <div className="flex flex-wrap gap-2">
+    <div
+      className="flex items-center justify-between gap-3 py-3.5"
+      style={{ borderTop: "1px solid #f3f2ed" }}
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        {icon ? (
+          <span className="shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
+            {icon}
+          </span>
+        ) : null}
+        <span className="text-[14.5px] font-medium text-[#1d1d1b]">{label}</span>
+      </span>
+      <div className="flex flex-wrap justify-end gap-1.5">
         {options.map((opt) => {
           const selected = value === opt.value;
           return (
@@ -59,20 +91,25 @@ function EmojiMetricRow<T extends string>({
               key={`${opt.value}-${selected}`}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`paw-press flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-all duration-150 hover:-translate-y-0.5 ${
+              className={`paw-press flex h-[38px] items-center gap-1.5 px-2.5 transition-all duration-150 ${
                 selected ? "paw-pop" : ""
               }`}
               style={{
-                background: selected ? "#e7f4ee" : "#f7f4ef",
-                border: `2px solid ${selected ? "#1f9d6b" : "transparent"}`,
-                boxShadow: selected ? "0 4px 12px rgba(31,157,107,0.25)" : "none",
+                borderRadius: 9,
+                background: selected ? selBg : "transparent",
+                border: `1px solid ${selected ? selBorder : "transparent"}`,
               }}
               aria-pressed={selected}
             >
-              <span className="text-xl leading-none">{opt.emoji}</span>
               <span
-                className="text-[10px] font-medium"
-                style={{ color: selected ? "#15795a" : "#8a7f74" }}
+                className="text-base leading-none"
+                style={{ color: selected ? selIcon : "#c8c9c0" }}
+              >
+                {opt.emoji}
+              </span>
+              <span
+                className="text-[11px] font-medium"
+                style={{ color: selected ? selIcon : "#c8c9c0" }}
               >
                 {opt.label}
               </span>
@@ -184,6 +221,33 @@ function DailyLogAnimations() {
   );
 }
 
+/** Visual checkbox box matching the redesign spec. */
+function CheckBox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className="flex h-[18px] w-[18px] shrink-0 items-center justify-center transition-colors"
+      style={{
+        borderRadius: 5,
+        background: checked ? "#15a06a" : "#fff",
+        border: checked ? "1.5px solid #15a06a" : "1.5px solid #cfd0c8",
+      }}
+      aria-hidden
+    >
+      {checked ? (
+        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+          <path
+            d="M2.5 6.2 5 8.5 9.5 3.5"
+            stroke="#fff"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
 /** Shared checkbox list for simple boolean context_signals packs. */
 function PackCheckboxes({
   items,
@@ -196,17 +260,21 @@ function PackCheckboxes({
 }) {
   return (
     <>
-      {items.map(({ key, label }) => (
-        <label key={key} className="flex items-center gap-2 text-sm text-[#4a463f]">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300"
-            checked={Boolean(values?.[key])}
-            onChange={(e) => onChange(key, e.target.checked)}
-          />
-          {label}
-        </label>
-      ))}
+      {items.map(({ key, label }) => {
+        const checked = Boolean(values?.[key]);
+        return (
+          <label key={key} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1d1d1b]">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={checked}
+              onChange={(e) => onChange(key, e.target.checked)}
+            />
+            <CheckBox checked={checked} />
+            {label}
+          </label>
+        );
+      })}
     </>
   );
 }
@@ -224,6 +292,10 @@ export default function HealthLogPage() {
   const [signalsLoading, setSignalsLoading] = useState(false);
   // Display-only signed URLs (parallel to form.photo_urls paths) for thumbnails.
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  // Presentation-only: which observation pack tab is visible.
+  const [obsTab, setObsTab] = useState<
+    "gi" | "urinary" | "mobility" | "skin_ear" | "breathing" | "seizure" | "medication"
+  >("gi");
 
   const [form, setForm] = useState<HealthLogInput>({
     pet_id: activePet?.id ?? pets[0]?.id ?? "",
@@ -424,22 +496,38 @@ export default function HealthLogPage() {
       <Celebration trigger={celebrate} streak={streak} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+          <h1 className="text-[29px] font-bold leading-tight text-[#1d1d1b]">
             {(activePet?.name ?? "your dog").replace(/\b\p{L}/gu, (c) => c.toUpperCase())} Daily check-in
           </h1>
-          <p className="mt-1 text-[15px] text-[#8a978f]">
+          <p className="mt-1 text-[15px] text-[#6f7069]">
             Teach the Brain what normal looks like.
           </p>
         </div>
-        {streak > 0 && (
-          <div className="paw-streak flex items-center gap-2 rounded-full border border-[#ffe0b2] bg-[#fff6e9] px-4 py-2">
-            <span className="text-lg leading-none">🔥</span>
-            <div className="leading-tight">
-              <div className="text-base font-bold text-[#c1852a]">{streak}-day streak</div>
-              <div className="text-[11px] text-[#a8895a]">Keep it going!</div>
+        <div className="flex items-center gap-3">
+          {streak > 0 && (
+            <div className="paw-streak flex items-center gap-2 rounded-full border border-[#bfe6d0] bg-[#e8f6ee] px-4 py-2">
+              <span className="text-lg leading-none">🔥</span>
+              <div className="leading-tight">
+                <div className="text-base font-bold text-[#0b7a4d]">{streak}-day streak</div>
+                <div className="text-[11px] text-[#15a06a]">Keep it going!</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <button
+            type="submit"
+            form="daily-checkin-form"
+            disabled={!form.pet_id || saving}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
+            style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)" }}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Save className="h-4 w-4" aria-hidden />
+            )}
+            {saving ? "Saving…" : "Save check-in"}
+          </button>
+        </div>
       </div>
 
       {!isSupabaseConfigured ? (
@@ -453,9 +541,12 @@ export default function HealthLogPage() {
 
       {/* Readout — what the logs show so far */}
       {readout.hasToday ? (
-        <section className="rounded-2xl border border-[#e8e2d8] bg-white p-5">
-          <h2 className="text-base font-semibold text-[#2c2a26]">{readout.headline}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#6b665d]">{readout.detail}</p>
+        <section
+          className="bg-white p-5"
+          style={{ borderRadius: 16, border: "1px solid #ebeae5" }}
+        >
+          <h2 className="text-base font-semibold text-[#1d1d1b]">{readout.headline}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-[#6f7069]">{readout.detail}</p>
           {readout.offSigns.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {readout.offSigns.map((s) => (
@@ -503,10 +594,16 @@ export default function HealthLogPage() {
       ) : null}
 
       {/* Log form */}
-      <form onSubmit={(e) => void submit(e)}>
-        <Card className="p-5 sm:p-6 space-y-0 divide-y divide-[#f0ede8]">
+      <form id="daily-checkin-form" onSubmit={(e) => void submit(e)}>
+        <Card
+          className="p-5 sm:p-6 space-y-0"
+          style={{ borderRadius: 16, borderColor: "#ebeae5" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#85867e]">
+            Today&apos;s baseline
+          </p>
           {/* Date + pet header */}
-          <div className="pb-4 flex flex-wrap items-end gap-4">
+          <div className="pb-4 pt-3 flex flex-wrap items-end gap-4">
             {pets.length > 1 && (
               <Select
                 label="Dog"
@@ -528,6 +625,7 @@ export default function HealthLogPage() {
           {/* Emoji metric selectors */}
           <EmojiMetricRow
             label="Appetite"
+            icon={<Utensils size={18} aria-hidden />}
             value={form.appetite}
             options={[
               { value: "none" as const, emoji: "😔", label: "None" },
@@ -539,6 +637,7 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Energy"
+            icon={<Zap size={18} aria-hidden />}
             value={form.energy}
             options={[
               { value: "low" as const, emoji: "😴", label: "Low" },
@@ -549,6 +648,7 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Water"
+            icon={<Droplets size={18} aria-hidden />}
             value={form.water}
             options={[
               { value: "less" as const, emoji: "💧", label: "Less" },
@@ -559,6 +659,7 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Stool"
+            icon={<Activity size={18} aria-hidden />}
             value={form.stool}
             options={[
               { value: "diarrhea" as const, emoji: "😣", label: "Loose" },
@@ -570,6 +671,7 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Urination"
+            icon={<Waves size={18} aria-hidden />}
             value={form.urination}
             options={[
               { value: "straining" as const, emoji: "😣", label: "Straining" },
@@ -581,6 +683,8 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Breathing"
+            icon={<Wind size={18} aria-hidden />}
+            tone="watch"
             value={breathingValue}
             options={[
               { value: "labored" as const, emoji: "😮‍💨", label: "Labored" },
@@ -599,6 +703,8 @@ export default function HealthLogPage() {
           />
           <EmojiMetricRow
             label="Mobility"
+            icon={<Footprints size={18} aria-hidden />}
+            tone="watch"
             value={mobilityValue}
             options={[
               { value: "limping" as const, emoji: "🦴", label: "Limping" },
@@ -617,21 +723,31 @@ export default function HealthLogPage() {
           />
 
           {/* Vomiting counter */}
-          <div className="flex items-center justify-between py-3">
-            <span className="text-sm font-medium text-[#4a463f]">Vomiting</span>
+          <div
+            className="flex items-center justify-between gap-3 py-3.5"
+            style={{ borderTop: "1px solid #f3f2ed" }}
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
+                <Activity size={18} />
+              </span>
+              <span className="text-[14.5px] font-medium text-[#1d1d1b]">Vomiting</span>
+            </span>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setField("vomiting_count", Math.max(0, form.vomiting_count - 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8e2d8] text-[#4a463f] hover:bg-[#f7f4ef] transition-colors text-lg font-medium"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0] text-lg font-medium"
+                style={{ borderColor: "#e6e5e0" }}
               >
                 −
               </button>
-              <span className="w-6 text-center text-sm font-semibold text-[#1c1814]">{form.vomiting_count}</span>
+              <span className="w-6 text-center text-sm font-semibold text-[#1d1d1b]">{form.vomiting_count}</span>
               <button
                 type="button"
                 onClick={() => setField("vomiting_count", Math.min(100, form.vomiting_count + 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8e2d8] text-[#4a463f] hover:bg-[#f7f4ef] transition-colors text-lg font-medium"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0] text-lg font-medium"
+                style={{ borderColor: "#e6e5e0" }}
               >
                 +
               </button>
@@ -639,44 +755,108 @@ export default function HealthLogPage() {
           </div>
 
           {/* Weight */}
-          <div className="py-3">
-            <Input
-              label="Weight (kg, optional)"
-              type="number"
-              min={0}
-              step="0.1"
-              value={form.weight_kg != null ? String(form.weight_kg) : ""}
-              onChange={(e) =>
-                setField("weight_kg", e.target.value ? Number(e.target.value) : null)
-              }
-            />
+          <div
+            className="flex items-center justify-between gap-3 py-3.5"
+            style={{ borderTop: "1px solid #f3f2ed" }}
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
+                <Scale size={18} />
+              </span>
+              <span className="text-[14.5px] font-medium text-[#1d1d1b]">Weight</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step="0.1"
+                placeholder="—"
+                aria-label="Weight (kg, optional)"
+                value={form.weight_kg != null ? String(form.weight_kg) : ""}
+                onChange={(e) =>
+                  setField("weight_kg", e.target.value ? Number(e.target.value) : null)
+                }
+                className="w-24 px-3 py-2 text-sm text-[#1d1d1b] placeholder-[#c8c9c0] focus:outline-none"
+                style={{ background: "#f5f4f0", border: "1px solid #e6e5e0", borderRadius: 8 }}
+              />
+              <span className="text-sm text-[#6f7069]">kg</span>
+            </div>
           </div>
 
           {/* Meds */}
-          <label className="flex items-center gap-2 py-3 text-sm text-[#4a463f] cursor-pointer">
+          <label
+            className="flex items-center gap-2.5 py-3.5 text-[14.5px] text-[#1d1d1b] cursor-pointer"
+            style={{ borderTop: "1px solid #f3f2ed" }}
+          >
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300"
+              className="sr-only"
               checked={form.meds_given}
               onChange={(e) => setField("meds_given", e.target.checked)}
             />
-            Gave medication / fluids today
+            <CheckBox checked={form.meds_given} />
+            <span className="flex items-center gap-2">
+              <span style={{ color: "#7a7b73" }} aria-hidden>
+                <Pill size={18} />
+              </span>
+              Gave medication / fluids today
+            </span>
           </label>
 
           {/* Specific observations — collapsible pack inputs */}
-          <details className="group rounded-xl border border-[#e8e2d8]">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-[#4a463f]">
-              <span>Specific observations <span className="ml-1 text-xs font-normal text-[#8a857a]">(optional)</span></span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-[#8a857a] transition-transform group-open:rotate-180" aria-hidden />
+          <details
+            className="group mt-3"
+            style={{ borderTop: "1px solid #f3f2ed" }}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-3.5 text-[14.5px] font-medium text-[#1d1d1b]">
+              <span>Specific observations <span className="ml-1 text-xs font-normal text-[#85867e]">(optional)</span></span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-[#85867e] transition-transform group-open:rotate-180" aria-hidden />
             </summary>
-            <div className="space-y-4 border-t border-[#e8e2d8] px-4 py-4">
-              <p className="text-xs text-[#8a857a]">
+            <div className="space-y-4 pb-2">
+              <p className="text-xs text-[#85867e]">
                 Tap the signs you noticed today. These go to your vet history — they&apos;re owner observations, not a diagnosis.
               </p>
 
+              {/* Underline tabs */}
+              <div
+                className="flex flex-wrap gap-x-4 gap-y-1 overflow-x-auto"
+                style={{ borderBottom: "1px solid #f3f2ed" }}
+                role="tablist"
+              >
+                {([
+                  { id: "gi", label: "GI" },
+                  { id: "urinary", label: "Urinary" },
+                  { id: "mobility", label: "Mobility" },
+                  { id: "skin_ear", label: "Skin & ear" },
+                  { id: "breathing", label: "Breathing" },
+                  { id: "seizure", label: "Episode" },
+                  { id: "medication", label: "Medication" },
+                ] as const).map((t) => {
+                  const active = obsTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setObsTab(t.id)}
+                      className="whitespace-nowrap pb-2 text-sm transition-colors"
+                      style={{
+                        color: active ? "#0b7a4d" : "#85867e",
+                        fontWeight: active ? 600 : 500,
+                        borderBottom: active ? "2px solid #0b7a4d" : "2px solid transparent",
+                        marginBottom: -1,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* GI */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Digestion &amp; stomach</legend>
+              <fieldset hidden={obsTab !== "gi"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Digestion &amp; stomach</legend>
                 <div className="mt-2 space-y-2">
                   <PackCheckboxes
                     items={[
@@ -696,8 +876,8 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Urinary */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Drinking &amp; urination</legend>
+              <fieldset hidden={obsTab !== "urinary"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Drinking &amp; urination</legend>
                 <div className="mt-2 space-y-2">
                   <PackCheckboxes
                     items={[
@@ -712,8 +892,8 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Mobility */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Movement &amp; pain</legend>
+              <fieldset hidden={obsTab !== "mobility"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Movement &amp; pain</legend>
                 <div className="mt-2 space-y-2">
                   <PackCheckboxes
                     items={[
@@ -735,8 +915,8 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Skin/Ear */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Skin &amp; ears</legend>
+              <fieldset hidden={obsTab !== "skin_ear"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Skin &amp; ears</legend>
                 <div className="mt-2 space-y-2">
                   <PackCheckboxes
                     items={[
@@ -752,8 +932,8 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Breathing */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Breathing &amp; heart</legend>
+              <fieldset hidden={obsTab !== "breathing"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Breathing &amp; heart</legend>
                 <div className="mt-2 space-y-2">
                   <PackCheckboxes
                     items={[
@@ -768,16 +948,17 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Seizure/episode */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Seizure or episode</legend>
+              <fieldset hidden={obsTab !== "seizure"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Seizure or episode</legend>
                 <div className="mt-2 space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-[#4a463f]">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1d1d1b]">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300"
+                      className="sr-only"
                       checked={form.context_signals?.seizure?.occurred ?? false}
                       onChange={(e) => setSignals({ seizure: { ...(form.context_signals?.seizure ?? { occurred: false }), occurred: e.target.checked } })}
                     />
+                    <CheckBox checked={form.context_signals?.seizure?.occurred ?? false} />
                     Seizure or episode occurred today
                   </label>
                   {form.context_signals?.seizure?.occurred && (
@@ -803,9 +984,9 @@ export default function HealthLogPage() {
               </fieldset>
 
               {/* Medication event */}
-              <fieldset>
-                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Medication history</legend>
-                <p className="mb-2 text-xs text-[#8a857a]">Record what was given — for your vet history only, not dosing advice.</p>
+              <fieldset hidden={obsTab !== "medication"}>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6f7069]">Medication history</legend>
+                <p className="mb-2 text-xs text-[#85867e]">Record what was given — for your vet history only, not dosing advice.</p>
                 <div className="space-y-2">
                   <Input
                     label="Medication name (optional)"
@@ -820,13 +1001,14 @@ export default function HealthLogPage() {
                       value={form.context_signals?.medication?.time_given ?? ""}
                       onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), time_given: e.target.value || undefined } })}
                     />
-                    <label className="flex items-end gap-2 pb-2.5 text-sm text-[#4a463f]">
+                    <label className="flex cursor-pointer items-end gap-2.5 pb-2.5 text-sm text-[#1d1d1b]">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="sr-only"
                         checked={form.context_signals?.medication?.missed_late ?? false}
                         onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), missed_late: e.target.checked || undefined } })}
                       />
+                      <CheckBox checked={form.context_signals?.medication?.missed_late ?? false} />
                       Missed or late dose
                     </label>
                   </div>
@@ -842,58 +1024,39 @@ export default function HealthLogPage() {
             </div>
           </details>
 
-          <Textarea
-            label="Notes (optional)"
-            value={form.notes ?? ""}
-            onChange={(e) => setField("notes", e.target.value)}
-            placeholder="Anything else you noticed today?"
-            rows={3}
-          />
+          <div className="pt-3.5" style={{ borderTop: "1px solid #f3f2ed" }}>
+            <Textarea
+              label="Notes (optional)"
+              value={form.notes ?? ""}
+              onChange={(e) => setField("notes", e.target.value)}
+              placeholder="Anything else you noticed today?"
+              rows={3}
+            />
+            <p className="mt-1 text-right text-[11px] text-[#85867e]">
+              {(form.notes ?? "").length} characters
+            </p>
+          </div>
 
           {/* Photo upload — real file upload to owner-scoped Supabase Storage */}
-          <div>
-            <label className="block text-sm font-medium text-[#4a463f]">
-              Photos <span className="text-xs font-normal text-[#8a857a]">(optional)</span>
-            </label>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <label
-                className={`${buttonClassName({ variant: "outline", size: "sm" })} cursor-pointer ${
-                  photoUploading || !isSupabaseConfigured ? "pointer-events-none opacity-50" : ""
-                }`}
-              >
-                {photoUploading ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
-                    Uploading…
-                  </>
-                ) : (
-                  "Add photos"
-                )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  className="hidden"
-                  disabled={photoUploading || !isSupabaseConfigured}
-                  onChange={(e) => void onPhotoFiles(e)}
-                />
+          <div className="pt-3.5" style={{ borderTop: "1px solid #f3f2ed" }}>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-[#1d1d1b]">
+                Photos <span className="text-xs font-normal text-[#85867e]">(optional)</span>
               </label>
               {photoCount > 0 ? (
-                <span className="text-sm text-[#4a463f]">
-                  {photoCount} photo{photoCount === 1 ? "" : "s"} attached
-                  <button
-                    type="button"
-                    className="ml-2 text-xs font-medium text-[#b23636] hover:underline"
-                    onClick={() => {
-                      setField("photo_urls", null);
-                      setPhotoPreviews([]);
-                    }}
-                  >
-                    Clear
-                  </button>
-                </span>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[#cf4338] hover:underline"
+                  onClick={() => {
+                    setField("photo_urls", null);
+                    setPhotoPreviews([]);
+                  }}
+                >
+                  Clear ({photoCount})
+                </button>
               ) : null}
             </div>
+
             {photoPreviews.some(Boolean) ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {photoPreviews.map((url, i) =>
@@ -903,14 +1066,44 @@ export default function HealthLogPage() {
                       key={i}
                       src={url}
                       alt="Attached health-log photo"
-                      className="h-16 w-16 rounded-lg border border-[#e8e2d8] object-cover"
+                      className="h-16 w-16 rounded-lg border object-cover"
+                      style={{
+                        borderColor: "#ebeae5",
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg,#f5f4f0,#f5f4f0 6px,#ebeae5 6px,#ebeae5 12px)",
+                      }}
                     />
                   ) : null,
                 )}
               </div>
             ) : null}
-            <p className="mt-1 text-xs text-[#8a857a]">
-              JPG, PNG, or WebP up to 5MB each (max 6). Stored privately for your vet records.
+
+            <label
+              className={`mt-2 flex cursor-pointer flex-col items-center justify-center gap-1.5 px-4 py-6 text-center transition-colors hover:bg-[#faf9f6] ${
+                photoUploading || !isSupabaseConfigured ? "pointer-events-none opacity-50" : ""
+              }`}
+              style={{ border: "1.5px dashed #d4d3cc", borderRadius: 10 }}
+            >
+              {photoUploading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-[#7a7b73]" aria-hidden />
+              ) : (
+                <UploadCloud className="h-5 w-5 text-[#7a7b73]" aria-hidden />
+              )}
+              <span className="text-sm font-medium text-[#1d1d1b]">
+                {photoUploading ? "Uploading…" : "Upload photo"}
+              </span>
+              <span className="text-xs text-[#85867e]">JPG, PNG, or WebP up to 5MB each (max 6)</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                disabled={photoUploading || !isSupabaseConfigured}
+                onChange={(e) => void onPhotoFiles(e)}
+              />
+            </label>
+            <p className="mt-1 text-xs text-[#85867e]">
+              Stored privately for your vet records.
             </p>
           </div>
 
@@ -923,18 +1116,21 @@ export default function HealthLogPage() {
           {/* After-save confirmation + signal chips */}
           {savedAt ? (
             <div className="space-y-3 pt-3">
-              <div className="flex items-center gap-2 rounded-xl bg-[#e7f4ee] px-4 py-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#1f9d6b]" aria-hidden />
-                <p className="text-sm font-medium text-[#15795a]">
+              <div
+                className="flex items-center gap-2 rounded-xl px-4 py-3"
+                style={{ background: "#e8f6ee", border: "1px solid #bfe6d0" }}
+              >
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#15a06a]" aria-hidden />
+                <p className="text-sm font-medium text-[#0b7a4d]">
                   Check-in saved!{" "}
                   <span className="font-normal">{savedAt}</span>
                 </p>
               </div>
               {signalsLoading ? (
-                <p className="text-xs text-[#6b665d]">Checking patterns…</p>
+                <p className="text-xs text-[#6f7069]">Checking patterns…</p>
               ) : afterSaveSignals.length > 0 ? (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f] mb-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#85867e] mb-2">
                     What the brain noticed
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -942,7 +1138,7 @@ export default function HealthLogPage() {
                       <span
                         key={i}
                         className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
-                        style={{ background: "#fbf0db", color: "#c1852a", border: "1px solid #f5d8a0" }}
+                        style={{ background: "#fdf3e3", color: "#b5740a", border: "1px solid #f0cd8e" }}
                       >
                         {s.owner_message}
                       </span>
@@ -958,8 +1154,14 @@ export default function HealthLogPage() {
             <button
               type="submit"
               disabled={!form.pet_id || saving}
-              className="w-full rounded-xl bg-[#1f9d6b] py-3.5 text-base font-semibold text-white hover:bg-[#15795a] disabled:opacity-50 transition-colors"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
+              style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)" }}
             >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Save className="h-4 w-4" aria-hidden />
+              )}
               {saving ? "Saving…" : "Save check-in"}
             </button>
           </div>
@@ -968,30 +1170,37 @@ export default function HealthLogPage() {
 
       {/* Recent logs */}
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-8 text-[#6b665d]">
+        <div className="flex items-center justify-center gap-2 py-8 text-[#6f7069]">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
           Loading your check-ins…
         </div>
       ) : logs.length > 0 ? (
         <section>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#8a857a]">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#85867e]">
             Recent check-ins
           </p>
           <div className="space-y-2">
             {logs.slice(0, 7).map((log) => {
               const off = buildHealthLogReadout([log]).offSigns;
               return (
-                <Card key={log.id} className="flex items-center justify-between gap-3 p-4">
+                <Card
+                  key={log.id}
+                  className="flex items-center justify-between gap-3 p-4"
+                  style={{ borderRadius: 16, borderColor: "#ebeae5" }}
+                >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#2c2a26]">{log.log_date}</p>
-                    <p className="truncate text-xs text-[#8a857a]">
+                    <p className="text-sm font-medium text-[#1d1d1b]">{log.log_date}</p>
+                    <p className="truncate text-xs text-[#85867e]">
                       {off.length === 0
                         ? "All normal"
                         : off.map((s) => `${s.label}: ${s.valueLabel}`).join(" · ")}
                     </p>
                   </div>
                   {log.meds_given ? (
-                    <span className="shrink-0 rounded-full bg-[#f7f4ef] px-2.5 py-1 text-xs text-[#6b665d]">
+                    <span
+                      className="shrink-0 rounded-full px-2.5 py-1 text-xs text-[#0b7a4d]"
+                      style={{ background: "#e8f6ee" }}
+                    >
                       Meds ✓
                     </span>
                   ) : null}
@@ -1002,7 +1211,7 @@ export default function HealthLogPage() {
         </section>
       ) : null}
 
-      <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
+      <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#85867e]">
         Daily logs help you and your vet spot changes — they&apos;re not a diagnosis.
         If you&apos;re worried or things get worse, contact your vet.
       </p>
