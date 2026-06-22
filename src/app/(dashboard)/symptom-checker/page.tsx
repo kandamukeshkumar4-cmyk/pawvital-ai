@@ -1060,22 +1060,17 @@ export default function SymptomCheckerPage() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full"
-                style={{ background: "#e9f6ef", color: "#0b7a4d" }}
-                title="Urgency guidance"
-                aria-label="Urgency guidance"
-              >
-                <ShieldCheck className="h-4 w-4" aria-hidden />
-              </span>
-              <h1
-                className="text-[21px] font-bold leading-tight"
+            <h1
+                className="flex flex-wrap items-center gap-2 text-[21px] font-bold leading-tight"
                 style={{ color: "#1d1d1b" }}
               >
                 Dog symptom check for {displayPetName}
+                <ShieldCheck
+                  className="h-[18px] w-[18px] flex-shrink-0"
+                  style={{ color: "#4d7cb5" }}
+                  aria-label="Urgency guidance active"
+                />
               </h1>
-            </div>
             <p className="mt-1 text-[15px]" style={{ color: "#6f7069" }}>
               We&apos;ll ask a few focused questions to understand what&apos;s going on.
             </p>
