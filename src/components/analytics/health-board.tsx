@@ -3,35 +3,32 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
-  AlertCircle,
-  AlertTriangle,
   ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
+  Bone,
   Camera,
-  Check,
+  ChevronRight,
+  Circle,
   ClipboardList,
-  Copy,
-  FileText,
-  HeartPulse,
-  ListChecks,
-  Minus,
+  Droplet,
+  Frown,
+  Info,
+  Meh,
   NotebookPen,
   Pill,
-  ShieldCheck,
+  Smile,
   Stethoscope,
-  TrendingDown,
-  TrendingUp,
+  Utensils,
+  Weight,
+  Zap,
 } from "lucide-react";
-import { buttonClassName } from "@/components/ui/button";
-import type { OwnerVerdict, OwnerVerdictState } from "@/lib/analytics/owner-readout";
+import type { OwnerVerdict } from "@/lib/analytics/owner-readout";
 import type {
   ChangedSignal,
-  ChangeDirection,
-  EvidenceCounts,
   HealthBoardModel,
   LogNextItem,
-  NextBestLog,
+  SignalCell,
   SignalGridModel,
   SignalTone,
   TimelineEvent,
@@ -40,46 +37,21 @@ import type {
   VetPacketModel,
 } from "@/lib/analytics/health-board";
 
-/* ------------------------------------------------------------------ tokens */
-
-const TONE_DOT: Record<SignalTone, string> = {
-  good: "#00a878",
-  watch: "#e0a458",
-  alert: "#e25c5c",
-  info: "#4d8bd4",
-  muted: "#d6cfc4",
-};
-const TONE_TEXT: Record<SignalTone, string> = {
-  good: "#0a7d5b",
-  watch: "#9a6b1f",
-  alert: "#b23636",
-  info: "#2f6aa8",
-  muted: "#8a857a",
-};
-const TONE_SOFT_BG: Record<SignalTone, string> = {
-  good: "rgba(0,168,120,0.10)",
-  watch: "rgba(224,164,88,0.16)",
-  alert: "rgba(226,92,92,0.12)",
-  info: "rgba(77,139,212,0.12)",
-  muted: "rgba(0,0,0,0.04)",
-};
-
-const CARD = "rounded-2xl border border-[#e8e2d8] bg-white";
-const LABEL = "text-xs font-semibold uppercase tracking-wide text-[#8a857a]";
+/* ------------------------------------------------------------------ tokens
+ * Exact hex values from the design slide (PawVital AI - Standalone.html,
+ * Health Signals screen). Good / Watch / Alert / No-data state colors.
+ */
+const STATE = {
+  good: "#15a06a",
+  watch: "#e0890a",
+  alert: "#d64545",
+  noData: "#c8c9c0",
+} as const;
 
 /* ----------------------------------------------------------- copy control */
 
-function CopyButton({
-  text,
-  idleLabel,
-  doneLabel = "Copied",
-  className,
-}: {
-  text: string;
-  idleLabel: string;
-  doneLabel?: string;
-  className?: string;
-}) {
+/** Two-line outline "Copy vet summary" button matching the slide. */
+function CopyVetSummaryButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const onCopy = useCallback(async () => {
     try {
@@ -107,623 +79,634 @@ function CopyButton({
       type="button"
       onClick={onCopy}
       aria-live="polite"
-      className={
-        className ??
-        `${buttonClassName({ variant: "warmOutline", size: "sm" })} border-[#cfe6dd] bg-white text-[#0a7d5b] hover:bg-[#f2faf7]`
-      }
+      className="flex w-full flex-col items-center"
+      style={{
+        marginTop: 13,
+        background: "#fff",
+        border: "1px solid #bfe2cf",
+        color: "#0b7a4d",
+        borderRadius: 11,
+        padding: 9,
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}
     >
-      {copied ? (
-        <Check className="mr-2 h-4 w-4" aria-hidden />
-      ) : (
-        <Copy className="mr-2 h-4 w-4" aria-hidden />
-      )}
-      {copied ? doneLabel : idleLabel}
+      <span style={{ fontSize: 14, fontWeight: 600 }}>{copied ? "Copied" : "Copy vet summary"}</span>
+      <span style={{ fontSize: 12, color: "#6f8f7c", marginTop: 1 }}>
+        Includes logs, signals &amp; recommendations
+      </span>
     </button>
   );
 }
 
-/* --------------------------------------------------------- 1. decision card */
-
-const STATE_ICON: Record<OwnerVerdictState, typeof HeartPulse> = {
-  watch: ShieldCheck,
-  schedule: HeartPulse,
-  urgent: AlertCircle,
-  emergency: AlertTriangle,
-};
-
-const STATE_BADGE: Record<OwnerVerdictState, { label: string; tone: SignalTone }> = {
-  watch: { label: "Stable", tone: "good" },
-  schedule: { label: "Keep watch", tone: "watch" },
-  urgent: { label: "Serious", tone: "alert" },
-  emergency: { label: "Urgent", tone: "alert" },
-};
-
+/* --------------------------------------------------------- 1. decision card
+ * The slide does not carry a separate decision banner — the verdict is
+ * represented by the OVERALL STATUS STRIP (rendered in page.tsx). This card is
+ * kept only for the emergency safety call-out path so urgent guidance is never
+ * lost; for non-emergency states it renders nothing.
+ */
 export function DecisionCard({
   verdict,
   petName,
-  lastCheckedLabel,
-  vetCopyText,
 }: {
   verdict: OwnerVerdict;
   petName: string;
   lastCheckedLabel: string | null;
   vetCopyText: string;
 }) {
-  const badge = STATE_BADGE[verdict.state];
-  const Icon = STATE_ICON[verdict.state];
-  const accent = TONE_DOT[badge.tone];
-
+  if (!verdict.emergency) return null;
   return (
     <section
-      className="rounded-3xl border bg-white p-5 shadow-sm sm:p-7"
-      style={{ borderColor: TONE_DOT[badge.tone], background: TONE_SOFT_BG[badge.tone] }}
-      aria-label="Current recommendation"
+      className="flex items-start gap-2.5 rounded-[14px] px-4 py-3.5 text-sm"
+      style={{ background: "rgba(214,69,69,0.10)", color: "#b23636", border: "1px solid #f0c9c9" }}
+      role="alert"
+      aria-label="Emergency guidance"
     >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <span
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
-            style={{ background: "rgba(255,255,255,0.7)", color: accent }}
-          >
-            <Icon className="h-7 w-7" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-              style={{ background: "rgba(255,255,255,0.8)", color: TONE_TEXT[badge.tone] }}
-            >
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
-              {badge.label}
-            </span>
-            <h2 className="mt-2 text-2xl font-bold text-[#2c2a26] sm:text-[26px]">
-              {verdict.headline}
-            </h2>
-            <p className="mt-1 max-w-md text-sm leading-relaxed text-[#6b665d]">
-              {verdict.subline}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 flex-col gap-3 sm:items-end">
-          {lastCheckedLabel ? (
-            <div className="sm:text-right">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-[#8a857a]">
-                Last checked
-              </p>
-              <p className="text-sm text-[#4a463f]">{lastCheckedLabel}</p>
-            </div>
-          ) : null}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              href="/symptom-checker"
-              className={buttonClassName({ size: "sm" })}
-              style={
-                verdict.emergency
-                  ? { background: "#e25c5c", borderColor: "#e25c5c" }
-                  : { background: "#0a7d5b", borderColor: "#0a7d5b" }
-              }
-            >
-              <Stethoscope className="mr-2 h-4 w-4" aria-hidden />
-              {verdict.state === "watch" ? "Start a check" : "Start follow-up check"}
-            </Link>
-            <CopyButton text={vetCopyText} idleLabel="Copy vet summary" doneLabel="Copied" />
-          </div>
-        </div>
-      </div>
-
-      {verdict.emergency ? (
-        <div
-          className="mt-4 flex items-start gap-2 rounded-2xl px-4 py-3 text-sm"
-          style={{ background: "rgba(226,92,92,0.12)", color: "#b23636" }}
-          role="alert"
-        >
-          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-          <span>
-            If {petName} is struggling to breathe, collapsed, bleeding heavily, or having
-            repeated seizures, contact an emergency vet right away.
-          </span>
-        </div>
-      ) : null}
+      <Stethoscope className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+      <span style={{ lineHeight: 1.55 }}>
+        If {petName} is struggling to breathe, collapsed, bleeding heavily, or having repeated
+        seizures, contact an emergency vet right away.
+      </span>
     </section>
   );
 }
 
-/* ------------------------------------------------------------ 2. insight tiles */
-
-function ChangeArrow({ arrow, tone }: { arrow: ChangedSignal["arrow"]; tone: SignalTone }) {
-  const color = TONE_TEXT[tone];
-  if (arrow === "down") return <ArrowDownRight className="h-3.5 w-3.5" style={{ color }} aria-hidden />;
-  if (arrow === "up") return <ArrowUpRight className="h-3.5 w-3.5" style={{ color }} aria-hidden />;
-  return <span className="inline-block h-2 w-2 rounded-full" style={{ background: TONE_DOT[tone] }} aria-hidden />;
+/* ------------------------------------------------------------ 2. insight tiles
+ * The slide folds these into the left column and right rail; InsightTiles is
+ * no longer rendered as a standalone row. Kept as a no-op so existing imports
+ * stay valid.
+ */
+export function InsightTiles(_: { board: HealthBoardModel }) {
+  return null;
 }
 
-function ChangedFromNormalTile({ items }: { items: ChangedSignal[] }) {
-  return (
-    <div className={`${CARD} flex flex-col p-4`}>
-      <div className="flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-[#0a7d5b]" aria-hidden />
-        <p className={LABEL}>What changed from normal</p>
-      </div>
-      {items.length === 0 ? (
-        <p className="mt-3 text-sm leading-relaxed text-[#6b665d]">
-          Nothing off normal in the latest log. Keep checking in to stay ahead of changes.
-        </p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {items.slice(0, 4).map((item) => (
-            <li
-              key={item.label}
-              className="flex items-center justify-between gap-2 rounded-r-[10px] py-1.5 pl-3 pr-2.5"
-              style={{
-                borderLeft: `3px solid ${TONE_DOT[item.tone]}`,
-                background: TONE_SOFT_BG[item.tone],
-              }}
-            >
-              <span className="text-sm font-medium text-[#3a3b34]">{item.label}</span>
-              <span
-                className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold"
-                style={{ color: TONE_TEXT[item.tone] }}
-              >
-                <ChangeArrow arrow={item.arrow} tone={item.tone} />
-                {item.value}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <Link href="/health-log" className="mt-auto pt-3 text-sm font-medium text-[#0a7d5b] hover:underline">
-        See full details →
-      </Link>
-    </div>
-  );
-}
+/* --------------------------------------------------------------- 3. signal grid
+ * "14-DAY SIGNAL GRID" card. 96px label gutter + 15 evenly-flexed day columns.
+ * Cell glyphs from the slide: good = smile #1aa06a, watch = meh #e0890a,
+ * weight-down = down arrow / weight-flat = right arrow #e0890a, no data = "—".
+ */
 
-function EvidenceTile({ evidence }: { evidence: EvidenceCounts }) {
-  const rows: { label: string; count: number }[] = [
-    { label: "Symptom checks", count: evidence.symptomChecks },
-    { label: "Daily logs", count: evidence.dailyLogs },
-    { label: "Photos", count: evidence.photos },
-  ];
-  return (
-    <div className={`${CARD} flex flex-col p-4`}>
-      <div className="flex items-center gap-2">
-        <FileText className="h-4 w-4 text-[#7c4dc4]" aria-hidden />
-        <p className={LABEL}>Vet-ready evidence</p>
-      </div>
-      <ul className="mt-3 space-y-2.5">
-        {rows.map((r) => (
-          <li key={r.label} className="flex items-center gap-3">
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
-              style={{
-                background: r.count > 0 ? "rgba(0,168,120,0.12)" : "rgba(0,0,0,0.04)",
-                color: r.count > 0 ? "#0a7d5b" : "#a8a097",
-              }}
-            >
-              {r.count}
-            </span>
-            <span className="text-sm text-[#4a463f]">{r.label}</span>
-          </li>
-        ))}
-      </ul>
-      <Link href="/history" className="mt-auto pt-3 text-sm font-medium text-[#0a7d5b] hover:underline">
-        View timeline →
-      </Link>
-    </div>
-  );
-}
-
-function NextBestLogTile({ next }: { next: NextBestLog }) {
-  return (
-    <div className={`${CARD} flex flex-col p-4`}>
-      <div className="flex items-center gap-2">
-        <NotebookPen className="h-4 w-4 text-[#0a7d5b]" aria-hidden />
-        <p className={LABEL}>Next best log</p>
-      </div>
-      <p className="mt-3 text-base font-semibold leading-snug text-[#2c2a26]">
-        {next.title} {next.when}
-      </p>
-      <p className="mt-1 text-sm leading-relaxed text-[#6b665d]">{next.detail}</p>
-      <Link
-        href="/health-log"
-        className={`${buttonClassName({ variant: "outline", size: "sm" })} mt-auto inline-flex w-fit border-[#cfe6dd] text-[#0a7d5b]`}
-        style={{ marginTop: "0.75rem" }}
-      >
-        Log now
-      </Link>
-    </div>
-  );
-}
-
-export function InsightTiles({ board }: { board: HealthBoardModel }) {
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <ChangedFromNormalTile items={board.changedFromNormal} />
-      <EvidenceTile evidence={board.evidence} />
-      <NextBestLogTile next={board.nextBestLog} />
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------- emoji face helpers */
-
-const TONE_EMOJI: Record<SignalTone, string> = {
-  good: "😊",
-  watch: "😐",
-  alert: "😣",
-  info: "💧",
-  muted: "—",
-};
-
-/* --------------------------------------------------------------- 3. signal grid */
-
-function ChangeBadge({ change }: { change: ChangeDirection }) {
-  if (change === "worse") {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: TONE_TEXT.alert }}>
-        <TrendingDown className="h-3.5 w-3.5" aria-hidden /> Worse
-      </span>
-    );
-  }
-  if (change === "better") {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: TONE_TEXT.good }}>
-        <TrendingUp className="h-3.5 w-3.5" aria-hidden /> Better
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#a8a097]">
-      <Minus className="h-3.5 w-3.5" aria-hidden /> No change
-    </span>
-  );
-}
-
-const GRID_EYEBROW = "text-xs font-semibold uppercase tracking-wide text-[#0b7a4d]";
+const GRID_COLS = [
+  "14d ago", "13d ago", "12d ago", "11d ago", "10d ago", "9d ago", "8d ago",
+  "7d ago", "6d ago", "5d ago", "4d ago", "3d ago", "2d ago", "1d ago", "Today",
+];
 
 const GRID_LEGEND: { label: string; color: string }[] = [
-  { label: "Good", color: "#15a06a" },
-  { label: "Watch", color: "#e0890a" },
-  { label: "Alert", color: "#d64545" },
-  { label: "No data", color: "#c8c9c0" },
+  { label: "Good", color: STATE.good },
+  { label: "Watch", color: STATE.watch },
+  { label: "Alert", color: STATE.alert },
+  { label: "No data", color: STATE.noData },
 ];
 
-function GridLegend() {
+const GRID_ROW_ICON: Record<string, typeof Utensils> = {
+  appetite: Utensils,
+  water: Droplet,
+  stool: Bone,
+  urination: Droplet,
+  vomiting: Meh,
+  energy: Zap,
+  weight: Weight,
+  medication: Pill,
+};
+
+function GridCellGlyph({ cell, signalKey }: { cell: SignalCell; signalKey: string }) {
+  if (!cell.logged) {
+    return <span style={{ color: STATE.noData, fontSize: 13 }}>—</span>;
+  }
+  // Weight is shown as a directional arrow rather than a face.
+  if (signalKey === "weight") {
+    const color = cell.tone === "good" ? STATE.good : STATE.watch;
+    if (cell.tone === "good") {
+      return <ArrowRight className="h-[15px] w-[15px]" style={{ color }} strokeWidth={2.2} aria-hidden />;
+    }
+    return <ArrowDownRight className="h-[15px] w-[15px]" style={{ color }} strokeWidth={2.2} aria-hidden />;
+  }
+  if (cell.tone === "good") {
+    return <Smile className="h-[17px] w-[17px]" style={{ color: "#1aa06a" }} strokeWidth={1.8} aria-hidden />;
+  }
+  if (cell.tone === "watch") {
+    return <Meh className="h-[17px] w-[17px]" style={{ color: STATE.watch }} strokeWidth={1.8} aria-hidden />;
+  }
+  if (cell.tone === "alert") {
+    return <Frown className="h-[17px] w-[17px]" style={{ color: STATE.alert }} strokeWidth={1.8} aria-hidden />;
+  }
+  // info / muted (e.g. medication) — neutral dash so we never invent a face.
+  return <span style={{ color: STATE.noData, fontSize: 13 }}>—</span>;
+}
+
+const PREVIEW_ROWS: { key: string; label: string; tones: SignalTone[] }[] = [
+  { key: "appetite", label: "Appetite", tones: ["good", "good", "watch", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good"] },
+  { key: "water", label: "Water", tones: Array<SignalTone>(15).fill("good") },
+  { key: "stool", label: "Stool", tones: ["good", "watch", "alert", "watch", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good"] },
+  { key: "energy", label: "Energy", tones: ["good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "good", "watch", "good"] },
+];
+
+function GridShell({
+  rows,
+  preview = false,
+}: {
+  rows: { key: string; label: string; cells: SignalCell[] }[];
+  preview?: boolean;
+}) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      {GRID_LEGEND.map((l) => (
-        <span key={l.label} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6f7069]">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: l.color }} aria-hidden />
-          {l.label}
+    <div style={{ borderRadius: 16, border: "1px solid #ebeae5", background: "#fff", padding: "20px 22px" }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+        <span
+          style={{
+            fontSize: 11.5,
+            fontWeight: 700,
+            letterSpacing: "0.6px",
+            color: "#0b7a4d",
+            textTransform: "uppercase",
+          }}
+        >
+          14-day signal grid
         </span>
-      ))}
+        {preview ? (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.6px",
+              textTransform: "uppercase",
+              color: "#0b7a4d",
+              background: "rgba(11,122,77,0.10)",
+              borderRadius: 999,
+              padding: "3px 9px",
+            }}
+          >
+            Preview — example
+          </span>
+        ) : (
+          <div className="flex items-center" style={{ gap: 14, fontSize: 12, color: "#6f7069" }}>
+            {GRID_LEGEND.map((l) => (
+              <span key={l.label} className="flex items-center" style={{ gap: 5 }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: l.color }} />
+                {l.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {preview ? (
+        <p style={{ fontSize: 13, color: "#85867e", marginBottom: 14 }}>
+          PREVIEW — log ~14 days and your grid fills in with real check-ins.
+        </p>
+      ) : null}
+
+      {/* Column header: 96px gutter + 15 evenly-flexed day labels. */}
+      <div className="flex" style={{ marginBottom: 4 }}>
+        <div style={{ width: 96, flex: "none" }} />
+        <div className="flex" style={{ flex: 1 }}>
+          {GRID_COLS.map((c) => (
+            <div key={c} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "#9a9b93" }}>
+              {c}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div aria-hidden={preview} style={preview ? { opacity: 0.55 } : undefined}>
+        {rows.map((row) => {
+          const Icon = GRID_ROW_ICON[row.key] ?? Utensils;
+          return (
+            <div key={row.key} className="flex items-center" style={{ borderTop: "1px solid #f3f2ed" }}>
+              <div
+                className="flex items-center"
+                style={{ width: 96, flex: "none", gap: 7, color: "#5b5c54", fontSize: 13, fontWeight: 500 }}
+              >
+                <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden />
+                {row.label}
+              </div>
+              <div className="flex" style={{ flex: 1 }}>
+                {row.cells.map((cell, i) => (
+                  <div
+                    key={`${row.key}-${cell.date}-${i}`}
+                    className="flex items-center justify-center"
+                    style={{ flex: 1, height: 32 }}
+                    title={cell.logged ? cell.label : "No data"}
+                  >
+                    <GridCellGlyph cell={cell} signalKey={row.key} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
-
-const PREVIEW_EXAMPLE_ROWS: { label: string; tones: SignalTone[] }[] = [
-  { label: "Appetite", tones: ["good", "good", "watch", "good", "good"] },
-  { label: "Water", tones: ["good", "good", "good", "good", "good"] },
-  { label: "Stool", tones: ["good", "watch", "alert", "watch", "good"] },
-  { label: "Energy", tones: ["good", "good", "good", "watch", "good"] },
-];
 
 export function SignalGrid({ grid }: { grid: SignalGridModel }) {
   if (!grid.hasData) {
+    // Sparse/new user: real grid is all em-dash, so show a clearly-labeled
+    // preview built from example tones (never persisted as real data).
+    const previewCells = (tones: SignalTone[]): SignalCell[] =>
+      tones.map((t, i) => ({ date: `preview-${i}`, label: "Example", tone: t, logged: true }));
+    const rows = PREVIEW_ROWS.map((r) => ({ key: r.key, label: r.label, cells: previewCells(r.tones) }));
     return (
-      <section className={`${CARD} p-5`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={GRID_EYEBROW}>14-day signal grid</p>
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={{ background: "rgba(11,122,77,0.10)", color: "#0b7a4d" }}
-          >
-            Preview
-          </span>
-        </div>
-        <p className="mt-3 text-sm leading-relaxed text-[#6b665d]">
-          Log ~14 days and your Health Signals will look like this.
-        </p>
-        <div className="relative mt-4 select-none" aria-hidden style={{ opacity: 0.45 }}>
-          <span className="absolute right-0 top-0 rounded-full bg-[#ecebe5] px-2 py-0.5 text-[10px] font-semibold text-[#6f7069]">
-            Example
-          </span>
-          <div className="space-y-2 pt-5">
-            {PREVIEW_EXAMPLE_ROWS.map((r) => (
-              <div key={r.label} className="flex items-center gap-3">
-                <span className="w-16 shrink-0 text-xs font-medium text-[#8a857a]">{r.label}</span>
-                <div className="flex flex-1 gap-1.5">
-                  {r.tones.map((t, i) => (
-                    <span
-                      key={i}
-                      className="h-5 flex-1 rounded-[5px]"
-                      style={{ background: TONE_DOT[t] }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <Link href="/health-log" className="mt-4 inline-block text-sm font-medium text-[#0a7d5b] hover:underline">
-          Log today&apos;s check-in →
+      <div className="flex flex-col" style={{ gap: 12 }}>
+        <GridShell rows={rows} preview />
+        <Link
+          href="/health-log"
+          className="inline-flex w-fit items-center"
+          style={{ gap: 5, color: "#0b7a4d", fontSize: 14, fontWeight: 600 }}
+        >
+          Log today&apos;s check-in
+          <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
         </Link>
-      </section>
+      </div>
     );
   }
 
-  return (
-    <section className={`${CARD} overflow-hidden`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ebeae5] px-5 py-4">
-        <p className={GRID_EYEBROW}>14-day signal grid</p>
-        <GridLegend />
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
-          <thead>
-            <tr className="text-[#8a857a]">
-              <th className="px-4 py-2 text-left text-xs font-semibold">Signal</th>
-              {grid.days.map((d) => (
-                <th key={d.date} className="px-2 py-2 text-center text-xs font-medium">
-                  <div>{d.weekday}</div>
-                  <div className={d.isToday ? "font-semibold text-[#2c2a26]" : "text-[#a8a097]"}>
-                    {d.isToday ? "Today" : d.monthDay}
-                  </div>
-                </th>
-              ))}
-              <th className="px-3 py-2 text-right text-xs font-semibold">Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            {grid.rows.map((row) => (
-              <tr key={row.key} className="border-t border-[#f4efe7]">
-                <td className="px-4 py-2.5 text-left font-medium text-[#4a463f]">{row.label}</td>
-                {row.cells.map((cell) => (
-                  <td key={cell.date} className="px-2 py-2.5 text-center">
-                    {cell.logged ? (
-                      <span className="inline-flex flex-col items-center gap-0.5">
-                        <span className="text-base leading-none" title={cell.label}>
-                          {TONE_EMOJI[cell.tone]}
-                        </span>
-                        <span
-                          className="text-[10px] leading-none font-medium"
-                          style={{ color: TONE_TEXT[cell.tone] }}
-                        >
-                          {cell.label}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-base" style={{ color: "#cbccc3" }}>—</span>
-                    )}
-                  </td>
-                ))}
-                <td className="px-3 py-2.5 text-right">
-                  <ChangeBadge change={row.change} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
+  const rows = grid.rows.map((r) => ({ key: r.key, label: r.label, cells: r.cells }));
+  return <GridShell rows={rows} />;
 }
 
-/* ------------------------------------------------------------ 4. pattern timeline */
+/* ------------------------------------------------------------ 4. pattern timeline
+ * "PATTERN TIMELINE" card. Each row: 36px tinted icon tile (per source) +
+ * 100px date/source column + 64px time column + flex description +
+ * right-aligned category chips.
+ */
 
 const SOURCE_META: Record<
   TimelineSource,
-  { label: string; icon: typeof Activity; tone: SignalTone }
+  { label: string; icon: typeof ClipboardList; bg: string; color: string }
 > = {
-  symptom_check: { label: "Symptom Check", icon: Stethoscope, tone: "alert" },
-  daily_log: { label: "Daily Log", icon: ClipboardList, tone: "good" },
-  journal: { label: "Journal", icon: NotebookPen, tone: "muted" },
-  medication: { label: "Meds", icon: Pill, tone: "info" },
-  photo: { label: "Photo", icon: Camera, tone: "muted" },
+  daily_log: { label: "Daily log", icon: ClipboardList, bg: "#f6f3ee", color: "#8a6a3c" },
+  symptom_check: { label: "Symptom check", icon: Stethoscope, bg: "#eaf3ee", color: "#0b7a4d" },
+  journal: { label: "Journal", icon: NotebookPen, bg: "#f3f2ee", color: "#6f7069" },
+  medication: { label: "Supplement", icon: Pill, bg: "#e7eef5", color: "#4d7cb5" },
+  photo: { label: "Photo", icon: Camera, bg: "#eef2ea", color: "#6f8a5c" },
 };
+
+// Category chip palette (slide-exact tints).
+const CATEGORY_CHIP: Record<string, { bg: string; color: string }> = {
+  Appetite: { bg: "#f6ddd0", color: "#b06a3a" },
+  Stool: { bg: "#ece2cf", color: "#8a6a3c" },
+  Energy: { bg: "#f6ecd2", color: "#9a7a1c" },
+  Water: { bg: "#dde7f1", color: "#4d7cb5" },
+  Urination: { bg: "#dde7f1", color: "#4d7cb5" },
+  Vomiting: { bg: "#f6ddd0", color: "#b06a3a" },
+  Photo: { bg: "#dde7f1", color: "#4d7cb5" },
+  Supplement: { bg: "#dde7f1", color: "#4d7cb5" },
+  Medication: { bg: "#dde7f1", color: "#4d7cb5" },
+  Note: { bg: "#e6e4de", color: "#6f7069" },
+  Check: { bg: "#eaf3ee", color: "#0b7a4d" },
+};
+
+/** Derive small category chips for a timeline event from its source/tone. */
+function chipsFor(ev: TimelineEvent): string[] {
+  switch (ev.source) {
+    case "photo":
+      return ["Photo"];
+    case "medication":
+      return ["Supplement"];
+    case "journal":
+      return ["Note"];
+    case "symptom_check":
+      return ["Check"];
+    case "daily_log":
+    default: {
+      // Pull category words straight from the headline the model built.
+      const d = ev.detail.toLowerCase();
+      const cats: string[] = [];
+      if (d.includes("appetite")) cats.push("Appetite");
+      if (d.includes("stool")) cats.push("Stool");
+      if (d.includes("energy")) cats.push("Energy");
+      if (d.includes("vomit")) cats.push("Vomiting");
+      if (d.includes("water") || d.includes("drink")) cats.push("Water");
+      if (d.includes("urin")) cats.push("Urination");
+      return cats;
+    }
+  }
+}
+
+/** "8:15 AM" from an ISO timestamp, or "" when only a date is known. */
+function timeOf(dateStr: string): string {
+  if (dateStr.length <= 10) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  let h = d.getHours();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${String(d.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
 
 export function PatternTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) return null;
-  // Oldest → newest reads left-to-right like a story.
-  const ordered = [...events].reverse();
 
   return (
-    <section className={`${CARD} p-5`}>
-      <p className={GRID_EYEBROW}>Pattern timeline</p>
-      <ul className="mt-4 space-y-2.5">
-        {ordered.map((ev, i) => {
+    <div style={{ borderRadius: 16, border: "1px solid #ebeae5", background: "#fff", padding: "20px 22px" }}>
+      <div style={{ marginBottom: 16 }}>
+        <div className="flex flex-wrap items-center justify-between" style={{ gap: 10 }}>
+          <div>
+            <span
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                letterSpacing: "0.6px",
+                color: "#0b7a4d",
+                textTransform: "uppercase",
+              }}
+            >
+              Pattern timeline
+            </span>
+            <span style={{ fontSize: 13, color: "#9a9b93", marginLeft: 10 }}>
+              Chronological story of what&apos;s been logged.
+            </span>
+          </div>
+          <div className="flex" style={{ gap: 10 }}>
+            <span
+              className="flex items-center"
+              style={{
+                gap: 7,
+                background: "#fff",
+                border: "1px solid #e3e2dd",
+                borderRadius: 9,
+                padding: "7px 12px",
+                fontSize: 13,
+                color: "#3a3b34",
+              }}
+            >
+              All sources ▾
+            </span>
+            <span
+              className="flex items-center"
+              style={{
+                gap: 7,
+                background: "#fff",
+                border: "1px solid #e3e2dd",
+                borderRadius: 9,
+                padding: "7px 12px",
+                fontSize: 13,
+                color: "#3a3b34",
+              }}
+            >
+              Last 90 days ▾
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        {events.map((ev, i) => {
           const meta = SOURCE_META[ev.source];
           const Icon = meta.icon;
+          const time = timeOf(ev.date);
+          const chips = chipsFor(ev);
+          const isPhoto = ev.source === "photo";
           return (
-            <li
+            <div
               key={`${ev.date}-${ev.source}-${i}`}
-              className="flex items-start gap-3 rounded-xl border border-[#f0ebe2] px-3 py-2.5"
+              className="flex items-center"
+              style={{ gap: 14, padding: "11px 0", borderTop: "1px solid #f3f2ed" }}
             >
               <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
-                style={{ background: TONE_SOFT_BG[ev.tone], color: TONE_TEXT[ev.tone] }}
+                className="flex items-center justify-center"
+                style={{ width: 36, height: 36, borderRadius: 9, background: meta.bg, color: meta.color, flex: "none" }}
               >
-                <Icon className="h-4 w-4" aria-hidden />
+                <Icon className="h-[17px] w-[17px]" strokeWidth={1.8} aria-hidden />
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-[11px] font-medium text-[#a8a097]">{ev.monthDay}</span>
-                  <p className="text-sm font-semibold text-[#2c2a26]">{ev.title}</p>
-                </div>
-                <p className="mt-0.5 text-xs leading-snug text-[#6b665d]">{ev.detail}</p>
+              <div style={{ width: 100, flex: "none" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1c2522" }}>{ev.monthDay}</div>
+                <div style={{ fontSize: 12, color: "#9a9b93" }}>{meta.label}</div>
               </div>
-              <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                style={{ background: TONE_SOFT_BG[meta.tone], color: TONE_TEXT[meta.tone] }}
-              >
-                {meta.label}
-              </span>
-            </li>
+              <div style={{ width: 64, flex: "none", fontSize: 12.5, color: "#85867e" }}>{time}</div>
+              {isPhoto ? (
+                <div className="flex flex-1 items-center" style={{ gap: 12 }}>
+                  <div
+                    style={{
+                      width: 46,
+                      height: 34,
+                      borderRadius: 7,
+                      flex: "none",
+                      background:
+                        "repeating-linear-gradient(45deg,#cdd6bd,#cdd6bd 5px,#c2cbb0 5px,#c2cbb0 10px)",
+                    }}
+                    aria-hidden
+                  />
+                  <span style={{ fontSize: 14, color: "#3a3b34" }}>{ev.detail}</span>
+                </div>
+              ) : (
+                <div style={{ flex: 1, fontSize: 14, color: "#3a3b34" }}>
+                  {ev.title}
+                  {ev.detail ? <span style={{ color: "#6f7069" }}>{" — "}{ev.detail}</span> : null}
+                </div>
+              )}
+              {chips.length > 0 ? (
+                <div className="flex" style={{ gap: 6, flex: "none" }}>
+                  {chips.map((c) => {
+                    const chip = CATEGORY_CHIP[c] ?? CATEGORY_CHIP.Note;
+                    return (
+                      <span
+                        key={c}
+                        style={{
+                          background: chip.bg,
+                          color: chip.color,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          padding: "3px 9px",
+                          borderRadius: 13,
+                        }}
+                      >
+                        {c}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           );
         })}
-      </ul>
-    </section>
-  );
-}
+      </div>
 
-/* --------------------------------------------------------------- 5. trend cards */
-
-function Sparkline({ card }: { card: TrendCard }) {
-  return (
-    <div className="mt-3 flex h-16 items-end gap-1">
-      {card.points.map((p) => (
-        <span
-          key={p.date}
-          className="flex-1 rounded-sm"
-          style={{
-            height: `${Math.max(6, Math.round(p.magnitude * 100))}%`,
-            background: p.empty ? "#efeae1" : TONE_DOT[p.tone],
-            minWidth: 3,
-          }}
-          title={`${p.date}: ${p.label}`}
-          aria-hidden
-        />
-      ))}
+      <Link
+        href="/history"
+        className="flex items-center justify-center"
+        style={{ gap: 5, color: "#0b7a4d", fontSize: 14, fontWeight: 600, marginTop: 14 }}
+      >
+        View full timeline
+        <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+      </Link>
     </div>
   );
 }
 
-function WeightLine({ card }: { card: TrendCard }) {
-  const pts = card.points;
-  const width = 100;
-  const height = 40;
-  const usable = pts.filter((p) => !p.empty);
-  const coords = pts.map((p, i) => {
-    const x = pts.length > 1 ? (i / (pts.length - 1)) * width : 0;
-    const y = height - p.magnitude * height;
-    return { x, y, empty: p.empty };
-  });
-  const line = coords
-    .filter((c) => !c.empty)
-    .map((c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(1)},${c.y.toFixed(1)}`)
-    .join(" ");
+/* --------------------------------------------------------------- 5. trend cards
+ * The slide folds trends into the "What changed from normal" rail; the
+ * standalone trend row is not shown. Kept as a no-op for import stability.
+ */
+export function TrendCards(_: { cards: TrendCard[] }) {
+  return null;
+}
+
+/* -------------------------------------------------- right rail: changed-from-normal
+ * "What changed from normal" card. Each item = left-accent strip with a tinted
+ * icon tile, title, "Watch" pill, description, and meta line.
+ */
+
+const RAIL_CARD: React.CSSProperties = {
+  background: "#fff",
+  border: "1px solid #ebeae5",
+  borderRadius: 16,
+  padding: "18px 20px",
+};
+
+const RAIL_EYEBROW: React.CSSProperties = {
+  fontSize: 11.5,
+  fontWeight: 700,
+  letterSpacing: "0.6px",
+  textTransform: "uppercase",
+};
+
+const CHANGE_ICON: Record<string, typeof Utensils> = {
+  Appetite: Utensils,
+  Energy: Zap,
+  Stool: Bone,
+  Urination: Droplet,
+  Water: Droplet,
+  Vomiting: Meh,
+};
+
+function ChangedItem({ item }: { item: ChangedSignal }) {
+  const isInfo = item.tone === "info";
+  const accent = isInfo ? "#4d7cb5" : STATE.watch;
+  const stripBg = isInfo ? "#f9fbfd" : "#fdfaf3";
+  const tileBg = isInfo ? "#e7eef5" : "#f6ece2";
+  const tileColor = isInfo ? "#4d7cb5" : "#c87d3e";
+  const Icon = CHANGE_ICON[item.label] ?? Info;
+  const Arrow =
+    item.arrow === "down" ? ArrowDownRight : item.arrow === "up" ? ArrowUpRight : null;
 
   return (
-    <div className="mt-3 h-16">
-      {usable.length === 0 ? (
-        <div className="flex h-full items-center justify-center text-xs text-[#a8a097]">
-          No weight logged
+    <div
+      className="flex"
+      style={{
+        gap: 12,
+        borderLeft: `3px solid ${accent}`,
+        background: stripBg,
+        borderRadius: "0 10px 10px 0",
+        padding: "11px 13px",
+      }}
+    >
+      <span
+        className="flex items-center justify-center"
+        style={{ width: 34, height: 34, borderRadius: 9, background: tileBg, color: tileColor, flex: "none" }}
+      >
+        <Icon className="h-[17px] w-[17px]" strokeWidth={1.8} aria-hidden />
+      </span>
+      <div style={{ flex: 1 }}>
+        <div className="flex items-center justify-between">
+          <span style={{ fontSize: 14.5, fontWeight: 600, color: "#1c2522" }}>{item.label}</span>
+          <span
+            style={{
+              background: "#fdf3e3",
+              color: "#b5740a",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "2px 8px",
+              borderRadius: 12,
+            }}
+          >
+            Watch
+          </span>
         </div>
+        <div className="flex items-center" style={{ fontSize: 13, color: "#6f7069", marginTop: 2, gap: 4 }}>
+          {Arrow ? <Arrow className="h-3.5 w-3.5" style={{ color: accent }} aria-hidden /> : null}
+          {item.value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ChangedFromNormalRail({ items }: { items: ChangedSignal[] }) {
+  return (
+    <div style={RAIL_CARD}>
+      <div className="flex items-center" style={{ ...RAIL_EYEBROW, color: "#5b6b62", gap: 7, marginBottom: 14 }}>
+        What changed from normal
+        <Info className="h-[13px] w-[13px]" style={{ color: "#b6b7af" }} strokeWidth={1.8} aria-hidden />
+      </div>
+      {items.length === 0 ? (
+        <p style={{ fontSize: 13, color: "#6f7069", lineHeight: 1.55 }}>
+          Nothing off normal in the latest log. Keep checking in to stay ahead of changes.
+        </p>
       ) : (
-        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-full w-full" aria-hidden>
-          <path d={line} fill="none" stroke="#00a878" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          {coords
-            .filter((c) => !c.empty)
-            .map((c, i) => (
-              <circle key={i} cx={c.x} cy={c.y} r={1.8} fill="#00a878" />
-            ))}
-        </svg>
+        <div className="flex flex-col" style={{ gap: 11 }}>
+          {items.slice(0, 4).map((item) => (
+            <ChangedItem key={item.label} item={item} />
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function TrendCardView({ card }: { card: TrendCard }) {
-  return (
-    <div className={`${CARD} p-4`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[#2c2a26]">{card.label}</p>
-        <span
-          className="text-xs font-medium"
-          style={{
-            color:
-              card.change === "worse"
-                ? TONE_TEXT.alert
-                : card.change === "better"
-                  ? TONE_TEXT.good
-                  : "#a8a097",
-          }}
-        >
-          {card.changeLabel}
-        </span>
-      </div>
-      {card.isMeasure ? <WeightLine card={card} /> : <Sparkline card={card} />}
-      <p className="mt-2 text-xs text-[#6b665d]">{card.caption}</p>
-    </div>
-  );
-}
-
-export function TrendCards({ cards }: { cards: TrendCard[] }) {
-  const hasAny = cards.some((c) => c.points.some((p) => !p.empty));
-  if (!hasAny) return null;
-  return (
-    <section>
-      <p className={`${LABEL} mb-2 px-1`}>Trends this week</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {cards.map((card) => (
-          <TrendCardView key={card.key} card={card} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* --------------------------------------------------------------- 6. vet packet */
-
+/* --------------------------------------------------------------- 6. vet packet
+ * "What to tell your vet" card: green eyebrow, body paragraph, two stacked
+ * full-width buttons (outline "Copy vet summary" + gradient "Create vet report").
+ */
 export function VetPacketPanel({
   packet,
-  petName,
 }: {
   packet: VetPacketModel;
   petName: string;
 }) {
+  // Body paragraph = the model's bullets joined into one vet-ready sentence.
+  const body = packet.bullets.join(" ");
   return (
-    <section className={`${CARD} bg-[#faf8f5] p-5`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-[#7c4dc4]" aria-hidden />
-          <p className={LABEL}>What to tell the vet</p>
-        </div>
-        <CopyButton text={packet.copyText} idleLabel="Copy" doneLabel="Copied" />
-      </div>
-      <ul className="mt-3 space-y-2">
-        {packet.bullets.map((b, i) => (
-          <li key={i} className="flex items-start gap-2.5">
-            <span className="mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#0a7d5b]" aria-hidden />
-            <span className="text-sm leading-relaxed text-[#4a463f]">{b}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-3 text-xs italic text-[#8a857a]">{packet.basedOn}</p>
-      <span className="sr-only">Summary for {petName}</span>
-    </section>
+    <div style={RAIL_CARD}>
+      <div style={{ ...RAIL_EYEBROW, color: "#0b7a4d", marginBottom: 10 }}>What to tell your vet</div>
+      <div style={{ fontSize: 13.5, color: "#44453f", lineHeight: 1.55 }}>{body}</div>
+      <CopyVetSummaryButton text={packet.copyText} />
+      <CreateVetReportButton />
+    </div>
   );
 }
 
-/* ----------------------------------------------------------- 7. log-next list */
-
+/* ----------------------------------------------------------- 7. log-next list
+ * "What to log next" checklist: circle/check icon + label per item.
+ */
 export function LogNextChecklist({ items }: { items: LogNextItem[] }) {
   if (items.length === 0) return null;
   return (
-    <section className={`${CARD} p-5`}>
-      <div className="flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-[#0a7d5b]" aria-hidden />
-        <p className={LABEL}>What to log next</p>
-      </div>
-      <ul className="mt-3 space-y-3">
+    <div style={RAIL_CARD}>
+      <div style={{ ...RAIL_EYEBROW, color: "#5b6b62", marginBottom: 12 }}>What to log next</div>
+      <div className="flex flex-col" style={{ gap: 12 }}>
         {items.map((item) => (
-          <li key={item.label} className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <span
-                className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#cfc8bb]"
-                aria-hidden
-              />
-              <div>
-                <p className="text-sm font-medium text-[#2c2a26]">{item.label}</p>
-                <p className="text-xs text-[#8a857a]">{item.why}</p>
-              </div>
-            </div>
-            <span className="shrink-0 rounded-full bg-[rgba(224,164,88,0.16)] px-2 py-0.5 text-[11px] font-medium text-[#9a6b1f]">
-              {item.when}
-            </span>
-          </li>
+          <Link key={item.label} href="/health-log" className="flex items-center" style={{ gap: 11 }}>
+            <Circle className="h-[19px] w-[19px] shrink-0" style={{ color: "#c2c3ba" }} strokeWidth={1.8} aria-hidden />
+            <span style={{ fontSize: 14, color: "#3a3b34" }}>{item.label}</span>
+          </Link>
         ))}
-      </ul>
-    </section>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------- right rail: vet-report button
+ * "Create vet report" — gradient two-line CTA. Renders a Link to keep the
+ * existing share/report navigation; styled per the slide.
+ */
+export function CreateVetReportButton() {
+  return (
+    <Link
+      href="/history"
+      className="flex w-full flex-col items-center"
+      style={{
+        marginTop: 9,
+        background: "linear-gradient(180deg,#17a06d,#0a7048)",
+        color: "#fff",
+        border: "none",
+        borderRadius: 11,
+        padding: 9,
+      }}
+    >
+      <span style={{ fontSize: 14, fontWeight: 600 }}>Create vet report</span>
+      <span style={{ fontSize: 12, color: "#cdeadc", marginTop: 1 }}>Generate a shareable report</span>
+    </Link>
   );
 }
