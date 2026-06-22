@@ -492,10 +492,11 @@ interface TimelineEvent {
   sortAt: number;
 }
 
-const DOT_COLOR: Record<Exclude<TimelineDot, "pending">, string> = {
+const DOT_COLOR: Record<TimelineDot, string> = {
   watch: "#e0890a",
   info: "#4d7cb5",
   active: "#0b7a4d",
+  pending: "#e0890a", // pending renders a hollow dot; color unused but keeps the map total
 };
 
 /** Short date column label ("May 15", "Today"). */
