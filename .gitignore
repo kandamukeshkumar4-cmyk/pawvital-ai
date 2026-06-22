@@ -154,3 +154,6 @@ Roo-Code
 
 # Playwright/dev run artifacts
 output/
+
+.design-ref/
+REDESIGN_SPEC.md
