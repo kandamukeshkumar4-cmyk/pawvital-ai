@@ -42,6 +42,12 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export interface SupplementSuggestion {
+  name: string;
+  /** Optional signal that triggered this suggestion — preserved through to the DB trial. */
+  reason_signal_key?: string | null;
+}
+
 export function SupplementTrialsPanel({
   petId,
   petName,
@@ -49,8 +55,8 @@ export function SupplementTrialsPanel({
 }: {
   petId: string | null;
   petName: string;
-  /** Supplement names from the AI "ask vet" list — one-tap to track concretely. */
-  suggestions?: string[];
+  /** Supplement suggestions from the AI "ask vet" list — one-tap to track concretely. */
+  suggestions?: SupplementSuggestion[];
 }) {
   const [trials, setTrials] = useState<SupplementTrial[]>([]);
   const [name, setName] = useState("");
@@ -122,6 +128,29 @@ export function SupplementTrialsPanel({
     [petId, busy, load],
   );
 
+  const markActive = useCallback(
+    async (id: string) => {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const r = await fetch(`/api/dog-brain/supplements?id=${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "mark_active" }),
+        });
+        if (!r.ok && r.status === 409) {
+          // Guard fired: trial already past ask_vet — just refresh.
+        }
+        await load();
+      } catch {
+        /* best-effort */
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, load],
+  );
+
   const recordOutcome = useCallback(
     async (id: string, outcome: Outcome) => {
       if (busy) return;
@@ -146,8 +175,14 @@ export function SupplementTrialsPanel({
 
   // Suggestions the owner hasn't already started a trial for.
   const tracked = new Set(trials.map((t) => t.supplement_name.toLowerCase()));
-  const freshSuggestions = Array.from(new Set(suggestions))
-    .filter((s) => s && !tracked.has(s.toLowerCase()))
+  const seen = new Set<string>();
+  const freshSuggestions = suggestions
+    .filter((s) => {
+      const key = s.name.toLowerCase();
+      if (!s.name || tracked.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, 6);
 
   return (
@@ -222,15 +257,15 @@ export function SupplementTrialsPanel({
         </button>
       </div>
 
-      {/* One-tap from AI "ask vet" suggestions → concrete persisted trial */}
+      {/* One-tap from AI "ask vet" suggestions → concrete persisted trial (reason_signal_key preserved) */}
       {freshSuggestions.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 11 }}>
           <span style={{ fontSize: 12.5, color: "#9a9b93", alignSelf: "center" }}>From your plan:</span>
           {freshSuggestions.map((s) => (
             <button
-              key={s}
+              key={s.name}
               type="button"
-              onClick={() => void start(s)}
+              onClick={() => void start(s.name, s.reason_signal_key)}
               disabled={busy}
               style={{
                 background: "#f4f3ee",
@@ -244,7 +279,7 @@ export function SupplementTrialsPanel({
                 fontFamily: "inherit",
               }}
             >
-              + {s}
+              + {s.name}
             </button>
           ))}
         </div>
@@ -295,7 +330,34 @@ export function SupplementTrialsPanel({
                   <div style={{ fontSize: 13, color: "#4d7cb5", fontWeight: 600, marginTop: 10 }}>
                     Outcome recorded: {t.outcome}
                   </div>
+                ) : t.status === "ask_vet" ? (
+                  // Lifecycle gate: owner must confirm with vet before starting.
+                  <div style={{ marginTop: 11 }}>
+                    <div style={{ fontSize: 12.5, color: "#b5740a", marginBottom: 8 }}>
+                      Ask your vet about this supplement at your next visit.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void markActive(t.id)}
+                      disabled={busy}
+                      style={{
+                        background: "linear-gradient(180deg,#17a06d,#0a7048)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 9,
+                        padding: "7px 16px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: busy ? "default" : "pointer",
+                        opacity: busy ? 0.55 : 1,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Vet approved — start trial
+                    </button>
+                  </div>
                 ) : (
+                  // active / follow_up_due: outcome recording
                   <div style={{ marginTop: 11 }}>
                     <div style={{ fontSize: 12.5, color: "#85867e", marginBottom: 7 }}>
                       How is {petName} doing on this?

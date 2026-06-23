@@ -181,14 +181,14 @@ export async function POST(request: Request) {
   if (!isNvidiaGenerationConfigured("diagnosis")) {
     return NextResponse.json({
       supplements: [],
-      nutrition_grade: "B+",
-      monthly_cost: "$90",
-      summary: `Demo mode: Connect an NVIDIA NIM API key for personalized supplement recommendations for ${pet.name || "your pet"}.`,
+      summary: `Demo mode: Connect an NVIDIA NIM API key for personalized supplement awareness for ${pet.name || "your pet"}.`,
     });
   }
 
   try {
-    const prompt = `You are a veterinary nutrition AI expert. Create a personalized supplement plan.
+    const prompt = `You are a veterinary nutrition AI assistant. Generate a vet-safe supplement awareness plan.
+Do NOT provide dosing, frequency, brand names, or pricing — those decisions belong to the veterinarian.
+Your job is to give the owner clear educational context so they can have an informed vet conversation.
 
 Pet Profile:
 - Name: ${pet.name || "your dog"}
@@ -200,25 +200,25 @@ Pet Profile:
 - Existing conditions: ${pet.existing_conditions?.join(", ") || "None"}
 - Medications: ${pet.medications?.join(", ") || "None"}
 
-Create a supplement plan. Respond in this exact JSON format:
+Respond in this exact JSON format — no other keys allowed:
 {
   "supplements": [
     {
-      "name": "Supplement name",
-      "purpose": "Why this supplement is recommended",
-      "dosage": "Recommended dosage",
-      "frequency": "How often",
-      "brand": "Recommended brand",
-      "price": "Estimated monthly cost",
-      "priority": "essential" | "recommended" | "optional"
+      "name": "Supplement name (generic, e.g. 'Omega-3 fatty acids')",
+      "purpose": "One sentence: what this supplement supports in dogs like this one",
+      "why_ask_vet": "One sentence: why the owner should confirm this with their vet before starting",
+      "evidence": "Brief note on the quality of evidence (e.g. 'Good evidence in large breeds with joint issues')",
+      "priority": "ask_vet" | "monitor"
     }
   ],
-  "nutrition_grade": "A+",
-  "monthly_cost": "$XX",
-  "summary": "2-3 sentence summary of the plan"
+  "summary": "2-3 sentence overview of the plan, vet-first framing"
 }
 
-Consider breed-specific needs, age-related requirements, and existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
+Rules:
+- priority "ask_vet" = worth discussing at next vet visit
+- priority "monitor" = low priority, can mention if the vet brings it up
+- Include 3-5 supplements. Never include dosing, frequency, brand names, or pricing.
+- Respond ONLY with valid JSON.`;
 
     // Supplements are non-clinical structured generation — use the fast
     // 'phrasing' model (llama-4-maverick-17b), not the heavy 253B 'diagnosis'
@@ -236,9 +236,7 @@ Consider breed-specific needs, age-related requirements, and existing conditions
   } catch {
     return NextResponse.json({
       supplements: [],
-      nutrition_grade: "B+",
-      monthly_cost: "$90",
-      summary: "Unable to generate a full plan at this time. Please try again.",
+      summary: "Unable to generate a plan at this time. Please try again.",
     });
   }
 }

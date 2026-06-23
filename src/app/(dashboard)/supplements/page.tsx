@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   HelpCircle,
   FileText,
-  MoreVertical,
   Bell,
   ChevronRight,
   Droplet,
@@ -20,32 +19,27 @@ import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/qua
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
-import { SupplementTrialsPanel } from "@/components/dog-brain/supplement-trials-panel";
+import { SupplementTrialsPanel, type SupplementSuggestion } from "@/components/dog-brain/supplement-trials-panel";
 
 interface SupplementItem {
   name: string;
   purpose: string;
-  dosage: string;
-  frequency: string;
-  brand: string;
-  price: string;
-  priority: "essential" | "recommended" | "optional";
+  why_ask_vet: string;
+  evidence: string;
+  priority: "ask_vet" | "monitor";
 }
 
 interface SupplementPlan {
   supplements: SupplementItem[];
-  nutrition_grade: string;
-  monthly_cost: string;
   summary: string;
 }
 
-type TabKey = "active" | "ask_vet" | "followups";
+type TabKey = "ask_vet" | "monitor";
 
 function classifySupplements(supplements: SupplementItem[]) {
   return {
-    active: supplements.filter((s) => s.priority === "essential"),
-    ask_vet: supplements.filter((s) => s.priority === "recommended"),
-    followups: supplements.filter((s) => s.priority === "optional"),
+    ask_vet: supplements.filter((s) => s.priority === "ask_vet"),
+    monitor: supplements.filter((s) => s.priority === "monitor"),
   };
 }
 
@@ -82,22 +76,20 @@ function ReminderToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
   );
 }
 
-function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
-  const [reminder, setReminder] = useState(tab === "active");
-  const [notes, setNotes] = useState("");
+function SupplementCard({ item }: { item: SupplementItem }) {
+  const [reminder, setReminder] = useState(false);
 
-  const isActive = tab === "active";
-  const statusLabel = isActive ? "Active" : "Ask vet about";
-  const statusBg = isActive ? "#e9f6ef" : "#fdf3e3";
-  const statusFg = isActive ? "#0b7a4d" : "#b5740a";
-  const evidence = [item.dosage, item.frequency].filter(Boolean).join(" · ");
+  const isAskVet = item.priority === "ask_vet";
+  const statusLabel = isAskVet ? "Ask vet" : "Monitor";
+  const statusBg = isAskVet ? "#fdf3e3" : "#f0f0ec";
+  const statusFg = isAskVet ? "#b5740a" : "#85867e";
 
   return (
     <div
       style={{
         background: "#fff",
         border: "1px solid #ebeae5",
-        borderLeft: isActive ? "4px solid #15a06a" : "1px solid #ebeae5",
+        borderLeft: isAskVet ? "4px solid #b5740a" : "1px solid #ebeae5",
         borderRadius: 14,
         padding: "20px 22px",
       }}
@@ -138,86 +130,33 @@ function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
             </span>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {isActive ? (
-            <span
-              style={{
-                background: "#fdf3e3",
-                color: "#b5740a",
-                fontSize: 13,
-                fontWeight: 600,
-                padding: "6px 13px",
-                borderRadius: 9,
-              }}
-            >
-              Ask vet
-            </span>
-          ) : (
-            <button
-              type="button"
-              style={{
-                background: "#fff",
-                border: "1px solid #e3e2dd",
-                color: "#3a3b34",
-                borderRadius: 9,
-                padding: "7px 14px",
-                fontSize: 13.5,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              View details
-            </button>
-          )}
-          <MoreVertical className="h-5 w-5 text-[#9a9b93]" aria-hidden />
-        </div>
       </div>
 
-      {/* Detail grid (gap 30, margin-top 18) — real fields only */}
-      <div style={{ display: "flex", gap: 30, marginTop: 18 }}>
+      {/* Detail grid — vet-safe fields only: no dosage, frequency, brand, price */}
+      <div style={{ display: "flex", gap: 22, marginTop: 18, flexWrap: "wrap" }}>
         {item.purpose && (
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 2, minWidth: 180 }}>
             <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Purpose</div>
             <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.purpose}</div>
           </div>
         )}
-        {evidence && (
-          <div style={{ flex: 1.2 }}>
+        {item.evidence && (
+          <div style={{ flex: 1.5, minWidth: 160 }}>
             <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Evidence</div>
-            <div style={{ fontSize: 14.5, color: "#c87d3e", fontWeight: 600 }}>{evidence}</div>
-            <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>View related</div>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#0b7a4d",
-                marginTop: 2,
-              }}
-            >
-              <Link href="/daily-log" style={{ cursor: "pointer" }}>
-                Daily logs
-              </Link>
+            <div style={{ fontSize: 14.5, color: "#c87d3e", fontWeight: 600 }}>{item.evidence}</div>
+            <div style={{ display: "flex", gap: 8, fontSize: 13, fontWeight: 600, color: "#0b7a4d", marginTop: 8 }}>
+              <Link href="/daily-log" style={{ cursor: "pointer" }}>Daily logs</Link>
               <span style={{ color: "#cbccc3" }}>·</span>
-              <Link href="/health-signals" style={{ cursor: "pointer" }}>
-                Health signals
-              </Link>
+              <Link href="/health-signals" style={{ cursor: "pointer" }}>Health signals</Link>
             </div>
           </div>
         )}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Suggested by PawVital</div>
-          {item.brand ? (
-            <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.brand}</div>
-          ) : (
-            <div style={{ fontSize: 14.5, color: "#9a9b93" }}>Personalized for your dog</div>
-          )}
-          {item.price && (
-            <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>Est. {item.price}</div>
-          )}
-        </div>
+        {item.why_ask_vet && (
+          <div style={{ flex: 2, minWidth: 180 }}>
+            <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Why ask your vet</div>
+            <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.why_ask_vet}</div>
+          </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -234,52 +173,14 @@ function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
         </div>
         <ReminderToggle on={reminder} onToggle={() => setReminder((r) => !r)} />
       </div>
-
-      {/* Notes */}
-      <div style={{ fontSize: 14.5, fontWeight: 600, color: "#1d1d1b", marginTop: 18 }}>
-        Your notes / side effects
-      </div>
-      <div style={{ fontSize: 12.5, color: "#85867e", marginTop: 2, marginBottom: 9 }}>
-        How is {item.name} doing after starting this?
-      </div>
-      <div style={{ position: "relative" }}>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value.slice(0, 250))}
-          placeholder="Any changes, side effects, or notes..."
-          style={{
-            width: "100%",
-            height: 62,
-            resize: "none",
-            border: "1px solid #e6e5e0",
-            borderRadius: 9,
-            padding: 11,
-            fontSize: 13.5,
-            color: "#1d1d1b",
-            outline: "none",
-          }}
-        />
-        <span
-          style={{
-            position: "absolute",
-            right: 10,
-            bottom: 9,
-            fontSize: 11.5,
-            color: "#b6b7af",
-          }}
-        >
-          {notes.length}/250
-        </span>
-      </div>
     </div>
   );
 }
 
 function EmptyTabState({ tab, petName }: { tab: TabKey; petName: string }) {
   const messages: Record<TabKey, string> = {
-    active: `No active supplements for ${petName} yet. Generate a plan above to get personalized recommendations.`,
-    ask_vet: `No vet discussion items for ${petName} yet. Recommendations from the AI plan will appear here.`,
-    followups: `No follow-up supplements for ${petName} yet. Optional items from the AI plan will appear here.`,
+    ask_vet: `No vet discussion items for ${petName} yet. Generate a plan above to see what to bring to your vet.`,
+    monitor: `Nothing to monitor yet for ${petName}. Generate a plan above for low-priority items.`,
   };
   return (
     <div
@@ -578,7 +479,7 @@ export default function SupplementsPage() {
   const [plan, setPlan] = useState<SupplementPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("active");
+  const [activeTab, setActiveTab] = useState<TabKey>("ask_vet");
 
   const fetchPlan = useCallback(async () => {
     if (!activePet) return;
@@ -607,16 +508,17 @@ export default function SupplementsPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data: any = await res.json();
       const normalized: SupplementPlan = {
-        ...data,
-        supplements: (data.supplements || []).map((s: SupplementItem) => ({
-          name: s.name || "Supplement",
-          purpose: s.purpose || "",
-          dosage: s.dosage || "",
-          frequency: s.frequency || "",
-          brand: s.brand || "",
-          price: s.price || "",
-          priority: (s.priority || "optional") as "essential" | "recommended" | "optional",
-        })),
+        summary: data.summary || "",
+        supplements: (data.supplements || []).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (s: any): SupplementItem => ({
+            name: s.name || "Supplement",
+            purpose: s.purpose || "",
+            why_ask_vet: s.why_ask_vet || "",
+            evidence: s.evidence || "",
+            priority: s.priority === "monitor" ? "monitor" : "ask_vet",
+          }),
+        ),
       };
       setPlan(normalized);
     } catch {
@@ -671,9 +573,8 @@ export default function SupplementsPage() {
   const tabItems = classified[activeTab];
 
   const TABS: { key: TabKey; label: string; count: number }[] = [
-    { key: "active", label: "Active", count: classified.active.length },
     { key: "ask_vet", label: "Ask vet about", count: classified.ask_vet.length },
-    { key: "followups", label: "Follow-ups", count: classified.followups.length },
+    { key: "monitor", label: "Monitor", count: classified.monitor.length },
   ];
 
   return (
@@ -766,7 +667,13 @@ export default function SupplementsPage() {
           <SupplementTrialsPanel
             petId={activePet.id ?? null}
             petName={activePet.name}
-            suggestions={classified.ask_vet.map((s) => s.name)}
+            suggestions={classified.ask_vet.map((s): SupplementSuggestion => ({
+              name: s.name,
+              // AI suggestions don't carry a signal key — reason_signal_key is
+              // preserved when the owner creates a trial from a Dog Brain signal
+              // suggestion instead (e.g. from the FollowupsPanel or signal chips).
+              reason_signal_key: null,
+            }))}
           />
 
           {/* Tab content */}
@@ -778,7 +685,7 @@ export default function SupplementsPage() {
               Generating personalized plan for {activePet.name}…
             </div>
           ) : tabItems.length > 0 ? (
-            tabItems.map((item, i) => <SupplementCard key={i} item={item} tab={activeTab} />)
+            tabItems.map((item, i) => <SupplementCard key={i} item={item} />)
           ) : (
             <EmptyTabState tab={activeTab} petName={activePet.name} />
           )}
