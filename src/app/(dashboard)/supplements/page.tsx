@@ -196,11 +196,11 @@ function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
                 marginTop: 2,
               }}
             >
-              <Link href="/daily-log" style={{ cursor: "pointer" }}>
+              <Link href="/health-log" style={{ cursor: "pointer" }}>
                 Daily logs
               </Link>
               <span style={{ color: "#cbccc3" }}>·</span>
-              <Link href="/health-signals" style={{ cursor: "pointer" }}>
+              <Link href="/analytics" style={{ cursor: "pointer" }}>
                 Health signals
               </Link>
             </div>
@@ -320,7 +320,7 @@ const EVIDENCE_TILES: {
     types: ["stool_change"],
     icon: Pill,
     iconColor: "#8a6a3c",
-    link: { href: "/daily-log", label: "View logs" },
+    link: { href: "/health-log", label: "View logs" },
   },
   {
     key: "hydration",
@@ -328,7 +328,7 @@ const EVIDENCE_TILES: {
     types: ["water_urination_change"],
     icon: Droplet,
     iconColor: "#4d7cb5",
-    link: { href: "/health-signals", label: "View signals" },
+    link: { href: "/analytics", label: "View signals" },
   },
   {
     key: "energy",
@@ -336,7 +336,7 @@ const EVIDENCE_TILES: {
     types: ["energy_behavior_change"],
     icon: Zap,
     iconColor: "#e0890a",
-    link: { href: "/health-signals", label: "View signals" },
+    link: { href: "/analytics", label: "View signals" },
   },
 ];
 
