@@ -16,7 +16,7 @@ Clear separation of where things stand:
 |---|---|
 | Backend code (supplement trials + brain loop) | **Landed** on branch, locally verified |
 | DB migration `20260622_dog_brain_supplement_trials.sql` | **APPLIED + verified** on active project `aammaxdsjhezmbvdkqee` (2026-06-23, user-approved) — see Supabase state |
-| Supplements UI wiring | **API-only / not wired** — see "UI status" |
+| Supplements UI wiring | **Wired** — `SupplementTrialsPanel` (real GET/POST/PATCH, persisted, no dosing) on the Supplements page — see "UI status" |
 | Client render side effects | **None** — `FollowupsPanel` does GET + PATCH only |
 | Build | **Unproven** — fails on G: for environment reasons (junction/readlink); needs a clean Linux/CI build |
 | PR gate | **Blocked** — required "Threshold Review Gate" check cannot run (Actions quota dead since 2026-06-03) |
@@ -45,11 +45,14 @@ Files changed this session:
 3. `bc7a68e` fix(dog-brain): match supplement trials FK to project profiles pattern
 4. `50e1fb2` / `362b38a` docs(dog-brain): closeout state updates
 
-## UI status — Supplements tab is API-only (not wired this session)
+## UI status — Supplements tab WIRED to the trial API (concrete + persisted)
 
-- `src/app/(dashboard)/supplements/page.tsx` (798 LOC, pixel-perfect to the PPTX mock) does **not** call `/api/dog-brain/supplements`. Confirmed: `grep -rn "dog-brain/supplements" src/` returns nothing.
-- The page renders AI supplement plans that include dosage / frequency / brand / price. Wiring a Dog Brain "ask-vet trial start" off those cards would mix AI treatment data into the Dog Brain-owned flow, which the safety rule forbids — a correct wiring needs a separately-framed surface.
-- Decision for this closeout: leave the Supplements UI **API-only** and record it honestly here rather than force a browser-observable redesign into a backend-durability closeout (prior restyles of this page were rejected). The supplement trial API is fully usable by a future, cleanly-separated UI surface.
+- New `src/components/dog-brain/supplement-trials-panel.tsx`, rendered in the main column of `src/app/(dashboard)/supplements/page.tsx`.
+- Real DB-backed (not a demo): GET `/api/dog-brain/supplements?pet_id=` lists the owner's persisted trials; POST starts an ask-vet trial (idempotent server-side); PATCH `?id=` records a terminal outcome. The panel re-reads the live list after each mutation, so what's shown is the real DB state and survives reload.
+- Seeded one-tap from the AI "ask vet" suggestions (`classified.ask_vet` names) so the AI layer connects to the concrete trial layer, but the trials persist independently of the regenerated AI plan.
+- Safety: the trial surface carries **no** dosage / frequency / brand / price — only supplement name, status, reason, outcome; framed "ask your vet". A test asserts no `dose|dosage|mg|ml|$|price` renders.
+- The pixel-perfect `SupplementCard` is untouched; new logic is isolated in its own client component.
+- Coverage: 6 jsdom tests (load, start→POST, outcome→PATCH, suggestion chip, safety invariant, no-pet empty render). `/supplements` compiles + serves 200 with no console errors; full authed exercise needs login + active pet (covered by the jsdom contract tests against the now-live API).
 
 ## Supabase state — APPLIED + VERIFIED (2026-06-23, user-approved)
 
