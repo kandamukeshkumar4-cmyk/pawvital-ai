@@ -18,7 +18,7 @@
 | 1 | Selector trace from selected source | **ALREADY LANDED** | PR #710 `fd3cd14`: selector reports branch (complaint/brain/fallback); `deriveBrainQuestionTrace` no longer re-derives; repeat-avoidance trace gap fixed; tests added. |
 | 2 | 60/90-day memory ranking (`src/lib/dog-brain/memory-ranking.ts`) | **DONE (iter 2)** | Pure module + 13 tests; wired in dog-brain-context.ts; severity stays dominant (urgency-safe). |
 | 3 | Privacy-safe analytics (`src/lib/dog-brain/analytics.ts`) | **MODULE DONE (iter 3)** | 8 events + builders + tests over existing App Insights sink; call-site wiring is next. |
-| 4 | Live E2E workflow (`.github/workflows/dog-brain-live-e2e.yml`) | **NOT BUILT** | File absent. |
+| 4 | Live E2E workflow (`.github/workflows/dog-brain-live-e2e.yml`) | **HARNESS DONE (iter 5)** | Manual workflow_dispatch + env-gated `tests/e2e/dog-brain-live-e2e.ts` (seed→memory-question poll→emergency-suppression→cleanup→0-residual). Typechecks+lints; NOT yet executed live (needs operator secrets). |
 | 5 | Supabase migration-ledger verify (`dog_brain_supplement_trials`) | **RUNBOOK (iter 4)** | STOP: MCP bound to wrong project (JobsearchAi, not PawVital). Runbook written with exact verify + repair commands + Node pg one-off. Live verify deferred to operator with correct creds. |
 | 6 | UX polish across tabs | **NOT STARTED** | — |
 | 8 | Clinical knowledge layer (`src/lib/clinical/knowledge-base.ts`, root-cause, supplement-guardrails) | **NOT BUILT** | Files absent. |
@@ -56,3 +56,10 @@
 - **Failed / STOP:** live DB verification — **STOP CONDITION "Supabase project is wrong"**. Did NOT run anything against the wrong project. Followed Phase 5's prescribed fallback (write runbook). psql/CLI absent + stale env passwords (per memory) compound this; needs operator with current PawVital creds.
 - **Next action:** Phase 4 — `.github/workflows/dog-brain-live-e2e.yml` (manual, env-gated) + e2e script skeleton; then Phase 3b route trace wiring with route tests; then Phase 8 clinical knowledge layer.
 - **Stop/defer:** Phase 5 live verify deferred to operator (documented, not faked). No full-loop stop — other phases proceed.
+
+### Iteration 5 — 2026-06-23 (Phase 4 live-E2E harness)
+- **Changed:** added `.github/workflows/dog-brain-live-e2e.yml` (manual `workflow_dispatch`, protected-environment-gated, installs Playwright chromium, uploads artifacts); added `tests/e2e/dog-brain-live-e2e.ts` (env-gated; seeds 90-day storyline + pending follow-up + worse-outcome supplement trial via service-role; logs in through the real UI; polls `POST /api/ai/symptom-chat` until `brain_question_trace` surfaces; asserts the emergency turn suppresses the trace; deletes everything in `finally` and asserts 0 residual; writes screenshots/result to `artifacts/dog-brain-e2e/`); added `e2e:dog-brain` npm script.
+- **Verified:** typecheck clean while authored under `scripts/` (tsc strict-mode-validated the whole flow), then relocated to `tests/e2e/` (repo convention: `/scripts/*` is gitignored; `tests/` is committable but tsconfig-excluded) — code unchanged after validation incl. real endpoint/body shape, real table columns, response key `brain_question_trace.evidence_summary`); eslint clean. Assertions hit the API contract directly (robust) rather than DOM scraping.
+- **Failed:** NOT executed against a live deployment — no E2E secrets / sandbox project in this environment, and running it would create prod rows (cleanup-residual is a STOP condition). First run is an operator action via the workflow with the `dog-brain-e2e` environment secrets.
+- **Next action:** Phase 3b route trace wiring (analytics emitters) with route tests; then Phase 8 curated clinical knowledge layer; then Phase 6 UX polish.
+- **Stop/defer:** live E2E execution deferred to operator (honest skeleton, typecheck-validated). No full-loop stop.
