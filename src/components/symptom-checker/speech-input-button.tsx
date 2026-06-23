@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2, Mic, MicOff } from "lucide-react";
-import Button from "@/components/ui/button";
 import { useAzureSpeechInput } from "@/hooks/useAzureSpeechInput";
 
 type SpeechInputButtonProps = {
@@ -48,14 +47,22 @@ export function SpeechInputButton({
 
   return (
     <div className="relative shrink-0">
-      <Button
+      {/* Soft pulse ring while listening — Apple-style, in the green brand. */}
+      {isListening && (
+        <span
+          className="pointer-events-none absolute inset-0 animate-ping rounded-full"
+          style={{ background: "rgba(11,122,77,0.18)" }}
+          aria-hidden
+        />
+      )}
+      <button
         aria-label={title}
-        className={`px-3 ${
+        className={`relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-150 active:scale-90 disabled:opacity-40 ${
           isListening
-            ? "border-purple-400 bg-purple-100 text-purple-700"
+            ? "bg-[#0b7a4d] text-white shadow-[0_2px_8px_rgba(11,122,77,0.35)]"
             : hasError
-              ? "border-red-300 text-red-600"
-              : ""
+              ? "text-[#cf4338] hover:bg-[#fdecea]"
+              : "text-[#8a8a8f] hover:bg-[#eef6f1] hover:text-[#0b7a4d]"
         }`}
         disabled={disabled || isBusy || isPermanentlyUnavailable}
         onClick={() => {
@@ -63,20 +70,19 @@ export function SpeechInputButton({
         }}
         title={title}
         type="button"
-        variant="outline"
       >
         {isBusy ? (
           <Loader2
-            className={`w-5 h-5 animate-spin ${
-              isListening ? "text-purple-600" : "text-gray-500"
+            className={`h-[19px] w-[19px] animate-spin ${
+              isListening ? "text-white" : "text-[#8a8a8f]"
             }`}
           />
         ) : hasError ? (
-          <MicOff className="w-5 h-5 text-red-500" />
+          <MicOff className="h-[19px] w-[19px]" strokeWidth={1.8} />
         ) : (
-          <Mic className="w-5 h-5 text-gray-500" />
+          <Mic className="h-[19px] w-[19px]" strokeWidth={1.8} />
         )}
-      </Button>
+      </button>
       {/* Accessible status for screen readers — announces listening + errors. */}
       <span className="sr-only" aria-live="polite">
         {isListening ? "Listening, speak now." : error ?? ""}

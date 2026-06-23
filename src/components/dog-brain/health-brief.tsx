@@ -300,15 +300,34 @@ function MiniBarChart({
   recentBar,
   grid,
   example = false,
+  tight = false,
 }: {
   values: number[];
   bar: string;
   recentBar: string;
   grid: string;
   example?: boolean;
+  /**
+   * Zoom the y-axis to the data's own min–max instead of anchoring to zero.
+   * Categorical scores (appetite/stool, 1–4) read best off a zero baseline,
+   * but a continuous metric like weight (~28 kg) needs a tight scale or a real
+   * 0.9 kg swing collapses to a flat line.
+   */
+  tight?: boolean;
 }) {
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
+  let max: number;
+  let min: number;
+  if (tight && values.length > 0) {
+    const dataMax = Math.max(...values);
+    const dataMin = Math.min(...values);
+    // Pad the range so the smallest bar still reads above the floor.
+    const pad = (dataMax - dataMin) * 0.25 || Math.abs(dataMax) * 0.02 || 1;
+    max = dataMax + pad;
+    min = dataMin - pad;
+  } else {
+    max = Math.max(...values, 1);
+    min = Math.min(...values, 0);
+  }
   const range = max - min || 1;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   return (
@@ -386,7 +405,13 @@ function ChangedMetricTile({
         ) : null}
       </div>
       {hasData ? (
-        <MiniBarChart values={values} bar={metric.bar} recentBar={metric.recentBar} grid={metric.grid} />
+        <MiniBarChart
+          values={values}
+          bar={metric.bar}
+          recentBar={metric.recentBar}
+          grid={metric.grid}
+          tight={metric.type === "weight_downtrend"}
+        />
       ) : showPreview ? (
         <MiniBarChart values={PREVIEW_SERIES} bar={metric.bar} recentBar={metric.recentBar} grid={metric.grid} example />
       ) : (
@@ -529,7 +554,10 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
 
   logs.slice(0, 6).forEach((log, i) => {
     const raw = log as { log_date?: string; created_at?: string };
-    const dateStr = raw.created_at ?? raw.log_date ?? "";
+    // Label/sort by the day the log is FOR (log_date), not when the row was
+    // written (created_at). Backfilled or bulk-entered logs share a created_at,
+    // which would otherwise collapse several distinct days into one "Today".
+    const dateStr = raw.log_date ?? raw.created_at ?? "";
     const at = new Date(dateStr).getTime() || 0;
     const { label, accent } = timelineDateLabel(dateStr);
     const photos = (log as { photo_urls?: string[] }).photo_urls;

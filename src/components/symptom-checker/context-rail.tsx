@@ -139,9 +139,10 @@ export function SymptomContextStrip({ petId, petName }: { petId: string | null; 
     <div
       style={{
         background: "#fff",
-        border: "1px solid #ebeae5",
-        borderRadius: "14px",
-        padding: "16px 22px",
+        border: "1px solid #ececea",
+        borderRadius: "16px",
+        padding: "18px 24px",
+        boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.04)",
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -217,7 +218,15 @@ export function SymptomRemembersPanel({ petId }: { petId: string | null }) {
 
   return (
     <aside className="flex flex-col gap-4">
-      <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: "16px", padding: "18px 20px" }}>
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #ececea",
+          borderRadius: "18px",
+          padding: "18px 20px",
+          boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.04)",
+        }}
+      >
         <div
           className="mb-[13px] flex items-center gap-[7px] text-[15px] font-bold"
           style={{ color: "#1d1d1b" }}
@@ -234,12 +243,13 @@ export function SymptomRemembersPanel({ petId }: { petId: string | null }) {
               return (
                 <div
                   key={s.dedupe_key}
-                  className="flex gap-[11px]"
+                  className="flex gap-[11px] transition-shadow duration-150 hover:shadow-[0_4px_14px_rgba(16,24,40,0.06)]"
                   style={{
+                    border: `1px solid ${isChange ? "#f1e4cb" : "#dfe8f3"}`,
                     borderLeft: `3px solid ${isChange ? "#e0890a" : "#4d7cb5"}`,
-                    background: isChange ? "#fdfaf3" : "#f9fbfd",
-                    borderRadius: "0 10px 10px 0",
-                    padding: "11px 12px",
+                    background: isChange ? "#fffdf8" : "#fbfcfe",
+                    borderRadius: "12px",
+                    padding: "12px 13px",
                   }}
                 >
                   <span

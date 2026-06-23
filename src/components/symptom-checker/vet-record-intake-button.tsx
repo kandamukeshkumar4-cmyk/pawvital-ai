@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
-import Button from "@/components/ui/button";
 
 type VetRecordIntakeButtonProps = {
   disabled?: boolean;
@@ -87,23 +86,22 @@ export function VetRecordIntakeButton({
 
   return (
     <>
-      <Button
+      <button
         aria-label={isUploading ? "Reading vet record" : "Attach vet record"}
-        className="shrink-0 px-3"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#8a8a8f] transition-all duration-150 hover:bg-[#eef6f1] hover:text-[#0b7a4d] active:scale-90 disabled:opacity-40"
         disabled={disabled || isUploading || isUnavailable}
         onClick={() => inputRef.current?.click()}
         title={
           isUnavailable ? "Vet record intake unavailable" : "Attach vet record"
         }
         type="button"
-        variant="outline"
       >
         {isUploading ? (
-          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          <Loader2 className="h-[19px] w-[19px] animate-spin text-[#8a8a8f]" />
         ) : (
-          <FileText className="w-5 h-5 text-gray-500" />
+          <FileText className="h-[19px] w-[19px]" strokeWidth={1.8} />
         )}
-      </Button>
+      </button>
       <input
         ref={inputRef}
         accept="application/pdf"

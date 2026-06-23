@@ -220,6 +220,9 @@ function ChatBubble({
                 : isOutOfScope
                   ? "1px solid #ebeae5"
                   : "1px solid #efeee9",
+          boxShadow: isUser
+            ? "0 1px 2px rgba(11,122,77,0.10)"
+            : "0 1px 2px rgba(16,24,40,0.04), 0 2px 8px rgba(16,24,40,0.03)",
         }}
       >
         {isCannotAssess && (
@@ -256,16 +259,16 @@ function ChatBubble({
           {message.content}
         </p>
         {message.askingBecause && !isUser && (
-          <p
-            className="mt-[7px] flex items-start gap-[5px] text-[12.5px]"
-            style={{ color: "#4d7cb5" }}
+          <div
+            className="mt-2.5 flex items-start gap-[7px] rounded-[10px] px-2.5 py-2 text-[12.5px] leading-snug"
+            style={{ background: "#eff5fb", border: "1px solid #e0eaf5", color: "#4d7cb5" }}
           >
-            <ShieldCheck className="mt-0.5 h-[13px] w-[13px] flex-shrink-0" aria-hidden />
+            <ShieldCheck className="mt-px h-[14px] w-[14px] flex-shrink-0" aria-hidden />
             <span>
               <span className="font-semibold">Why I&apos;m asking: </span>
               {message.askingBecause}
             </span>
-          </p>
+          </div>
         )}
         <div className="mt-1.5 flex items-center gap-1.5">
           <span
@@ -1060,22 +1063,17 @@ export default function SymptomCheckerPage() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full"
-                style={{ background: "#e9f6ef", color: "#0b7a4d" }}
-                title="Urgency guidance"
-                aria-label="Urgency guidance"
-              >
-                <ShieldCheck className="h-4 w-4" aria-hidden />
-              </span>
-              <h1
-                className="text-[21px] font-bold leading-tight"
+            <h1
+                className="flex flex-wrap items-center gap-2 text-[21px] font-bold leading-tight"
                 style={{ color: "#1d1d1b" }}
               >
                 Dog symptom check for {displayPetName}
+                <ShieldCheck
+                  className="h-[18px] w-[18px] flex-shrink-0"
+                  style={{ color: "#4d7cb5" }}
+                  aria-label="Urgency guidance active"
+                />
               </h1>
-            </div>
             <p className="mt-1 text-[15px]" style={{ color: "#6f7069" }}>
               We&apos;ll ask a few focused questions to understand what&apos;s going on.
             </p>
@@ -1084,11 +1082,10 @@ export default function SymptomCheckerPage() {
             <button
               type="button"
               onClick={startNewSession}
-              className="flex w-full flex-shrink-0 items-center justify-center gap-2 text-[13.5px] font-semibold transition-colors hover:bg-[#f3f9f6] sm:w-auto"
+              className="flex w-full flex-shrink-0 items-center justify-center gap-2 text-[13.5px] font-semibold transition-opacity hover:opacity-90 sm:w-auto"
               style={{
-                background: "#fff",
-                border: "1px solid #bfe2cf",
-                color: "#0b7a4d",
+                background: "linear-gradient(135deg, #0b7a4d, #15a06a)",
+                color: "#fff",
                 borderRadius: "10px",
                 padding: "9px 15px",
               }}
@@ -1136,156 +1133,84 @@ export default function SymptomCheckerPage() {
         {/* Dog Brain context strip (mockup #2) — real counts */}
         <SymptomContextStrip petId={activePet?.id ?? null} petName={displayPetName} />
 
-        {/* Chat (left) + What PawVital remembers (right) */}
-        <div className="grid gap-[22px] lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <div className="min-w-0 space-y-4 sm:space-y-6">
-
-        {/* Pre-session: Welcome + Quick Start */}
-        {!sessionStarted && (
-          <Card className="p-4 sm:p-6" style={{ border: "1px solid #ebeae5", borderRadius: "16px" }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ background: "#e9f6ef", color: "#0b7a4d" }}
-              >
-                <Stethoscope className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold" style={{ color: "#1d1d1b" }}>
-                  Tell me what&apos;s going on with {displayPetName}
-                </h2>
-                <p className="text-sm" style={{ color: "#6f7069" }}>
-                  I&apos;ll guide a dog-only symptom check, ask focused follow-up
-                  questions, and prepare a vet handoff summary with urgency
-                  guidance. PawVital does not diagnose or prescribe treatment.
-                </p>
-              </div>
+        {/* Progress bar — page level, only during active session */}
+        {sessionStarted && !isTerminalConversation && !report && (
+          <div className="flex items-center gap-[14px]">
+            <span className="text-[13px] font-medium" style={{ color: "#6f7069" }}>Progress</span>
+            <div className="flex flex-1 gap-[5px]">
+              {Array.from({ length: Math.max(totalQuestions, 5) }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[7px] flex-1"
+                  style={{ borderRadius: "4px", background: i < answeredCount ? "#15a06a" : "#e8e7e2" }}
+                />
+              ))}
             </div>
-
-            <div
-              className="mb-4 rounded-xl p-4"
-              style={{ background: "#e9f6ef", border: "1px solid #cfe6da" }}
-            >
-              <div className="flex items-start gap-2">
-                <Bot className="mt-0.5 h-5 w-5" style={{ color: "#0b7a4d" }} />
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "#0b7a4d" }}>
-                    How this works:
-                  </p>
-                  <ol
-                    className="mt-1 ml-4 list-decimal space-y-1 text-sm"
-                    style={{ color: "#0b7a4d" }}
-                  >
-                    <li>
-                      Describe what&apos;s happening in your own words or upload
-                      a photo of the issue
-                    </li>
-                    <li>I&apos;ll ask 3-5 focused questions about urgency</li>
-                    <li>
-                      I&apos;ll prepare a vet handoff summary with urgency
-                      guidance, important details, and what to watch for
-                    </li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick start symptom buttons */}
-            <div>
-              <p className="mb-2 text-xs" style={{ color: "#6f7069" }}>
-                Quick start — or type your own below:
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {quickSymptoms.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() =>
-                      sendMessage(
-                        `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
-                      )
-                    }
-                    className="rounded-full px-3 py-1.5 text-xs transition-colors hover:bg-[#e9f6ef]"
-                    style={{ border: "1px solid #cfe6da", color: "#0b7a4d" }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
+            <span className="flex-shrink-0 text-[13px] font-semibold" style={{ color: "#6f7069" }}>
+              {answeredCount} of {Math.max(totalQuestions, 5)} questions
+            </span>
+          </div>
         )}
 
-        {/* Chat Messages */}
-        {sessionStarted && (
+        {/* Chat (left) + What PawVital remembers (right) */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_368px] lg:items-start">
+          <div className="min-w-0 space-y-4 sm:space-y-6">
+
+
+        {/* Chat area — always visible (pre-session shows chips + composer; active shows messages) */}
+        {(
           <Card
             className="overflow-hidden p-0"
-            style={{ border: "1px solid #ebeae5", borderRadius: "16px" }}
+            style={{
+              border: "1px solid #ececea",
+              borderRadius: "18px",
+              boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.04)",
+            }}
           >
-            {/* Chat header */}
-            <div
-              className="flex flex-wrap items-start gap-3 px-4 py-3"
-              style={{ borderBottom: "1px solid #ebeae5", background: "#fff" }}
-            >
-              <div
-                className="flex h-[34px] w-[34px] items-center justify-center rounded-full"
-                style={{ background: "#e9f6ef", color: "#0b7a4d" }}
-              >
-                <Stethoscope className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "#1d1d1b" }}>
-                  Dog symptom check for {displayPetName}
-                </p>
-                <p className="text-xs" style={{ color: "#9a9b93" }}>
-                  {displayPetBreed}, {displayPetAgeYears}y, {displayPetWeight} lbs
-                </p>
-              </div>
-              {!report && (
-                <div className="ml-auto flex-shrink-0">
-                  {activeTerminalMessage ? (
-                    <TerminalOutcomeStatusBadge
-                      type={
-                        activeTerminalMessage.terminalState ??
-                        (activeTerminalMessage.type as TerminalOutcomeType)
-                      }
-                    />
-                  ) : (
-                    <StateBadge state={conversationState} />
-                  )}
-                </div>
-              )}
-            </div>
-            {!report && !isTerminalConversation && (
-              <div className="px-4 pb-3 pt-3">
-                <div className="flex items-center gap-[14px]">
-                  <span className="text-[13px] font-medium" style={{ color: "#6f7069" }}>
-                    Progress
-                  </span>
-                  <div className="flex flex-1 gap-[5px]">
-                    {Array.from({ length: Math.max(totalQuestions, 5) }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-[7px] flex-1"
-                        style={{
-                          borderRadius: "4px",
-                          background: i < answeredCount ? "#15a06a" : "#e8e7e2",
-                        }}
-                      />
+            {/* Messages area */}
+            <div className="flex min-h-[200px] max-h-[60vh] flex-col space-y-4 overflow-y-auto p-4 sm:max-h-[560px]">
+              {/* Pre-session: premium welcome + quick-start chips */}
+              {!sessionStarted && (
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-10 text-center">
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-[20px]"
+                    style={{
+                      background: "linear-gradient(135deg,#eaf6f0,#d6ecdf)",
+                      color: "#0b7a4d",
+                      boxShadow: "0 2px 10px rgba(11,122,77,0.12)",
+                    }}
+                  >
+                    <Stethoscope className="h-8 w-8" strokeWidth={1.7} />
+                  </div>
+                  <div>
+                    <h2 className="text-[19px] font-bold tracking-[-0.01em]" style={{ color: "#1d1d1b" }}>
+                      What&apos;s going on with {displayPetName}?
+                    </h2>
+                    <p
+                      className="mx-auto mt-2 max-w-[440px] text-[13.5px] leading-relaxed"
+                      style={{ color: "#8a8a8f" }}
+                    >
+                      Tap a common sign to begin, or describe it in your own words below. PawVital
+                      uses {displayPetName}&apos;s logs and history to ask the right follow-ups.
+                    </p>
+                  </div>
+                  <div className="flex max-w-[580px] flex-wrap justify-center gap-2.5">
+                    {quickSymptoms.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() =>
+                          sendMessage(
+                            `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
+                          )
+                        }
+                        className="rounded-full border border-[#dcefe2] bg-white px-4 py-2 text-[13px] font-medium text-[#0b7a4d] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#bfe2cf] hover:bg-[#f3faf6] hover:shadow-[0_4px_12px_rgba(11,122,77,0.13)] active:scale-95"
+                      >
+                        {s}
+                      </button>
                     ))}
                   </div>
-                  <span
-                    className="flex-shrink-0 text-[13px] font-semibold"
-                    style={{ color: "#6f7069" }}
-                  >
-                    {answeredCount} of {Math.max(totalQuestions, 5)} questions
-                  </span>
                 </div>
-              </div>
-            )}
-
-            {/* Messages area */}
-            <div className="min-h-[200px] max-h-[60vh] space-y-4 overflow-y-auto p-4 sm:max-h-[500px]">
+              )}
               {messages.map((msg, i) => (
                 <div key={i} className="space-y-2">
                   <ChatBubble
@@ -1405,25 +1330,25 @@ export default function SymptomCheckerPage() {
                   </div>
                 )}
                 <div
-                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  className="flex items-center gap-1.5"
                   style={{
-                    border: "1px solid #e6e5e0",
-                    borderRadius: "13px",
-                    padding: "8px 8px 8px 4px",
+                    border: "1px solid #e7e7e2",
+                    borderRadius: "18px",
+                    padding: "7px 7px 7px 9px",
                     background: "#fff",
+                    boxShadow:
+                      "0 1px 2px rgba(16,24,40,0.04), 0 4px 14px rgba(16,24,40,0.05)",
                   }}
                 >
-                  <div className="flex flex-shrink-0">
+                  <div className="flex flex-shrink-0 items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex cursor-pointer flex-col items-center gap-[3px] px-3 py-1.5"
-                      style={{ color: "#6f7069" }}
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[#8a8a8f] transition-all duration-150 hover:bg-[#eef6f1] hover:text-[#0b7a4d] active:scale-90"
                       title="Attach photo"
                       aria-label="Attach photo"
                     >
-                      <ImagePlus className="h-[18px] w-[18px]" />
-                      <span className="text-[11px]">Attach photo</span>
+                      <ImagePlus className="h-[19px] w-[19px]" strokeWidth={1.8} />
                     </button>
                     <SpeechInputButton
                       disabled={loading || awaitingAsyncResult}
@@ -1442,35 +1367,40 @@ export default function SymptomCheckerPage() {
                     ref={fileInputRef}
                     className="hidden"
                   />
-                  <div className="min-w-0 flex-1">
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={
-                        messages.length === 0
-                          ? `Describe what's going on with ${displayPetName} or attach a photo...`
-                          : "Type your answer here..."
-                      }
-                      rows={1}
-                      className="min-w-0 w-full resize-none border-0 bg-transparent px-2 py-1 text-[14px] focus:outline-none focus:ring-0"
-                      style={{ color: "#1d1d1b" }}
-                    />
-                    <p className="px-2 text-[11.5px]" style={{ color: "#b6b7af" }}>
-                      Press Enter to send
-                    </p>
-                  </div>
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      messages.length === 0
+                        ? `Describe what's going on with ${displayPetName}…`
+                        : "Type your answer…"
+                    }
+                    rows={1}
+                    className="min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-[7px] text-[14.5px] leading-snug placeholder:text-[#aeaeb2] focus:outline-none focus:ring-0"
+                    style={{ color: "#1d1d1b" }}
+                  />
                   <button
                     onClick={() => sendMessage()}
                     disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
-                    className="flex h-[42px] w-full flex-shrink-0 items-center justify-center text-white transition-opacity disabled:opacity-50 sm:w-[42px]"
-                    style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)", borderRadius: "11px" }}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white transition-all duration-150 hover:brightness-[1.06] active:scale-95 disabled:opacity-40"
+                    style={{
+                      background: "linear-gradient(180deg,#17a06d,#0a7048)",
+                      boxShadow: "0 1px 2px rgba(10,112,72,0.28), 0 2px 8px rgba(10,112,72,0.18)",
+                    }}
                     aria-label="Send message"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                 </div>
+                <p
+                  className="mt-2 px-1 text-center text-[11.5px]"
+                  style={{ color: "#b6b7af" }}
+                >
+                  Press <kbd className="font-medium text-[#8a8a8f]">Enter</kbd> to send ·{" "}
+                  <kbd className="font-medium text-[#8a8a8f]">Shift + Enter</kbd> for a new line
+                </p>
 
                 {/* Generate Report button */}
                 {readyForReport && !generatingReport && (
@@ -1506,80 +1436,6 @@ export default function SymptomCheckerPage() {
           </Card>
         )}
 
-        {!sessionStarted && !report && (
-          <div className="p-3" style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: "16px" }}>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div
-                className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5"
-                style={{ border: "1px solid #e6e5e0", borderRadius: "13px", background: "#fff" }}
-              >
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="shrink-0 px-3"
-                  title="Attach Photo"
-                  aria-label="Attach photo"
-                >
-                  <ImagePlus className="w-5 h-5" style={{ color: "#9a9b93" }} />
-                </Button>
-                <SpeechInputButton
-                  disabled={loading || awaitingAsyncResult}
-                  onTranscript={appendTranscriptToInput}
-                />
-                <VetRecordIntakeButton
-                  disabled={loading || awaitingAsyncResult}
-                  petId={activePet?.id ?? null}
-                  onContext={appendVetRecordContextToInput}
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  ref={fileInputRef}
-                  className="hidden"
-                />
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Describe what's going on with ${displayPetName} or attach a photo...`}
-                  rows={2}
-                  className="min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-sm focus:outline-none focus:ring-0"
-                  style={{ color: "#1d1d1b" }}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
-                  className="flex h-[42px] w-full items-center justify-center rounded-full text-white transition-opacity disabled:opacity-50 sm:h-full sm:w-[42px]"
-                  style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)" }}
-                  aria-label="Send message"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            {selectedImage && (
-              <div className="mt-3 relative inline-block">
-                <img
-                  src={selectedImage}
-                  alt="Preview"
-                  className="h-24 rounded object-contain"
-                  style={{ border: "1px solid #ebeae5", background: "#f5f5f7" }}
-                />
-                <button
-                  onClick={clearComposerImage}
-                  className="absolute -top-2 -right-2 rounded-full p-1 text-white shadow-sm"
-                  style={{ background: "#cf4338" }}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Generating Report Loading State */}
         {generatingReport && (
