@@ -31,7 +31,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
     jest.doMock('@/lib/api-auth', () => ({
       requireAuthenticatedApiUser: async () => ({ user: { id: 'user-1' } }),
     }));
-    const capturedInserts: any[] = [];
+    const capturedInserts: Array<Record<string, unknown>> = [];
     jest.doMock('@/lib/api/pet-guard', () => ({
       requireOwnedPet: async () => ({
         user: { id: 'user-1' },
@@ -40,7 +40,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
           from: (table: string) => {
             if (table === 'dog_brain_supplement_trials') {
               return {
-                insert: (row: any) => {
+                insert: (row: Record<string, unknown>) => {
                   capturedInserts.push(row);
                   return { select: () => ({ maybeSingle: async () => ({ data: { id: 'trial-1', ...row }, error: null }) }) };
                 },
@@ -76,7 +76,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
 
   it("PATCH outcome persists better/same/worse/side_effect (no dosage)", async () => {
     jest.resetModules();
-    const capturedUpdates: any[] = [];
+    const capturedUpdates: Array<Record<string, unknown>> = [];
     jest.doMock('@/lib/api-auth', () => ({
       requireAuthenticatedApiUser: async () => ({
         user: { id: 'user-1' },
@@ -84,7 +84,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
           from: (table: string) => {
             if (table === 'dog_brain_supplement_trials') {
               return {
-                update: (fields: any) => {
+                update: (fields: Record<string, unknown>) => {
                   capturedUpdates.push(fields);
                   return {
                     eq: () => ({ eq: () => ({ select: () => ({ maybeSingle: async () => ({ data: { id: 't1', ...fields } }) }) }) }),
@@ -104,7 +104,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ outcome: 'worse', notes: 'got worse' }),
     });
-    const res = await mod.PATCH(req, { params: Promise.resolve({ id: '11111111-1111-4111-8111-111111111111' }) } as any);
+    await mod.PATCH(req);
     expect(capturedUpdates.length).toBeGreaterThan(0);
     expect(capturedUpdates[0].outcome).toBe('worse');
     expect(JSON.stringify(capturedUpdates[0]).toLowerCase()).not.toMatch(/dose|dosage|mg|ml/);

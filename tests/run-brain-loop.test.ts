@@ -10,9 +10,13 @@ jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: () => Promise.resolve(fakeSupabase),
 }));
 
-let fakeSupabase: any;
-let capturedFollowupInserts: any[];
-let existingPending: any;
+type DbRow = Record<string, unknown>;
+type FakeSupabase = { from: (table: string) => DbRow };
+type TestGlobal = typeof globalThis & { __simulate23505?: boolean };
+
+let fakeSupabase: FakeSupabase;
+let capturedFollowupInserts: DbRow[];
+let existingPending: DbRow | null;
 
 function resetFake() {
   capturedFollowupInserts = [];
@@ -39,14 +43,14 @@ function resetFake() {
         select: () => makeChain(table),
         eq: () => makeChain(table),
         maybeSingle: async () => ({ data: existingPending, error: null }),
-        insert: (row: any) => {
+        insert: (row: DbRow) => {
           capturedFollowupInserts.push(row);
           return {
             select: () => ({
               maybeSingle: async () => {
                 // simulate 23505 by caller if needed; here return success unless flag
-                if ((global as any).__simulate23505) {
-                  const err: any = new Error("duplicate");
+                if ((globalThis as TestGlobal).__simulate23505) {
+                  const err = new Error("duplicate") as Error & { code?: string };
                   err.code = "23505";
                   return { data: null, error: err };
                 }
@@ -65,11 +69,11 @@ function resetFake() {
   };
 }
 
-let currentLogs: any[] = [];
+let currentLogs: DbRow[] = [];
 
 beforeEach(() => {
   resetFake();
-  (global as any).__simulate23505 = false;
+  (globalThis as TestGlobal).__simulate23505 = false;
   currentLogs = [];
 });
 
@@ -112,7 +116,7 @@ describe("runDogBrainLoopAfterHealthLog (direct)", () => {
     expect(res.dedupedFollowups.length).toBeGreaterThanOrEqual(1);
     expect(res.createdFollowups.length).toBe(0);
     // no new insert attempted because pre-check returned existing
-    const stoolInserts = capturedFollowupInserts.filter((r: any) => r.signal_key === "stool_change");
+    const stoolInserts = capturedFollowupInserts.filter((r) => r.signal_key === "stool_change");
     expect(stoolInserts.length).toBe(0);
   });
 

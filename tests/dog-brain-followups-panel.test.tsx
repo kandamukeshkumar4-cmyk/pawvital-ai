@@ -3,6 +3,7 @@
 import * as React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
+import type { DetectedSignal } from "@/lib/dog-brain/types";
 
 const PET = "pet-1";
 const PROMPT = "Stool was off 3 days ago. Better, same, or worse today?";
@@ -94,7 +95,14 @@ describe("FollowupsPanel — Brain follow-ups surfaced in the Reminders queue", 
     );
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const signals = [{ signal_type: "stool_change", severity: "watch", owner_message: "Stool off" } as any];
+    const signals: DetectedSignal[] = [
+      {
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "Stool off",
+        dedupe_key: "stool_change:test",
+      },
+    ];
     render(<FollowupsPanel petId={PET} signals={signals} />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 

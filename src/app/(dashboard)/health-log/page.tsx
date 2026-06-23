@@ -304,6 +304,13 @@ const WHITE_CARD: React.CSSProperties = {
 
 const SAVE_GRADIENT = "linear-gradient(180deg,#17a06d,#0a7048)";
 
+interface DogBrainSaveSummary {
+  state?: string;
+  signal_count?: number;
+  created_followups?: number;
+  deduped_followups?: number;
+}
+
 export default function HealthLogPage() {
   const { activePet, pets } = useAppStore();
   const [logs, setLogs] = useState<HealthLog[]>([]);
@@ -311,7 +318,7 @@ export default function HealthLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [lastBrainSummary, setLastBrainSummary] = useState<any>(null);
+  const [lastBrainSummary, setLastBrainSummary] = useState<DogBrainSaveSummary | null>(null);
   const [celebrate, setCelebrate] = useState(0);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [afterSaveSignals, setAfterSaveSignals] = useState<DetectedSignal[]>([]);
