@@ -220,6 +220,9 @@ function ChatBubble({
                 : isOutOfScope
                   ? "1px solid #ebeae5"
                   : "1px solid #efeee9",
+          boxShadow: isUser
+            ? "0 1px 2px rgba(11,122,77,0.10)"
+            : "0 1px 2px rgba(16,24,40,0.04), 0 2px 8px rgba(16,24,40,0.03)",
         }}
       >
         {isCannotAssess && (
@@ -256,16 +259,16 @@ function ChatBubble({
           {message.content}
         </p>
         {message.askingBecause && !isUser && (
-          <p
-            className="mt-[7px] flex items-start gap-[5px] text-[12.5px]"
-            style={{ color: "#4d7cb5" }}
+          <div
+            className="mt-2.5 flex items-start gap-[7px] rounded-[10px] px-2.5 py-2 text-[12.5px] leading-snug"
+            style={{ background: "#eff5fb", border: "1px solid #e0eaf5", color: "#4d7cb5" }}
           >
-            <ShieldCheck className="mt-0.5 h-[13px] w-[13px] flex-shrink-0" aria-hidden />
+            <ShieldCheck className="mt-px h-[14px] w-[14px] flex-shrink-0" aria-hidden />
             <span>
               <span className="font-semibold">Why I&apos;m asking: </span>
               {message.askingBecause}
             </span>
-          </p>
+          </div>
         )}
         <div className="mt-1.5 flex items-center gap-1.5">
           <span
@@ -1150,7 +1153,7 @@ export default function SymptomCheckerPage() {
         )}
 
         {/* Chat (left) + What PawVital remembers (right) */}
-        <div className="grid gap-[22px] lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_368px] lg:items-start">
           <div className="min-w-0 space-y-4 sm:space-y-6">
 
 
@@ -1158,17 +1161,40 @@ export default function SymptomCheckerPage() {
         {(
           <Card
             className="overflow-hidden p-0"
-            style={{ border: "1px solid #ebeae5", borderRadius: "16px" }}
+            style={{
+              border: "1px solid #ececea",
+              borderRadius: "18px",
+              boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.04)",
+            }}
           >
             {/* Messages area */}
-            <div className="min-h-[200px] max-h-[60vh] space-y-4 overflow-y-auto p-4 sm:max-h-[500px]">
-              {/* Pre-session: quick-start chips */}
+            <div className="flex min-h-[200px] max-h-[60vh] flex-col space-y-4 overflow-y-auto p-4 sm:max-h-[560px]">
+              {/* Pre-session: premium welcome + quick-start chips */}
               {!sessionStarted && (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <p className="text-[13px]" style={{ color: "#9a9b93" }}>
-                    Quick start — or type your own below:
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-10 text-center">
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-[20px]"
+                    style={{
+                      background: "linear-gradient(135deg,#eaf6f0,#d6ecdf)",
+                      color: "#0b7a4d",
+                      boxShadow: "0 2px 10px rgba(11,122,77,0.12)",
+                    }}
+                  >
+                    <Stethoscope className="h-8 w-8" strokeWidth={1.7} />
+                  </div>
+                  <div>
+                    <h2 className="text-[19px] font-bold tracking-[-0.01em]" style={{ color: "#1d1d1b" }}>
+                      What&apos;s going on with {displayPetName}?
+                    </h2>
+                    <p
+                      className="mx-auto mt-2 max-w-[440px] text-[13.5px] leading-relaxed"
+                      style={{ color: "#8a8a8f" }}
+                    >
+                      Tap a common sign to begin, or describe it in your own words below. PawVital
+                      uses {displayPetName}&apos;s logs and history to ask the right follow-ups.
+                    </p>
+                  </div>
+                  <div className="flex max-w-[580px] flex-wrap justify-center gap-2.5">
                     {quickSymptoms.map((s) => (
                       <button
                         key={s}
@@ -1177,8 +1203,7 @@ export default function SymptomCheckerPage() {
                             `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
                           )
                         }
-                        className="rounded-full px-3 py-1.5 text-xs transition-colors hover:bg-[#e9f6ef]"
-                        style={{ border: "1px solid #cfe6da", color: "#0b7a4d", background: "#fafaf8" }}
+                        className="rounded-full border border-[#dcefe2] bg-white px-4 py-2 text-[13px] font-medium text-[#0b7a4d] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#bfe2cf] hover:bg-[#f3faf6] hover:shadow-[0_4px_12px_rgba(11,122,77,0.13)] active:scale-95"
                       >
                         {s}
                       </button>
