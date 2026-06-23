@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
-import { Calendar, ChevronDown, ChevronUp, Info, Loader2, Shield, Stethoscope, Upload } from "lucide-react";
+import { Calendar, Info, Loader2, Shield, Stethoscope, Upload } from "lucide-react";
 import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
@@ -88,7 +88,6 @@ function HealthSignalsContent() {
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
-  const [showFullGrid, setShowFullGrid] = useState(false);
 
   const loadChecks = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -328,46 +327,10 @@ function HealthSignalsContent() {
             vetCopyText={board.vetPacket.copyText}
           />
 
-          {/* VERDICT HERO — answer-first, plain language */}
-          <section
-            style={{
-              background: "#fff",
-              border: "1px solid #ececea",
-              borderRadius: 20,
-              boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.045)",
-              padding: "22px 26px",
-            }}
-          >
-            <div className="flex items-start gap-4">
-              <span
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                style={{ background: `${STATE_STRIP[verdict.state].color}1a`, color: STATE_STRIP[verdict.state].color }}
-              >
-                <Shield className="h-6 w-6" strokeWidth={1.8} aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.6px", textTransform: "uppercase", color: STATE_STRIP[verdict.state].color }}>
-                  {STATE_STRIP[verdict.state].word}
-                </div>
-                <h2 className="mt-1 text-[22px] font-bold leading-snug tracking-[-0.01em]" style={{ color: "#1c2522" }}>
-                  {verdict.headline}
-                </h2>
-                <p className="mt-1.5 text-[14.5px] leading-relaxed" style={{ color: "#6f7069" }}>
-                  {verdict.subline}
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* OVERALL STATUS STRIP */}
           <section
             className="flex items-stretch overflow-hidden"
-            style={{
-              background: "#fff",
-              border: "1px solid #ececea",
-              borderRadius: 20,
-              boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.045)",
-            }}
+            style={{ background: "#fdfcf9", border: "1px solid #ecebe5", borderRadius: 14 }}
             aria-label="Health memory summary"
           >
             <div
@@ -435,27 +398,7 @@ function HealthSignalsContent() {
           {/* TWO COLUMNS: left flex 1, right rail 344px */}
           <div className="flex items-start" style={{ gap: 22 }}>
             <div className="flex min-w-0 flex-1 flex-col" style={{ gap: 20 }}>
-              {showFullGrid ? (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowFullGrid(false)}
-                    className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-[#0b7a4d]"
-                  >
-                    Hide full grid <ChevronUp className="h-4 w-4" aria-hidden />
-                  </button>
-                  <SignalGrid grid={board.grid} />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowFullGrid(true)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-[14px] border border-[#e3e2dd] bg-white px-4 py-3 text-[13.5px] font-semibold text-[#3a3b34] transition-colors hover:bg-[#faf9f6]"
-                  style={{ boxShadow: "0 1px 2px rgba(16,24,40,0.04)" }}
-                >
-                  See full 14-day signal grid <ChevronDown className="h-4 w-4" aria-hidden />
-                </button>
-              )}
+              <SignalGrid grid={board.grid} />
               <PatternTimeline events={board.timeline} />
             </div>
             <div className="flex flex-none flex-col" style={{ width: 344, gap: 18 }}>
