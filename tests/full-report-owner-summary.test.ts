@@ -60,14 +60,16 @@ describe("full report owner summary", () => {
     render(React.createElement(FullReport, { report: makeReport() }));
 
     expect(
-      screen.getByText("What this result means for your dog right now"),
+      screen.getByRole("heading", {
+        name: "Seek emergency veterinary care immediately",
+      }),
     ).toBeTruthy();
-    expect(screen.getAllByText("Emergency care now")).toHaveLength(2);
+    expect(screen.getByText("Emergency · seek care immediately")).toBeTruthy();
     expect(screen.getByText("Do this now")).toBeTruthy();
     expect(
       screen.getByText("Get urgent help even faster if you notice"),
     ).toBeTruthy();
-    expect(screen.getByText("Why PawVital recommended this")).toBeTruthy();
+    expect(screen.getByText("What's happening")).toBeTruthy();
     expect(
       screen.getByText("What PawVital still can't determine"),
     ).toBeTruthy();
@@ -77,10 +79,7 @@ describe("full report owner summary", () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Copy Shareable Summary" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "See Feedback Status" }),
+      screen.getByRole("button", { name: "Copy clinic handoff for your vet" }),
     ).toBeTruthy();
     expect(screen.getByText("Feedback for this report")).toBeTruthy();
     expect(
@@ -104,8 +103,14 @@ describe("full report owner summary", () => {
       }),
     );
 
-    expect(screen.getByRole("button", { name: "Open Feedback" })).toBeTruthy();
-    expect(screen.getByText("Was this helpful?")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Did this match what happened?" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Private tester feedback" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Share outcome" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send feedback" })).toBeTruthy();
   });
 
   it("does not render system notes telemetry even if a persisted report still carries observability", () => {
@@ -149,7 +154,11 @@ describe("full report owner summary", () => {
       }),
     );
 
-    expect(screen.getAllByText("Home monitoring for now")).toHaveLength(2);
+    expect(
+      screen.getByRole("heading", {
+        name: "Monitor at home with the guidance below",
+      }),
+    ).toBeTruthy();
     expect(screen.getByText("What to do now")).toBeTruthy();
     expect(
       screen.getByText("Offer small amounts of water frequently."),
@@ -176,7 +185,7 @@ describe("full report owner summary", () => {
     render(React.createElement(FullReport, { report: makeReport() }));
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Copy Shareable Summary" }),
+      screen.getByRole("button", { name: "Copy clinic handoff for your vet" }),
     );
 
     const clipboard = window.navigator.clipboard as {

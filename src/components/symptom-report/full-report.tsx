@@ -292,8 +292,28 @@ export function FullReport({
         actions={report.actions}
         actionTitle={presentation.actionTitle}
         warningSigns={report.warning_signs}
-        warningTitle="Go sooner if you notice"
+        warningTitle={presentation.warningTitle}
       />
+
+      {presentation.limitations.length > 0 ? (
+        <Card className="border border-gray-200 p-4 sm:p-5">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
+              What PawVital still can&apos;t determine
+            </h3>
+            <ul className="space-y-2">
+              {presentation.limitations.map((limitation) => (
+                <li
+                  key={limitation}
+                  className="text-sm leading-6 text-gray-700"
+                >
+                  {limitation}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Card>
+      ) : null}
 
       <div ref={handoffRef}>
         <VetHandoffCard

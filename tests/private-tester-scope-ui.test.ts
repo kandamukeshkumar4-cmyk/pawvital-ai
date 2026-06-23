@@ -17,6 +17,7 @@ import { useAppStore } from "@/store/app-store";
 import type { Pet, UserProfile } from "@/types";
 
 const mockUsePathname = jest.fn();
+const mockRedirect = jest.fn();
 const mockSignOut = jest.fn();
 
 jest.mock("next/link", () => {
@@ -36,6 +37,7 @@ jest.mock("next/link", () => {
 });
 
 jest.mock("next/navigation", () => ({
+  redirect: (...args: unknown[]) => mockRedirect(...args),
   usePathname: () => mockUsePathname(),
 }));
 
@@ -154,7 +156,7 @@ describe("private tester scope UI", () => {
     expect(screen.queryByText("Paw Circle")).toBeNull();
   });
 
-  it("VET-1368 tester scope UI: keeps the full sidebar navigation when private tester mode is off", () => {
+  it("VET-1368 tester scope UI: keeps approved sidebar navigation when private tester mode is off", () => {
     setPrivateTesterMode(false);
 
     render(React.createElement(Sidebar));
@@ -164,7 +166,7 @@ describe("private tester scope UI", () => {
     expect(screen.getByText("Supplements")).toBeTruthy();
     expect(screen.getByText("Reminders")).toBeTruthy();
     expect(screen.getByText("Journal")).toBeTruthy();
-    expect(screen.getByText("Paw Circle")).toBeTruthy();
+    expect(screen.queryByText("Paw Circle")).toBeNull();
   });
 
   it("VET-1368 tester scope UI: swaps the dashboard to private-test-safe focus content", () => {
@@ -192,21 +194,12 @@ describe("private tester scope UI", () => {
     expect(screen.queryByText("Joint supplement administered")).toBeNull();
   });
 
-  it("VET-1368 tester scope UI: quarantines Paw Circle with safe private-test copy", () => {
+  it("VET-1368 tester scope UI: redirects Paw Circle direct access to the dashboard", () => {
     setPrivateTesterMode(true);
 
-    render(React.createElement(CommunityPage));
+    CommunityPage();
 
-    expect(
-      screen.getByText("Paw Circle is disabled for private testers")
-    ).toBeTruthy();
-    expect(
-      screen.getByText("Community features are not part of this private test.")
-    ).toBeTruthy();
-    expect(screen.queryByText("Connect with fellow dog parents")).toBeNull();
-    expect(
-      screen.queryByText("Cooper's mobility improved so much in 3 months!")
-    ).toBeNull();
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
   });
 
   it("VET-1368 tester scope UI: quarantines supplements with safe private-test copy", () => {
@@ -272,7 +265,6 @@ describe("private tester scope UI", () => {
         null,
         React.createElement(Sidebar),
         React.createElement(DashboardPage),
-        React.createElement(CommunityPage),
         React.createElement(SupplementsPage)
       )
     );
@@ -281,13 +273,14 @@ describe("private tester scope UI", () => {
     expect(screen.queryByText("Paw Circle")).toBeNull();
     expect(screen.getByText("Private tester home")).toBeTruthy();
     expect(
-      screen.getByText("Paw Circle is disabled for private testers")
-    ).toBeTruthy();
-    expect(
       screen.getByText("Supplement plan is disabled for private testers")
     ).toBeTruthy();
     expect(screen.queryByText("View Supplements")).toBeNull();
     expect(screen.queryByText("Connect with fellow dog parents")).toBeNull();
+
+    CommunityPage();
+
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
   });
 
   it("VET-1390 tester scope UI: respects the server runtime flag when NEXT_PUBLIC mode is not present in the client bundle", () => {
@@ -308,14 +301,10 @@ describe("private tester scope UI", () => {
 
     dashboardView.unmount();
 
-    const communityView = render(React.createElement(CommunityPage));
+    CommunityPage();
 
-    expect(
-      screen.getByText("Paw Circle is disabled for private testers")
-    ).toBeTruthy();
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
     expect(screen.queryByText("Connect with fellow dog parents")).toBeNull();
-
-    communityView.unmount();
 
     render(React.createElement(SupplementsPage));
 
