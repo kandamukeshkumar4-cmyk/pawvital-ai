@@ -7,7 +7,9 @@
 # Jest suite. The production build is intentionally NOT run here (it needs
 # Supabase/NIM env vars and is already performed by Vercel's remote build at
 # deploy time).
-image: node:20
+# Node 24 to match the dev environment — some tests use module.registerHooks(),
+# a Node 22.15+/24 API absent on node:20 ("registerHooks is not a function").
+image: node:24
 
 stages:
   - verify
