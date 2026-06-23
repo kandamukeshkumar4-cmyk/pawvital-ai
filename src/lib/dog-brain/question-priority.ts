@@ -83,8 +83,8 @@ function deriveEvidenceDateRange(
   const days = Math.round((now.getTime() - newest) / 86_400_000);
 
   if (!Number.isFinite(days) || days < 0) {
-    // A future date is not trustworthy — omit rather than guess.
-    return "in recent check-ins";
+    // A future/garbled date is not trustworthy — omit rather than guess.
+    return undefined;
   }
   if (days === 0) return "today";
   if (days === 1) return "about a day ago";

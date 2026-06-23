@@ -29,46 +29,40 @@ const BRAIN_TRACE_SAFETY_NOTE =
   "Supportive context only; not a diagnosis.";
 
 /**
+ * Which selection branch produced the next question. Lets the Brain trace be
+ * attributed from the selector's own decision instead of re-deriving it.
+ * Mirrors getNextQuestionWithSource precedence: complaint > brain > fallback.
+ */
+export type BrainQuestionSource = "complaint" | "brain" | "fallback";
+
+/**
  * Derive a Brain question trace for an already-selected question id. PURE.
  *
- * Emits a trace ONLY when ALL hold:
- *  - the complaint branch (preferredSymptoms) did NOT produce selectedQuestionId,
- *  - the brain branch (brainPrioritySymptoms) DID produce selectedQuestionId,
- *  - the brain symptom that produced it has owner-friendly evidence in the map.
- *
- * Otherwise returns null (current complaint wins, pending clarification wins,
- * empty memory, or an unmapped signal/symptom) — never throws.
+ * Emits a trace ONLY when the selector reported that supportive Dog Brain memory
+ * (`source === "brain"`) — not the current complaint, the generic fallback, or a
+ * pending clarification — drove the selected question, AND a Brain symptom that
+ * owns it has owner-friendly evidence in the map. Otherwise returns null (empty
+ * memory or an unmapped signal/symptom included) — never throws.
  */
 export function deriveBrainQuestionTrace(
-  session: TriageSession,
-  preferredSymptoms: string[],
+  source: BrainQuestionSource | null,
   brainPrioritySymptoms: string[],
   evidenceMap: Record<string, BrainSymptomEvidence>,
   selectedQuestionId: string | null,
 ): BrainQuestionTrace | null {
+  if (source !== "brain") return null;
   if (!selectedQuestionId) return null;
   if (!brainPrioritySymptoms.length) return null;
   if (!evidenceMap || Object.keys(evidenceMap).length === 0) return null;
 
-  // The current complaint always wins: if it would have produced this exact
-  // question, Brain memory did not drive it — no (misleading) trace.
-  if (
-    getNextQuestionForPreferredSymptoms(session, preferredSymptoms) ===
-    selectedQuestionId
-  ) {
-    return null;
-  }
-
-  // The brain branch must genuinely select this exact question id.
-  if (
-    getNextQuestionForPreferredSymptoms(session, brainPrioritySymptoms) !==
-    selectedQuestionId
-  ) {
-    return null;
-  }
-
-  // Find which brain symptom owns the selected follow-up AND has evidence.
-  const selectedSymptomKey = brainPrioritySymptoms.find((symptom) => {
+  // Attribute to the owning symptom using the SAME clinical-priority order the
+  // selector uses (getSymptomPriorityScore), so the evidence shown matches the
+  // symptom that actually won the question.
+  const rankedSymptoms = [...brainPrioritySymptoms].sort(
+    (left, right) =>
+      getSymptomPriorityScore(right) - getSymptomPriorityScore(left),
+  );
+  const selectedSymptomKey = rankedSymptoms.find((symptom) => {
     if (!evidenceMap[symptom]) return false;
     const followUps = SYMPTOM_MAP[symptom]?.follow_up_questions;
     return Array.isArray(followUps) && followUps.includes(selectedQuestionId);
@@ -94,30 +88,98 @@ export function deriveBrainQuestionTrace(
 export function getNextQuestionAvoidingRepeat(
   session: TriageSession,
   preferredSymptoms: string[] = [],
+  brainPrioritySymptoms: string[] = []
+): string | null {
+  return getNextQuestionWithSource(
+    session,
+    preferredSymptoms,
+    brainPrioritySymptoms
+  ).questionId;
+}
+
+/**
+ * Same selection as getNextQuestionAvoidingRepeat, but also reports WHICH branch
+ * produced the question: the current-turn complaint, supportive Dog Brain
+ * memory, or the generic fallback. The selected question id is identical to
+ * getNextQuestionAvoidingRepeat — only the source tag is added (consumed by the
+ * explanation-only Brain trace, never by control flow). Empty
+ * brainPrioritySymptoms can never yield "brain".
+ */
+export function getNextQuestionWithSource(
+  session: TriageSession,
+  preferredSymptoms: string[] = [],
   // SUPPORTIVE Dog Brain memory: symptom keys derived from recurring owner-logged
   // signals. Consulted ONLY as a tiebreak — after the current turn's complaint is
   // exhausted and before the generic fallback — so it can surface an already-legal
   // follow-up the owner's history makes relevant, without changing the candidate
   // set or overriding complaint-driven / red-flag selection. Empty = no-op.
   brainPrioritySymptoms: string[] = []
-): string | null {
-  const nextQuestionId =
-    getNextQuestionForPreferredSymptoms(session, preferredSymptoms) ||
-    getNextQuestionForPreferredSymptoms(session, brainPrioritySymptoms) ||
-    getNextQuestion(session);
-  if (!nextQuestionId) return null;
+): { questionId: string | null; source: BrainQuestionSource | null } {
+  const complaintQuestionId = getNextQuestionForPreferredSymptoms(
+    session,
+    preferredSymptoms
+  );
+  const brainQuestionId = complaintQuestionId
+    ? null
+    : getNextQuestionForPreferredSymptoms(session, brainPrioritySymptoms);
+  const fallbackQuestionId =
+    complaintQuestionId || brainQuestionId ? null : getNextQuestion(session);
 
+  let questionId =
+    complaintQuestionId || brainQuestionId || fallbackQuestionId;
+  let source: BrainQuestionSource | null = complaintQuestionId
+    ? "complaint"
+    : brainQuestionId
+      ? "brain"
+      : fallbackQuestionId
+        ? "fallback"
+        : null;
+  if (!questionId) return { questionId: null, source: null };
+
+  // Repeat-avoidance: if the chosen question was just asked and already
+  // answered, swap to the next missing question, and RE-attribute the swapped
+  // question to its owning branch so the Brain trace stays correct (instead of
+  // silently dropping) on these turns. Selection result is unchanged.
   if (
-    nextQuestionId !== session.last_question_asked ||
-    !session.answered_questions.includes(nextQuestionId)
+    questionId === session.last_question_asked &&
+    session.answered_questions.includes(questionId)
   ) {
-    return nextQuestionId;
+    const alternatives = getMissingQuestions(session).filter(
+      (qId) => qId !== session.last_question_asked
+    );
+    const swapped = alternatives[0] || questionId;
+    if (swapped !== questionId) {
+      questionId = swapped;
+      source = classifyQuestionSource(
+        swapped,
+        preferredSymptoms,
+        brainPrioritySymptoms
+      );
+    }
   }
 
-  const alternatives = getMissingQuestions(session).filter(
-    (qId) => qId !== session.last_question_asked
+  return { questionId, source };
+}
+
+/** True when any of `symptoms`' follow-up questions includes `questionId`. */
+function symptomSetOwnsQuestion(
+  symptoms: string[],
+  questionId: string
+): boolean {
+  return symptoms.some((symptom) =>
+    SYMPTOM_MAP[symptom]?.follow_up_questions?.includes(questionId)
   );
-  return alternatives[0] || nextQuestionId;
+}
+
+/** Attribute a question to a branch using the same precedence as selection. */
+function classifyQuestionSource(
+  questionId: string,
+  preferredSymptoms: string[],
+  brainPrioritySymptoms: string[]
+): BrainQuestionSource {
+  if (symptomSetOwnsQuestion(preferredSymptoms, questionId)) return "complaint";
+  if (symptomSetOwnsQuestion(brainPrioritySymptoms, questionId)) return "brain";
+  return "fallback";
 }
 
 export function getNextQuestionForPreferredSymptoms(

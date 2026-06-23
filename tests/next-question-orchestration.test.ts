@@ -5,10 +5,14 @@ const mockGetNextQuestionAvoidingRepeat = jest.fn();
 
 jest.mock("@/lib/symptom-chat/answer-coercion", () => ({
   // Preserve real exports (e.g. deriveBrainQuestionTrace) — only override the
-  // selector so question routing can be driven deterministically per test.
+  // selector so question routing can be driven deterministically per test. The
+  // orchestrator consumes getNextQuestionWithSource; the legacy mock fn supplies
+  // the question id and these turns are not Brain-driven (source: null).
   ...jest.requireActual("@/lib/symptom-chat/answer-coercion"),
-  getNextQuestionAvoidingRepeat: (...args: unknown[]) =>
-    mockGetNextQuestionAvoidingRepeat(...args),
+  getNextQuestionWithSource: (...args: unknown[]) => ({
+    questionId: mockGetNextQuestionAvoidingRepeat(...args),
+    source: null,
+  }),
 }));
 
 describe("orchestrateNextQuestion", () => {

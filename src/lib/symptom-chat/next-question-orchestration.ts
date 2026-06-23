@@ -9,7 +9,7 @@ import {
   syncStructuredCaseMemoryQuestions,
 } from "@/lib/symptom-memory";
 import {
-  getNextQuestionAvoidingRepeat,
+  getNextQuestionWithSource,
   deriveBrainQuestionTrace,
   type BrainQuestionTrace,
 } from "@/lib/symptom-chat/answer-coercion";
@@ -58,26 +58,29 @@ export function orchestrateNextQuestion(
   input: OrchestrateNextQuestionInput
 ): OrchestrateNextQuestionResult {
   const needsClarificationQuestionId = resolveNeedsClarificationQuestionId(input);
-  const nextQuestionId =
-    needsClarificationQuestionId ??
-    getNextQuestionAvoidingRepeat(
-      input.session,
-      input.turnFocusSymptoms,
-      input.brainPrioritySymptoms ?? []
-    );
-
-  // Explanation-only trace. A pending clarification re-ask always wins, so a
-  // clarification turn yields no Brain trace. Otherwise emit a trace ONLY when
-  // Brain memory (not the complaint) genuinely drove this exact question.
-  const brainQuestionTrace = needsClarificationQuestionId
+  // A pending clarification re-ask always wins; otherwise select the next
+  // question AND record which branch produced it (complaint / brain / fallback).
+  const selection = needsClarificationQuestionId
     ? null
-    : deriveBrainQuestionTrace(
+    : getNextQuestionWithSource(
         input.session,
         input.turnFocusSymptoms,
+        input.brainPrioritySymptoms ?? []
+      );
+  const nextQuestionId =
+    needsClarificationQuestionId ?? selection?.questionId ?? null;
+
+  // Explanation-only trace. A clarification turn yields no Brain trace. Otherwise
+  // emit a trace ONLY when the selector reports Brain memory (not the complaint
+  // or fallback) drove this exact question — no re-derivation.
+  const brainQuestionTrace = selection
+    ? deriveBrainQuestionTrace(
+        selection.source,
         input.brainPrioritySymptoms ?? [],
         input.brainPrioritySymptomEvidence ?? {},
         nextQuestionId
-      );
+      )
+    : null;
 
   let session = recordRepeatSuppressionTelemetry(
     input.session,

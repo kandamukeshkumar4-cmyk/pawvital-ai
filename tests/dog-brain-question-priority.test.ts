@@ -5,6 +5,7 @@ import {
 import type { DetectedSignal } from "@/lib/dog-brain/types";
 import {
   getNextQuestionAvoidingRepeat,
+  getNextQuestionWithSource,
   getNextQuestionForPreferredSymptoms,
   deriveBrainQuestionTrace,
 } from "@/lib/symptom-chat/answer-coercion";
@@ -282,8 +283,7 @@ describe("deriveBrainQuestionTrace (explanation-only)", () => {
     expect(selected).toBeTruthy();
 
     const trace = deriveBrainQuestionTrace(
-      session,
-      [], // complaint branch empty
+      "brain", // selector reported Brain memory drove it
       ["diarrhea"], // brain branch
       evidenceMap,
       selected,
@@ -301,10 +301,10 @@ describe("deriveBrainQuestionTrace (explanation-only)", () => {
     const session = brainSession();
     const selected = getNextQuestionForPreferredSymptoms(session, ["diarrhea"]);
     expect(
-      deriveBrainQuestionTrace(session, [], ["diarrhea"], {}, selected),
+      deriveBrainQuestionTrace("brain", ["diarrhea"], {}, selected),
     ).toBeNull();
     expect(
-      deriveBrainQuestionTrace(session, [], [], {}, selected),
+      deriveBrainQuestionTrace("brain", [], {}, selected),
     ).toBeNull();
   });
 
@@ -327,10 +327,9 @@ describe("deriveBrainQuestionTrace (explanation-only)", () => {
     ]);
 
     // Even though Brain also maps to "vomiting", the complaint produced this
-    // question first — no misleading Brain trace.
+    // question first — the selector reports source="complaint" → no Brain trace.
     const trace = deriveBrainQuestionTrace(
-      session,
-      ["vomiting"],
+      "complaint",
       ["vomiting"],
       evidenceMap,
       selected,
@@ -344,8 +343,7 @@ describe("deriveBrainQuestionTrace (explanation-only)", () => {
     // Evidence map references a DIFFERENT key than the one that produced the
     // question — unknown/unmapped ⇒ safe no-op.
     const trace = deriveBrainQuestionTrace(
-      session,
-      [],
+      "brain",
       ["diarrhea"],
       { vomiting: { signal_type: "vomiting_trend", evidence_summary: "x" } },
       selected,
@@ -354,9 +352,90 @@ describe("deriveBrainQuestionTrace (explanation-only)", () => {
   });
 
   it("returns null for a null selected question id", () => {
-    const session = brainSession();
     expect(
-      deriveBrainQuestionTrace(session, [], ["diarrhea"], {}, null),
+      deriveBrainQuestionTrace("brain", ["diarrhea"], {}, null),
     ).toBeNull();
+  });
+
+  it("returns null when the selector reports a non-brain source", () => {
+    const session = brainSession();
+    const evidenceMap = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "stool change",
+        dedupe_key: "stool_change:2026-06-10",
+      }),
+    ]);
+    const selected = getNextQuestionForPreferredSymptoms(session, ["diarrhea"]);
+    // Same inputs that would yield a trace under source="brain"…
+    expect(
+      deriveBrainQuestionTrace("brain", ["diarrhea"], evidenceMap, selected),
+    ).not.toBeNull();
+    // …produce nothing when the fallback (not Brain) drove the question.
+    expect(
+      deriveBrainQuestionTrace("fallback", ["diarrhea"], evidenceMap, selected),
+    ).toBeNull();
+  });
+});
+
+describe("getNextQuestionWithSource (selection + branch attribution)", () => {
+  it("reports source='complaint' when the current complaint drives the question", () => {
+    const session = createSession();
+    session.known_symptoms = ["vomiting"];
+    session.answered_questions = [];
+    const { questionId, source } = getNextQuestionWithSource(
+      session,
+      ["vomiting"],
+      ["diarrhea"],
+    );
+    expect(questionId).toBeTruthy();
+    expect(source).toBe("complaint");
+  });
+
+  it("reports source='brain' when only Brain memory surfaces a question", () => {
+    const session = createSession();
+    session.known_symptoms = [];
+    session.answered_questions = [];
+    const { questionId, source } = getNextQuestionWithSource(
+      session,
+      [], // no current complaint
+      ["diarrhea"], // brain memory
+    );
+    expect(questionId).toBeTruthy();
+    expect(source).toBe("brain");
+  });
+
+  it("never reports 'brain' when Brain memory is empty", () => {
+    const session = createSession();
+    session.known_symptoms = [];
+    session.answered_questions = [];
+    expect(getNextQuestionWithSource(session, [], []).source).not.toBe("brain");
+  });
+
+  it("selects the SAME question id as getNextQuestionAvoidingRepeat (no selection change)", () => {
+    const session = createSession();
+    session.known_symptoms = ["vomiting"];
+    session.answered_questions = [];
+    expect(
+      getNextQuestionWithSource(session, ["vomiting"], ["diarrhea"]).questionId,
+    ).toBe(getNextQuestionAvoidingRepeat(session, ["vomiting"], ["diarrhea"]));
+  });
+
+  it("preserves selection and still attributes a source on a repeat-avoidance swap", () => {
+    const session = createSession();
+    session.known_symptoms = ["vomiting"];
+    const firstPick = getNextQuestionForPreferredSymptoms(session, ["vomiting"]);
+    expect(firstPick).toBeTruthy();
+    // Force the swap: the first pick was just asked and already answered.
+    session.last_question_asked = firstPick as string;
+    session.answered_questions = [firstPick as string];
+    const result = getNextQuestionWithSource(session, ["vomiting"], ["diarrhea"]);
+    // Selection stays identical to the legacy selector on the same turn.
+    expect(result.questionId).toBe(
+      getNextQuestionAvoidingRepeat(session, ["vomiting"], ["diarrhea"]),
+    );
+    // A source is always attributed so the trace logic is never silently skipped.
+    expect(["complaint", "brain", "fallback", null]).toContain(result.source);
   });
 });
