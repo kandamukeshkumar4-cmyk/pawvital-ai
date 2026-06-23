@@ -23,6 +23,9 @@ cache:
 verify:
   stage: verify
   interruptible: true
+  # Give Node headroom — the full ts-jest suite (~3900 tests) is memory-heavy.
+  variables:
+    NODE_OPTIONS: "--max-old-space-size=3072"
   before_script:
     - node --version
     - npm ci --cache .npm --prefer-offline --no-audit --no-fund
@@ -31,8 +34,10 @@ verify:
     - npm run typecheck
     # Lint — fails only on errors (pre-existing warnings are allowed).
     - npx eslint .
-    # Full Jest suite — the regression gate.
-    - npm test -- --ci
+    # Full Jest suite — the regression gate. --runInBand (single process) keeps
+    # peak memory low so it doesn't OOM on small shared runners; the suite is
+    # green this way (parallel workers exhaust the runner's RAM).
+    - npm test -- --ci --runInBand
   rules:
     # Run on any branch push and on merge requests.
     - if: '$CI_COMMIT_BRANCH'
