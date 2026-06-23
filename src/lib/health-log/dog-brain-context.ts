@@ -6,18 +6,29 @@ import {
   type FollowupContextRow,
 } from "./context";
 import { detectDogBrainSignals } from "@/lib/dog-brain/signals";
-import { brainPrioritySymptomsFromSignals } from "@/lib/dog-brain/question-priority";
+import {
+  brainPrioritySymptomsFromSignals,
+  brainPrioritySymptomEvidence,
+  type BrainSymptomEvidence,
+} from "@/lib/dog-brain/question-priority";
 
 export interface DogBrainContextData {
   /** Supportive narrative for the report prompt; null = skip context. */
   context: string | null;
   /** Recurring-signal symptom keys for the symptom-checker question tiebreak. */
   prioritySymptoms: string[];
+  /**
+   * Owner-friendly, non-diagnostic evidence per priority symptom key — used ONLY
+   * to explain (after the fact) why Brain memory surfaced a question. Never alters
+   * selection or control state. Empty when there is no Brain memory.
+   */
+  prioritySymptomEvidence: Record<string, BrainSymptomEvidence>;
 }
 
 const EMPTY_DOG_BRAIN_DATA: DogBrainContextData = {
   context: null,
   prioritySymptoms: [],
+  prioritySymptomEvidence: {},
 };
 
 /**
@@ -309,13 +320,15 @@ export async function loadDogBrainContextWithSignals({
     // derived from the SAME logs already loaded above (detectDogBrainSignals
     // uses the 14 newest internally) — no extra query, no duplicate ownership
     // check. Replaces the former standalone loadDogBrainPrioritySymptoms loader.
-    const prioritySymptoms = brainPrioritySymptomsFromSignals(
-      detectDogBrainSignals(logs).signals,
-    );
+    const detectedSignals = detectDogBrainSignals(logs).signals;
+    const prioritySymptoms = brainPrioritySymptomsFromSignals(detectedSignals);
+    const prioritySymptomEvidence =
+      brainPrioritySymptomEvidence(detectedSignals);
 
     return {
       context: sections.length === 0 ? null : sections.join("\n\n"),
       prioritySymptoms,
+      prioritySymptomEvidence,
     };
   } catch {
     return EMPTY_DOG_BRAIN_DATA;

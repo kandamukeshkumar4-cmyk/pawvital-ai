@@ -8,7 +8,12 @@ import {
   recordConversationTelemetry,
   syncStructuredCaseMemoryQuestions,
 } from "@/lib/symptom-memory";
-import { getNextQuestionAvoidingRepeat } from "@/lib/symptom-chat/answer-coercion";
+import {
+  getNextQuestionAvoidingRepeat,
+  deriveBrainQuestionTrace,
+  type BrainQuestionTrace,
+} from "@/lib/symptom-chat/answer-coercion";
+import type { BrainSymptomEvidence } from "@/lib/dog-brain/question-priority";
 import { didVisualEvidenceInfluenceQuestion } from "@/lib/symptom-chat/report-helpers";
 import {
   getPendingQuestionId,
@@ -29,6 +34,12 @@ interface OrchestrateNextQuestionInput {
    * complaint. Optional; absent / empty preserves pre-Brain behavior exactly.
    */
   brainPrioritySymptoms?: string[];
+  /**
+   * Owner-friendly evidence per Brain priority symptom key — used ONLY to build
+   * the explanation-only brainQuestionTrace. Never affects selection. Optional;
+   * absent / empty means no trace is emitted.
+   */
+  brainPrioritySymptomEvidence?: Record<string, BrainSymptomEvidence>;
 }
 
 interface OrchestrateNextQuestionResult {
@@ -36,6 +47,11 @@ interface OrchestrateNextQuestionResult {
   nextQuestionId: string | null;
   needsClarificationQuestionId: string | null;
   visualEvidenceInfluencedQuestion: boolean;
+  /**
+   * Explanation-only metadata: present only when Dog Brain memory (not the
+   * current complaint and not a pending clarification) drove nextQuestionId.
+   */
+  brainQuestionTrace: BrainQuestionTrace | null;
 }
 
 export function orchestrateNextQuestion(
@@ -49,6 +65,19 @@ export function orchestrateNextQuestion(
       input.turnFocusSymptoms,
       input.brainPrioritySymptoms ?? []
     );
+
+  // Explanation-only trace. A pending clarification re-ask always wins, so a
+  // clarification turn yields no Brain trace. Otherwise emit a trace ONLY when
+  // Brain memory (not the complaint) genuinely drove this exact question.
+  const brainQuestionTrace = needsClarificationQuestionId
+    ? null
+    : deriveBrainQuestionTrace(
+        input.session,
+        input.turnFocusSymptoms,
+        input.brainPrioritySymptoms ?? [],
+        input.brainPrioritySymptomEvidence ?? {},
+        nextQuestionId
+      );
 
   let session = recordRepeatSuppressionTelemetry(
     input.session,
@@ -80,6 +109,7 @@ export function orchestrateNextQuestion(
     nextQuestionId,
     needsClarificationQuestionId,
     visualEvidenceInfluencedQuestion,
+    brainQuestionTrace,
   };
 }
 

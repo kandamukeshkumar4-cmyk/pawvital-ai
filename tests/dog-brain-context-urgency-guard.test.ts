@@ -15,6 +15,8 @@ import {
   type TriageSession,
 } from "@/lib/triage-engine";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
+import { deriveBrainQuestionTrace } from "@/lib/symptom-chat/answer-coercion";
+import { brainPrioritySymptomEvidence } from "@/lib/dog-brain/question-priority";
 
 const pet: PetProfile = {
   name: "Scout",
@@ -71,5 +73,40 @@ describe("Dog Brain memory cannot downgrade deterministic urgency", () => {
     expect(withBenignMemory.red_flags_triggered).toEqual(
       expect.arrayContaining(["vomit_blood"]),
     );
+  });
+
+  it("Brain question trace is explanation-only — building it never mutates urgency or red flags", () => {
+    const session = emergencySession();
+    const redFlagsBefore = [...session.red_flags_triggered];
+    const urgencyBefore = buildDiagnosisContext(session, pet).highest_urgency;
+
+    const evidenceMap = brainPrioritySymptomEvidence([
+      {
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "The latest log shows a stool change.",
+        dedupe_key: "stool_change:2026-06-10",
+      },
+    ]);
+
+    // Even with Brain priority symptoms + evidence present, deriving the trace is
+    // a pure read: it cannot change the session, urgency, or red flags. And on an
+    // emergency turn the complaint (vomiting) drives selection, so the brain trace
+    // for an unrelated diarrhea question stays null when the complaint owns it.
+    const trace = deriveBrainQuestionTrace(
+      session,
+      ["vomiting"],
+      ["diarrhea"],
+      evidenceMap,
+      // A vomiting follow-up the complaint branch owns — not a brain-driven id.
+      "vomit_blood",
+    );
+    expect(trace).toBeNull();
+
+    expect(session.red_flags_triggered).toEqual(redFlagsBefore);
+    expect(buildDiagnosisContext(session, pet).highest_urgency).toBe(
+      urgencyBefore,
+    );
+    expect(urgencyBefore).toBe("emergency");
   });
 });

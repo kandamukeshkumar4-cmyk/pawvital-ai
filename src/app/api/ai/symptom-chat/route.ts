@@ -163,6 +163,7 @@ import {
   loadDogBrainContext,
   loadDogBrainContextWithSignals,
 } from "@/lib/health-log/dog-brain-context";
+import type { BrainSymptomEvidence } from "@/lib/dog-brain/question-priority";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -981,16 +982,20 @@ export async function POST(request: Request) {
     // deterministic planner picks the next question (never overrides complaint or
     // red-flag selection, never reaches urgency logic). Empty on any failure.
     let brainPrioritySymptoms: string[] = [];
+    let brainPrioritySymptomEvidence: Record<string, BrainSymptomEvidence> = {};
     if (action === "chat" && verifiedUserId && effectivePet) {
       try {
         // Single best-effort load: the narrative context AND the question-tiebreak
         // priority symptoms come from one fetch (no duplicate logs/ownership query).
-        const { context: brainContext, prioritySymptoms } =
-          await loadDogBrainContextWithSignals({
-            userId: verifiedUserId,
-            petName: effectivePet.name,
-            petId: effectivePet.id,
-          });
+        const {
+          context: brainContext,
+          prioritySymptoms,
+          prioritySymptomEvidence,
+        } = await loadDogBrainContextWithSignals({
+          userId: verifiedUserId,
+          petName: effectivePet.name,
+          petId: effectivePet.id,
+        });
         if (brainContext) {
           const memory = ensureStructuredCaseMemory(session);
           session = {
@@ -999,6 +1004,7 @@ export async function POST(request: Request) {
           };
         }
         brainPrioritySymptoms = prioritySymptoms;
+        brainPrioritySymptomEvidence = prioritySymptomEvidence;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2447,6 +2453,7 @@ export async function POST(request: Request) {
       turnFocusSymptoms,
       visualEvidence,
       brainPrioritySymptoms,
+      brainPrioritySymptomEvidence,
     });
     session = nextQuestionState.session;
     const nextQuestionId = nextQuestionState.nextQuestionId;
@@ -2472,6 +2479,15 @@ export async function POST(request: Request) {
     const effectiveQuestionId =
       orchestratorResult.selectedQuestionId ?? nextQuestionId;
     const askingBecause = orchestratorResult.askingBecause;
+
+    // Brain trace is explanation-only. It was computed against the legacy/brain
+    // selection (nextQuestionId). Be conservative: only surface it when the
+    // question actually asked (effectiveQuestionId) is still the Brain-driven one
+    // — if the planner-live path swapped in a different question, emit null.
+    const brainQuestionTrace =
+      effectiveQuestionId === nextQuestionId
+        ? nextQuestionState.brainQuestionTrace
+        : null;
     const promptVetRecord = shouldPromptVetRecordUpload(
       session,
       effectiveQuestionId
@@ -2507,6 +2523,7 @@ export async function POST(request: Request) {
       turnDeadline,
       turnDepth,
       askingBecause,
+      brainQuestionTrace,
       promptVetRecord,
     });
   } catch (error) {

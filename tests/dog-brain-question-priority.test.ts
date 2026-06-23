@@ -1,6 +1,13 @@
-import { brainPrioritySymptomsFromSignals } from "@/lib/dog-brain/question-priority";
+import {
+  brainPrioritySymptomsFromSignals,
+  brainPrioritySymptomEvidence,
+} from "@/lib/dog-brain/question-priority";
 import type { DetectedSignal } from "@/lib/dog-brain/types";
-import { getNextQuestionAvoidingRepeat } from "@/lib/symptom-chat/answer-coercion";
+import {
+  getNextQuestionAvoidingRepeat,
+  getNextQuestionForPreferredSymptoms,
+  deriveBrainQuestionTrace,
+} from "@/lib/symptom-chat/answer-coercion";
 import { createSession } from "@/lib/triage-engine";
 import { SYMPTOM_MAP } from "@/lib/clinical-matrix";
 
@@ -170,5 +177,186 @@ describe("getNextQuestionAvoidingRepeat — Dog Brain tiebreak", () => {
       [],
     );
     expect(withEmptyBrain).toBe(legacy);
+  });
+});
+
+describe("brainPrioritySymptomEvidence (owner-friendly, non-diagnostic)", () => {
+  it("maps each priority symptom key to its source signal_type + summary", () => {
+    const evidence = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "The latest log shows a stool change.",
+        dedupe_key: "stool_change:2026-06-10",
+      }),
+    ]);
+
+    // The mapped keys (diarrhea, blood_in_stool) each reference the same signal.
+    expect(evidence["diarrhea"]?.signal_type).toBe("stool_change");
+    expect(evidence["blood_in_stool"]?.signal_type).toBe("stool_change");
+    expect(evidence["diarrhea"]?.evidence_summary).toBe(
+      "The latest log shows a stool change.",
+    );
+    // Owner-friendly: no disease names / diagnosis language.
+    expect(evidence["diarrhea"]?.evidence_summary).not.toMatch(
+      /diagnos|disease|cancer|infection/i,
+    );
+  });
+
+  it("derives a relative date phrase only when a date is reliable", () => {
+    const now = new Date("2026-06-15T00:00:00Z");
+    const evidence = brainPrioritySymptomEvidence(
+      [
+        signal({
+          signal_type: "vomiting_trend",
+          severity: "watch",
+          owner_message: "Vomiting was reported 3 times.",
+          dedupe_key: "vomiting_trend:2026-06-13",
+        }),
+      ],
+      now,
+    );
+    expect(evidence["vomiting"]?.evidence_date_range).toBe("about 2 days ago");
+  });
+
+  it("omits the date when the dedupe_key has no parseable date", () => {
+    const evidence = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "appetite_drop",
+        severity: "watch",
+        owner_message: "Appetite was down recently.",
+        dedupe_key: "appetite_drop:unknown",
+      }),
+    ]);
+    expect(evidence["not_eating"]).toBeDefined();
+    expect(evidence["not_eating"]?.evidence_date_range).toBeUndefined();
+  });
+
+  it("is empty for no signals and for unmapped (medication) signals", () => {
+    expect(brainPrioritySymptomEvidence([])).toEqual({});
+    expect(
+      brainPrioritySymptomEvidence([
+        signal({ signal_type: "possible_med_side_effect", severity: "info" }),
+      ]),
+    ).toEqual({});
+  });
+
+  it("highest-severity signal wins when two signals map to the same key", () => {
+    const evidence = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "vomiting_trend",
+        severity: "info",
+        owner_message: "low severity message",
+        dedupe_key: "vomiting_trend:2026-06-01",
+      }),
+      signal({
+        signal_type: "vomiting_trend",
+        severity: "alert",
+        owner_message: "high severity message",
+        dedupe_key: "vomiting_trend:2026-06-10",
+      }),
+    ]);
+    expect(evidence["vomiting"]?.evidence_summary).toBe("high severity message");
+  });
+});
+
+describe("deriveBrainQuestionTrace (explanation-only)", () => {
+  function brainSession() {
+    const session = createSession();
+    session.known_symptoms = []; // no current complaint
+    session.answered_questions = [];
+    return session;
+  }
+
+  it("(proof 1+2) returns a trace referencing the correct signal_type when Brain drove the question", () => {
+    const session = brainSession();
+    const evidenceMap = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "The latest log shows a stool change.",
+        dedupe_key: "stool_change:2026-06-10",
+      }),
+    ]);
+    const selected = getNextQuestionForPreferredSymptoms(session, ["diarrhea"]);
+    expect(selected).toBeTruthy();
+
+    const trace = deriveBrainQuestionTrace(
+      session,
+      [], // complaint branch empty
+      ["diarrhea"], // brain branch
+      evidenceMap,
+      selected,
+    );
+
+    expect(trace).not.toBeNull();
+    expect(trace?.source).toBe("dog_brain");
+    expect(trace?.signal_type).toBe("stool_change");
+    expect(trace?.selected_symptom_key).toBe("diarrhea");
+    expect(trace?.selected_question_id).toBe(selected);
+    expect(trace?.safety_note).toMatch(/not a diagnosis/i);
+  });
+
+  it("(proof 3) returns null when Brain memory is empty (no evidence)", () => {
+    const session = brainSession();
+    const selected = getNextQuestionForPreferredSymptoms(session, ["diarrhea"]);
+    expect(
+      deriveBrainQuestionTrace(session, [], ["diarrhea"], {}, selected),
+    ).toBeNull();
+    expect(
+      deriveBrainQuestionTrace(session, [], [], {}, selected),
+    ).toBeNull();
+  });
+
+  it("(proof 4) returns null when the current complaint drove the question", () => {
+    const session = createSession();
+    session.known_symptoms = ["vomiting"];
+    session.answered_questions = [];
+
+    // Complaint = vomiting; the selected question belongs to vomiting's follow-ups.
+    const selected = getNextQuestionForPreferredSymptoms(session, ["vomiting"]);
+    expect(selected).toBeTruthy();
+
+    const evidenceMap = brainPrioritySymptomEvidence([
+      signal({
+        signal_type: "vomiting_trend",
+        severity: "watch",
+        owner_message: "Vomiting was reported 3 times.",
+        dedupe_key: "vomiting_trend:2026-06-10",
+      }),
+    ]);
+
+    // Even though Brain also maps to "vomiting", the complaint produced this
+    // question first — no misleading Brain trace.
+    const trace = deriveBrainQuestionTrace(
+      session,
+      ["vomiting"],
+      ["vomiting"],
+      evidenceMap,
+      selected,
+    );
+    expect(trace).toBeNull();
+  });
+
+  it("(proof 7) returns null (no throw) for an unmapped symptom key with no evidence", () => {
+    const session = brainSession();
+    const selected = getNextQuestionForPreferredSymptoms(session, ["diarrhea"]);
+    // Evidence map references a DIFFERENT key than the one that produced the
+    // question — unknown/unmapped ⇒ safe no-op.
+    const trace = deriveBrainQuestionTrace(
+      session,
+      [],
+      ["diarrhea"],
+      { vomiting: { signal_type: "vomiting_trend", evidence_summary: "x" } },
+      selected,
+    );
+    expect(trace).toBeNull();
+  });
+
+  it("returns null for a null selected question id", () => {
+    const session = brainSession();
+    expect(
+      deriveBrainQuestionTrace(session, [], ["diarrhea"], {}, null),
+    ).toBeNull();
   });
 });

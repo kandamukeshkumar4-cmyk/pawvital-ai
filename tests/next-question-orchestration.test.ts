@@ -4,6 +4,9 @@ import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orches
 const mockGetNextQuestionAvoidingRepeat = jest.fn();
 
 jest.mock("@/lib/symptom-chat/answer-coercion", () => ({
+  // Preserve real exports (e.g. deriveBrainQuestionTrace) — only override the
+  // selector so question routing can be driven deterministically per test.
+  ...jest.requireActual("@/lib/symptom-chat/answer-coercion"),
   getNextQuestionAvoidingRepeat: (...args: unknown[]) =>
     mockGetNextQuestionAvoidingRepeat(...args),
 }));
