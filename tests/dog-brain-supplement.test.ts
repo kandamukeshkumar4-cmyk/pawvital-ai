@@ -8,7 +8,7 @@ import * as path from 'path';
 
 describe("dog_brain_supplement_trials (minimal backend)", () => {
   it("migration file exists with required columns and RLS", () => {
-    const migPath = path.resolve(__dirname, '../supabase/migrations/20260622_dog_brain_supplement_trials.sql');
+    const migPath = path.resolve(__dirname, '../supabase/migrations/20260622000000_dog_brain_supplement_trials.sql');
     const sql = fs.readFileSync(migPath, 'utf8');
     expect(sql).toMatch(/dog_brain_supplement_trials/);
     expect(sql).toMatch(/user_id uuid/);

@@ -100,3 +100,23 @@ Files changed this session:
 - No clinical files touched (`git diff origin/master..HEAD` empty for `triage-engine.ts`, `clinical-matrix.ts`, `symptom-chat/route.ts`, `symptom-memory.ts`).
 - Supplement route stores `supplement_name`, `reason_signal_key`, `status`, `outcome` (better/same/worse/side_effect), `outcome_at`, `notes`. **No** dosage/frequency/brand/price fields. Tests assert no `dose|dosage|mg|ml` in persisted rows.
 - No client-created follow-ups — `followups-panel.tsx` does GET + PATCH only.
+
+## Post-merge reconciliation (Opus follow-up, PR #706)
+
+### Merge conflict — found and fixed
+- PR #706 was opened from a branch forked off `eaa9c70`, which is the commit **before** the PR #702 merge (`7158820`) landed on `master`. GitHub reported the PR as `CONFLICTING` / `DIRTY`.
+- Root cause: `master` (post-#702) and the closeout branch both rewrote `src/app/(dashboard)/supplements/page.tsx`. `master` was left **half-migrated** — #702 added `SupplementTrialsPanel` (no dosing) but kept the *old* dosing-based "tracked supplements" display (a loader mapping `dosage`/`frequency`/`brand`). The closeout completes that migration by removing the unsafe display.
+- Resolution: rebased the single closeout commit onto `origin/master` (`7158820`). Only `page.tsx` conflicted; resolved by taking the closeout's complete vet-safe version (verified that every `master`-unique line in `page.tsx` was the old dosing/tracked UI — `MoreVertical`, `nutrition_grade`, `monthly_cost`, `formatAddedDate`, the dosing card — i.e. nothing worth preserving). Orphaned `tracked` loader removed as a consequence.
+- Re-verified after rebase: `typecheck` clean, `eslint` on changed files 0 issues, **34 supplement tests pass** (`dog-brain-supplement|supplement-trials-panel|health-log.route`). No owner-facing `dosage/frequency/brand/price` in `page.tsx` or the AI route (only the negative prompt instructions + the marker comment remain).
+- Force-pushed (`--force-with-lease`) `5c7da92` → `1912541`. **PR #706 is now `mergeable: MERGEABLE`** (`mergeStateStatus: BLOCKED` remains — the Threshold Review Gate, an external ops gate, not a conflict).
+
+### Migration history — verified read-only (definitive)
+Audited directly against the live PawVital project `aammaxdsjhezmbvdkqee` (read-only `pg` query using the main worktree's `DATABASE_URL`, since the connected Supabase MCP is bound to a different org — `JobsearchAi` — which is why the earlier MCP attempt returned permission denied):
+- `dog_brain_supplement_trials` table **exists**, with all expected columns (`reason_signal_key`, `status`, `started_at`, `follow_up_due_at`, `outcome`, `outcome_at`, `notes`, …).
+- Indexes **exist**: `dog_brain_supplement_trials_pkey`, `uniq_supplement_trial_open`, `idx_dog_brain_supplement_trials_user_pet`, `idx_dog_brain_supplement_trials_due`.
+- RLS **enabled**, policy `dog_brain_supplement_trials_owner_all`.
+- `supabase_migrations.schema_migrations` has **NO `20260622` entry** (latest recorded is `20260616181159`). The table was applied **out-of-band** (raw `pg` one-off), so the migration ledger does not track it.
+- **OPS BLOCKER (honest state):** schema is correct and live, but migration history is dirty. Per the ticket's own rule, the ledger was **not** hand-edited. Safe remediation when the Supabase CLI is linked to the project: `supabase migration repair --status applied <version>` (note: the migration file is named `20260622_…`, an 8-digit prefix that does not match the CLI's 14-digit `YYYYMMDDHHMMSS` convention used by existing ledger rows — it must be renamed to a 14-digit version before `repair`/`db push` will accept it). Do **not** raw-insert into `schema_migrations`.
+
+### Build root — confirmed environmental (no code fix)
+- `outputFileTracingRoot` does not apply (standalone repo, not a monorepo). The failure is Turbopack creating an NTFS junction for `@react-pdf/renderer` under `.next/node_modules`, which exFAT (drive `G:`) cannot host at all (`mklink /J` → "Local NTFS volumes are required"). Documented inline in `next.config.ts`. Build path: NTFS / WSL / Vercel remote. `typecheck` (clean) is the code-correctness proof available on this filesystem.
