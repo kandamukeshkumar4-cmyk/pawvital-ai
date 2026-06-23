@@ -106,11 +106,12 @@ describe("suggestMedia — image domain routing", () => {
     expect(result && "domain" in result && result.domain).toBe("skin_wound");
   });
 
-  test("suggests skin_wound image from keyword alone (no symptom key)", () => {
+  test("suggests mass_swelling image from keyword alone (no symptom key)", () => {
     const session = makeSession([]);
+    // "lump" is a mass_swelling keyword (not skin_wound) — deterministic routing.
     const result = suggestMedia("I noticed a lump on her back", session);
     expect(result?.mediaType).toBe("image");
-    expect(result && "domain" in result && result.domain).toBe("skin_wound");
+    expect(result && "domain" in result && result.domain).toBe("mass_swelling");
   });
 
   test("suggests eye image for eye_discharge symptom", () => {

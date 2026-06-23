@@ -26,7 +26,7 @@ describe("PetOnboardingHost", () => {
   it("opens the pet profile modal when the session has not dismissed onboarding", async () => {
     render(React.createElement(PetOnboardingHost));
 
-    expect(await screen.findByText("Add your dog")).toBeTruthy();
+    expect(await screen.findByText("Get started")).toBeTruthy();
   });
 
   it("stays closed when onboarding was dismissed in session storage", async () => {
