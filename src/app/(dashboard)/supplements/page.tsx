@@ -20,6 +20,7 @@ import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/qua
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
+import { SupplementTrialsPanel } from "@/components/dog-brain/supplement-trials-panel";
 
 interface SupplementItem {
   name: string;
@@ -758,6 +759,15 @@ export default function SupplementsPage() {
               <p className="text-sm leading-relaxed text-[#0b7a4d]">{plan.summary}</p>
             </div>
           )}
+
+          {/* Concrete, DB-backed supplement trials the owner is tracking to
+              discuss with their vet. Seeded one-tap from the AI "ask vet" list
+              but persists independently of the (regenerated) AI plan. */}
+          <SupplementTrialsPanel
+            petId={activePet.id ?? null}
+            petName={activePet.name}
+            suggestions={classified.ask_vet.map((s) => s.name)}
+          />
 
           {/* Tab content */}
           {loading ? (
