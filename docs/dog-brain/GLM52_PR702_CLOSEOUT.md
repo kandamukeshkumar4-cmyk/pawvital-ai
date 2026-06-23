@@ -2,86 +2,78 @@
 
 > Single state file for the Dog Brain backend-owned closed loop closeout.
 
-## Current state
+## Current state (latest)
 
 - branch: `codex/dog-brain-backend-owned-loop`
 - worktree: `G:\MY Website\pawvital-ai-glm-dogbrain-loop`
-- HEAD (after fixes): `bc7a68e` (pending push)
+- HEAD (before this session): `362b38a`
 - PR: https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/702
-- PR state (pre-push): OPEN, not draft, mergeable=UNKNOWN, mergeStateStatus=UNKNOWN, no review threads, no status checks
+- PR state: OPEN, not draft, `mergeable=MERGEABLE`, `mergeStateStatus=BLOCKED`, `reviewDecision=""`, `statusCheckRollup=[]`, 0 review threads.
 
-## Commits made this session (on top of a07b77d)
+Clear separation of where things stand:
 
-1. `6f13038` fix(dog-brain): report followup persistence failures honestly
+| Area | State |
+|---|---|
+| Backend code (supplement trials + brain loop) | **Landed** on branch, locally verified |
+| DB migration `20260622_dog_brain_supplement_trials.sql` | **Pending** — not applied to active DB; unprovable from this environment (see Supabase state) |
+| Supplements UI wiring | **API-only / not wired** — see "UI status" |
+| Client render side effects | **None** — `FollowupsPanel` does GET + PATCH only |
+| Build | **Unproven** — fails on G: for environment reasons (junction/readlink); needs a clean Linux/CI build |
+| PR gate | **Blocked** — required "Threshold Review Gate" check cannot run (Actions quota dead since 2026-06-03) |
+
+## This session — supplement trial hardening
+
+Goal: make the supplement trial loop durable and honest (idempotency, lifecycle, terminal outcome) on top of `362b38a`. No clinical files touched; no UI redesign; no migration applied.
+
+What changed:
+
+1. **Idempotent POST `/api/dog-brain/supplements`.** Added an owner-scoped pre-query for an existing OPEN trial on `(user_id, pet_id, supplement_name, reason_signal_key)` with `status IN ('ask_vet','active')`. If found, returns the existing row with `{ deduped: true }` and never inserts. A `23505` from the race re-fetches the existing open trial and returns `{ deduped: true }` instead of a 500. NULL `reason_signal_key` uses `.is(...)` so NULL reasons dedupe too. Migration adds the backstop partial unique index `uniq_supplement_trial_open`.
+2. **Lifecycle semantics.** An `ask_vet` trial no longer sets `started_at` (the trial hasn't started; the owner is meant to clear it with their vet first).
+3. **Terminal outcome.** PATCH now sets `status = 'outcome_recorded'` (was `follow_up_due`) and stamps `outcome_at`, so an answered follow-up no longer keeps looking due. Migration adds `outcome_recorded` to the status CHECK and an `outcome_at` column (with idempotent `ADD COLUMN IF NOT EXISTS` / constraint swap for older table revisions).
+4. **PATCH id validation.** A non-UUID `?id=` now returns 400 instead of producing a Postgres-level 500.
+
+Files changed this session:
+
+- `src/app/api/dog-brain/supplements/route.ts` — idempotent POST, lifecycle fix, terminal PATCH, UUID guard.
+- `supabase/migrations/20260622_dog_brain_supplement_trials.sql` — `outcome_recorded` status, `outcome_at` column, partial unique index, idempotent re-apply guards.
+- `tests/dog-brain-supplement.test.ts` — new tests: duplicate POST dedupe (no double insert), 23505 → dedupe, missing-table → honest 503, `ask_vet` does not set `started_at`, PATCH terminal status + `outcome_at`, non-UUID id → 400; migration assertions for the new columns/index.
+
+## Prior session commits (on top of a07b77d)
+
+1. `6f13038` fix(dog-brain): report followup persistence failures honestly (PROOF #11)
 2. `9ef745a` docs(dog-brain): add GLM 5.2 PR #702 closeout loop memory
 3. `bc7a68e` fix(dog-brain): match supplement trials FK to project profiles pattern
+4. `50e1fb2` / `362b38a` docs(dog-brain): closeout state updates
 
-## Files changed this session
+## UI status — Supplements tab is API-only (not wired this session)
 
-- `src/lib/dog-brain/run-brain-loop.ts` — PROOF #11 fix: missing-table/permission errors on `dog_brain_followups` no longer mislabeled as `{ deduped: true }`; now returns `{ deduped: false, error }` so caller records honest nonfatal error. 23505 remains the only true dedupe.
-- `tests/run-brain-loop.test.ts` — new test proving missing `dog_brain_followups` table → `errors.length >= 1`, `dedupedFollowups.length === 0`, no insert attempted, signal still detected. Added `__simulateFollowupsTableMissing` flag to fake Supabase.
-- `supabase/migrations/20260622_dog_brain_supplement_trials.sql` — FK target changed from `auth.users(id)` to `public.profiles(id)` to match the existing project pattern (`20260619`: `dog_brain_followups`, `vet_record_summaries`).
-- `tests/dog-brain-supplement.test.ts` — extended migration structural test to assert `REFERENCES public.profiles(id)` present, `REFERENCES auth.users` absent, RLS enabled, owner-scoped policy, grants, indexes.
-- `docs/dog-brain/GLM52_PR702_CLOSEOUT.md` — this state file.
+- `src/app/(dashboard)/supplements/page.tsx` (798 LOC, pixel-perfect to the PPTX mock) does **not** call `/api/dog-brain/supplements`. Confirmed: `grep -rn "dog-brain/supplements" src/` returns nothing.
+- The page renders AI supplement plans that include dosage / frequency / brand / price. Wiring a Dog Brain "ask-vet trial start" off those cards would mix AI treatment data into the Dog Brain-owned flow, which the safety rule forbids — a correct wiring needs a separately-framed surface.
+- Decision for this closeout: leave the Supplements UI **API-only** and record it honestly here rather than force a browser-observable redesign into a backend-durability closeout (prior restyles of this page were rejected). The supplement trial API is fully usable by a future, cleanly-separated UI surface.
 
-## Verification results
+## Supabase state — UNPROVEN from this environment
 
-| Check | Command | Result |
-|---|---|---|
-| typecheck | `npm run typecheck` | PASS (exit 0) |
-| eslint (full) | `npx eslint .` | PASS (0 errors, 51 pre-existing warnings) |
-| focused tests | `npm test -- --testPathPatterns="run-brain-loop\|dog-brain-summary-mapper\|dog-brain-supplement\|dog-brain-followups-panel\|health-log.route"` | PASS 5 suites / 32 tests (was 31, +1 PROOF #11) |
-| broader slice | `npm test -- --testPathPatterns="dog-brain\|health-log\|followups\|vet-record"` | PASS 21 suites / 164 tests |
-| clinical/symptom | `npm test -- --testPathPatterns="clinical\|symptom"` | 79 suites / 2126 pass, 1 pre-existing fail |
-| build (Turbopack) | `npm run build` | FAIL — `TurbopackInternalError: failed to create junction point ... os error 1` (G: drive filesystem limitation, environment-only) |
-| build (webpack) | `npx next build --webpack` | FAIL — `EISDIR: illegal operation on a directory, readlink '.../admin/tester-feedback/route.ts'` (G: workspace root detection with multiple lockfiles, environment-only) |
+- Intended active project ref (per prior memory and `20260619` migration comment): `aammaxdsjhezmbvdkqee`.
+- This worktree has **no `.env.local`** (only `.env.example`), so the active ref cannot be read here.
+- The connected Supabase MCP exposes **only an unrelated project** (`JobsearchAi`, ref `oripsqtuvyvhdhcnkgbz`) — it has no access to the PawVital project, so `to_regclass('public.dog_brain_supplement_trials')` and `schema_migrations` cannot be checked against the live DB from here.
+- **BLOCKER:** `dog_brain_supplement_trials` existence in the active DB is unproven. The migration is file-only and is **NOT** applied.
+- **Exact migration needed:** `supabase/migrations/20260622_dog_brain_supplement_trials.sql`, applied to project `aammaxdsjhezmbvdkqee`, then re-verify RLS / policy / grants / indexes. **Do not apply without explicit user approval.**
 
-## Pre-existing failure proof (NOT introduced by this PR)
+## PR gate state — corrected root cause
 
-- `tests/symptom-checker.tester-onboarding.test.ts:139` fails with `fetchMock expected 1, received 6`.
-- `git diff origin/master..HEAD -- tests/symptom-checker.tester-onboarding.test.ts` = empty (PR did not touch the test).
-- `git diff origin/master..HEAD -- src/app/api/ai/symptom-chat/route.ts src/lib/triage-engine.ts src/lib/clinical-matrix.ts src/lib/symptom-memory.ts` = empty (PR did not touch clinical files).
-- Test code byte-identical on origin/master (`git show origin/master:tests/symptom-checker.tester-onboarding.test.ts`).
+- Ruleset **"Protectmaster"** requires the status check **"Threshold Review Gate"** on PRs to `master`.
+- **Correction of a previous false claim:** the workflow `threshold-review-gate.yml` does **not** only trigger on review. Its actual triggers are: `pull_request` to `master` (opened/reopened/synchronize/ready_for_review), `pull_request_review`, `push` to `codex/**`, and `workflow_dispatch`.
+- GitHub Actions **is enabled** on the repo (`actions/permissions` → `enabled:true, allowed_actions:all`).
+- **Real reason no checks are reported:** the gate workflow's run history ends **2026-06-03**; every historical run was `pull_request_review`-triggered. No workflow runs have fired since — consistent with the known "CI dead since Jun 3 (Actions quota)" state. So `gh run list --branch codex/dog-brain-backend-owned-loop` is empty and `statusCheckRollup=[]` because **no Actions run at all**, not because of the trigger config.
+- Consequence: `mergeStateStatus=BLOCKED` and the required check can't auto-satisfy until either Actions quota is restored (then re-push or `workflow_dispatch` to fire the gate) or a maintainer admin-merges (the documented path for recent Dog Brain PRs).
+- This is an external ops/billing gate, not a code defect. Not merging, per instructions.
 
-## Build failure proof (environment-only, not code)
+## Verification (this session)
 
-- Turbopack: `failed to create junction point at "G:\\...\\.next\\node_modules\\@react-pdf\\renderer-..."` — Windows G: drive does not support junction creation reliably. Error is in Turbopack filesystem internals, not in PR code.
-- Webpack: `EISDIR: illegal operation on a directory, readlink 'G:\MY Website\pawvital-ai-glm-dogbrain-loop\src\app\api\admin\tester-feedback\route.ts'` — workspace root detection fails due to multiple lockfiles on G:. The file is a normal tracked file; webpack's readlink fails on the G: workspace structure.
-- Both failures are reproducible on G: only; CI runs on Linux where these filesystem limitations do not apply.
-- PR does not touch `@react-pdf/renderer`, `.next/`, build internals, or `src/app/api/admin/tester-feedback/route.ts`.
+Recorded in the handoff for this loop. Focused supplement suite green; full results in the loop report.
 
-## Supabase state
+## Safety check (unchanged + extended)
 
-- Active project ref: `aammaxdsjhezmbvdkqee` (proven from `G:\MY Website\pawvital-ai\.env.local` NEXT_PUBLIC_SUPABASE_URL; matches existing `20260619` migration comment).
-- BLOCKER: no Supabase MCP tool or `supabase` CLI available in this environment to verify whether `dog_brain_supplement_trials` exists in the live project.
-- Migration `supabase/migrations/20260622_dog_brain_supplement_trials.sql` is file-only; NOT applied to production (per prior PR body + no apply approved this run).
-- Migration has: RLS enabled, owner-scoped policy (`auth.uid() = user_id`), grants to `authenticated`, indexes on `(user_id, pet_id, status)` and `follow_up_due_at`, FK to `public.profiles(id)` (matches project pattern).
-
-## Safety check
-
-- Emergency urgency boundary: PASS — `dog-brain-context-urgency-guard.test.ts` passes (2 tests); Dog Brain context is supportive-only, read by `buildNarrativeReportPrompt` only, never by deterministic triage. No clinical files touched (`git diff` empty for triage-engine.ts, clinical-matrix.ts, symptom-chat/route.ts, symptom-memory.ts).
-- Supplement safety: PASS — route stores `supplement_name`, `reason_signal_key`, `status`, `outcome` (enum: better/same/worse/side_effect), `notes`. No dosage/frequency/brand/price fields. `status` starts as `ask_vet`. Test asserts no `dose|dosage|mg|ml` in persisted row.
-- No client-created follow-ups: PASS — `followups-panel.tsx` useEffect does GET only (no POST). `resolve()` does PATCH only. Test `render with signals prop never POSTs` passes.
-
-## What is still blocked
-
-1. Supabase production DB state unproven — need MCP/CLI access to verify `dog_brain_supplement_trials` exists in project `aammaxdsjhezmbvdkqee`; migration apply requires user approval.
-2. Build not verified on G: (environment-only failure); CI build status pending — no CI runs triggered for this PR yet.
-3. PR `mergeStateStatus=BLOCKED` by external gates (not code):
-   - Ruleset "Protectmaster" (id 14710736) requires status check "Threshold Review Gate" (integration_id 15368).
-   - That workflow (`threshold-review-gate.yml`) triggers on `pull_request_review`, not `pull_request` — so it only runs AFTER a code owner submits a review.
-   - `require_code_owner_review: true` + `required_review_thread_resolution: true` in the same ruleset.
-   - No review has been submitted on PR #702 (`reviewDecision=""`, `statusCheckRollup=[]`, no review threads).
-   - `mergeable=MERGEABLE`, `isDraft=false`, headRefOid=`50e1fb2` (pushed).
-   - This is a human/owner gate, not a code defect. I cannot merge and will not merge per instructions.
-
-## Final PR gate state (post-push)
-
-- headRefOid: `50e1fb2ac02c59193b0550630b564751603802e6`
-- isDraft: false
-- mergeable: MERGEABLE
-- mergeStateStatus: BLOCKED
-- reviewDecision: "" (no reviews)
-- statusCheckRollup: [] (no checks — Threshold Review Gate not triggered)
-- reviewThreads: [] (no threads)
-- Unresolved actionable review threads: 0
+- No clinical files touched (`git diff origin/master..HEAD` empty for `triage-engine.ts`, `clinical-matrix.ts`, `symptom-chat/route.ts`, `symptom-memory.ts`).
+- Supplement route stores `supplement_name`, `reason_signal_key`, `status`, `outcome` (better/same/worse/side_effect), `outcome_at`, `notes`. **No** dosage/frequency/brand/price fields. Tests assert no `dose|dosage|mg|ml` in persisted rows.
+- No client-created follow-ups — `followups-panel.tsx` does GET + PATCH only.
