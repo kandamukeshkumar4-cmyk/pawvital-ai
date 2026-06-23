@@ -84,3 +84,27 @@
 - **Failed:** nothing. `emergency_question_trace_suppressed` intentionally NOT wired — it would require touching 3+ emergency early-return sites (the "churns the giant file" risk the brief says to STOP on); the emergency path already returns no trace, so this is a missing telemetry event only, not a behavior gap.
 - **Next action:** Phase 6 UX polish (Playwright screenshots from the NTFS dev server; document if demo-mode loading stall blocks it), then `/thermo-review`, push, PR, final handoff.
 - **Stop/defer:** emergency-suppressed emit deferred (multi-site risk). No stop conditions hit.
+
+### Iteration 9 — 2026-06-23 (thermo-review + PR + handoff — LOOP COMPLETE)
+- **Changed:** ran `/thermo-review` (APPROVE, no blocking findings); pushed `codex/investor-demo-hardening`; opened **PR #713**.
+- **Verified:** thermo-review approved; full targeted suite **2382 pass**; typecheck + eslint clean; PR created. CI = "no checks reported" (Actions quota dead since Jun 3 — documented, not a regression).
+- **Failed / deferred (operator/env-gated, NOT faked):** live E2E execution (needs sandbox secrets); Supabase live migration verify (MCP on wrong project); `emergency_question_trace_suppressed` emit (multi-site route risk); Phase 6 UX polish (this branch has ZERO `.tsx` changes — nothing visual to screenshot; full audit is separate net-new work + blocked by demo-mode loading stall).
+- **Next action:** operator runs the live-E2E workflow + the migration runbook with correct creds; admin-merge PR #713 (CI gate is dead).
+
+---
+
+## FINAL HANDOFF
+
+- **Branch:** `codex/investor-demo-hardening` (off `origin/master` @ #710)
+- **PR:** https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/713
+- **Commits (7):** d9b6f55 ranking · 3c740ce analytics module · 9334f6a migration runbook · c34e7cc live-E2E harness · cb29011 lifecycle wiring · 1a87eb7 clinical knowledge layer · 06edcdb route trace emits
+- **Landed:** memory-ranking + wiring; analytics module + 8-event wiring (CRUD + route); clinical knowledge layer (4 modules); manual live-E2E harness; migration runbook. 6 new modules, 5 test suites (+57 tests), 2 docs, 1 CI workflow.
+- **Did NOT land (deferred, documented):** live-E2E execution; Supabase live-verify (wrong-project STOP); emergency-suppressed emit; knowledge-layer route/UI wiring; Phase 6 UX (no UI in diff).
+- **Failing:** none. Targeted suite 2382 pass; typecheck + eslint clean.
+- **Migration ledger:** UNVERIFIED live (runbook written; MCP wrong project — STOP honored).
+- **Production / live-E2E:** harness ready, NOT executed (needs operator secrets).
+- **Thermo-review verdict:** APPROVE (no blockers; 2 minor DRY follow-ups noted).
+- **Build:** deferred to NTFS/Vercel (local `G:` exFAT).
+- **SIA:** verifier=typecheck+eslint+2382 targeted tests+thermo-review | trajectory=9 iterations, 7 commits, state doc per-iteration | decision=harness (added analytics/knowledge/E2E harness + runbook + state doc) | Goodhart guard=clinical determinism untouched; ranking/knowledge floors provably never alter triage urgency.
+- **AutoLab:** baseline=#710 typecheck-clean+2329 tests | benchmark=typecheck+eslint+targeted suite+thermo gate | iterations=9 (best = 2382 pass, +57, 0 regressions) | budget=self-paced loop | outcome=improved.
+- **Final verdict:** **STAGE-READY for the code that landed** (ranking, analytics, clinical knowledge, harness — all green + thermo-approved). **NOT yet fully stage-PROVEN end-to-end** until an operator runs the live-E2E + migration-verify with correct credentials and admin-merges #713 (CI gate dead).
