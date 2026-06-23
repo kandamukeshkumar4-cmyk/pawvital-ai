@@ -90,6 +90,8 @@ interface ChatMessage {
   ownerMessage?: string | null;
   recommendedNextStep?: string | null;
   askingBecause?: string | null;
+  /** Owner-friendly "Why this came up" memory note; null when not Brain-driven. */
+  brainQuestionEvidence?: string | null;
   promptVetRecord?: boolean;
   timestamp: Date;
 }
@@ -267,6 +269,18 @@ function ChatBubble({
             <span>
               <span className="font-semibold">Why I&apos;m asking: </span>
               {message.askingBecause}
+            </span>
+          </div>
+        )}
+        {message.brainQuestionEvidence && !isUser && (
+          <div
+            className="mt-1.5 flex items-start gap-[7px] rounded-[10px] px-2.5 py-2 text-[12.5px] leading-snug"
+            style={{ background: "#f3f6f2", border: "1px solid #e3ebe1", color: "#5a7a55" }}
+          >
+            <ShieldCheck className="mt-px h-[14px] w-[14px] flex-shrink-0" aria-hidden />
+            <span>
+              <span className="font-semibold">Why this came up: </span>
+              {message.brainQuestionEvidence}
             </span>
           </div>
         )}
@@ -865,6 +879,11 @@ export default function SymptomCheckerPage() {
             askingBecause:
               typeof data.asking_because === "string"
                 ? data.asking_because
+                : null,
+            brainQuestionEvidence:
+              data.brain_question_trace &&
+              typeof data.brain_question_trace.evidence_summary === "string"
+                ? data.brain_question_trace.evidence_summary
                 : null,
             terminalState:
               isTerminalOutcome && typeof data.terminal_state === "string"

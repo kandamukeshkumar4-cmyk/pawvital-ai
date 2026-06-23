@@ -7,6 +7,89 @@ import {
 import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import { isEmergencyGradeCriticalQuestionId } from "@/lib/clinical/emergency-grade-critical-questions";
+import type { BrainSymptomEvidence } from "@/lib/dog-brain/question-priority";
+
+/**
+ * Explanation-only metadata describing WHY Dog Brain memory surfaced a question.
+ * It is computed AFTER selection and NEVER alters question selection, urgency, or
+ * any control state. Null whenever the current complaint (or a pending
+ * clarification) drove the question, or there is no Brain memory.
+ */
+export interface BrainQuestionTrace {
+  source: "dog_brain";
+  signal_type: BrainSymptomEvidence["signal_type"];
+  selected_symptom_key: string;
+  selected_question_id: string;
+  evidence_date_range?: string;
+  evidence_summary: string;
+  safety_note: string;
+}
+
+const BRAIN_TRACE_SAFETY_NOTE =
+  "Supportive context only; not a diagnosis.";
+
+/**
+ * Derive a Brain question trace for an already-selected question id. PURE.
+ *
+ * Emits a trace ONLY when ALL hold:
+ *  - the complaint branch (preferredSymptoms) did NOT produce selectedQuestionId,
+ *  - the brain branch (brainPrioritySymptoms) DID produce selectedQuestionId,
+ *  - the brain symptom that produced it has owner-friendly evidence in the map.
+ *
+ * Otherwise returns null (current complaint wins, pending clarification wins,
+ * empty memory, or an unmapped signal/symptom) — never throws.
+ */
+export function deriveBrainQuestionTrace(
+  session: TriageSession,
+  preferredSymptoms: string[],
+  brainPrioritySymptoms: string[],
+  evidenceMap: Record<string, BrainSymptomEvidence>,
+  selectedQuestionId: string | null,
+): BrainQuestionTrace | null {
+  if (!selectedQuestionId) return null;
+  if (!brainPrioritySymptoms.length) return null;
+  if (!evidenceMap || Object.keys(evidenceMap).length === 0) return null;
+
+  // The current complaint always wins: if it would have produced this exact
+  // question, Brain memory did not drive it — no (misleading) trace.
+  if (
+    getNextQuestionForPreferredSymptoms(session, preferredSymptoms) ===
+    selectedQuestionId
+  ) {
+    return null;
+  }
+
+  // The brain branch must genuinely select this exact question id.
+  if (
+    getNextQuestionForPreferredSymptoms(session, brainPrioritySymptoms) !==
+    selectedQuestionId
+  ) {
+    return null;
+  }
+
+  // Find which brain symptom owns the selected follow-up AND has evidence.
+  const selectedSymptomKey = brainPrioritySymptoms.find((symptom) => {
+    if (!evidenceMap[symptom]) return false;
+    const followUps = SYMPTOM_MAP[symptom]?.follow_up_questions;
+    return Array.isArray(followUps) && followUps.includes(selectedQuestionId);
+  });
+  if (!selectedSymptomKey) return null;
+
+  const evidence = evidenceMap[selectedSymptomKey];
+  if (!evidence?.evidence_summary) return null;
+
+  return {
+    source: "dog_brain",
+    signal_type: evidence.signal_type,
+    selected_symptom_key: selectedSymptomKey,
+    selected_question_id: selectedQuestionId,
+    ...(evidence.evidence_date_range
+      ? { evidence_date_range: evidence.evidence_date_range }
+      : {}),
+    evidence_summary: evidence.evidence_summary,
+    safety_note: BRAIN_TRACE_SAFETY_NOTE,
+  };
+}
 
 export function getNextQuestionAvoidingRepeat(
   session: TriageSession,
@@ -37,7 +120,7 @@ export function getNextQuestionAvoidingRepeat(
   return alternatives[0] || nextQuestionId;
 }
 
-function getNextQuestionForPreferredSymptoms(
+export function getNextQuestionForPreferredSymptoms(
   session: TriageSession,
   preferredSymptoms: string[]
 ): string | null {

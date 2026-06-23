@@ -31,6 +31,7 @@ import {
   type TurnDepth,
 } from "@/lib/symptom-chat/turn-depth";
 import { getGuideForQuestion } from "@/lib/symptom-chat/response-builders";
+import type { BrainQuestionTrace } from "@/lib/symptom-chat/answer-coercion";
 
 interface BuildQuestionResponseFlowInput {
   session: TriageSession;
@@ -48,6 +49,8 @@ interface BuildQuestionResponseFlowInput {
   turnDeadline?: TurnDeadline;
   turnDepth?: TurnDepth;
   askingBecause?: string | null;
+  /** Explanation-only metadata when Dog Brain memory drove the question. */
+  brainQuestionTrace?: BrainQuestionTrace | null;
   promptVetRecord?: boolean;
 }
 
@@ -83,6 +86,7 @@ export async function buildQuestionResponseFlow(
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),
     asking_because: input.askingBecause ?? session.case_memory?.asking_because ?? null,
+    brain_question_trace: input.brainQuestionTrace ?? null,
     prompt_vet_record: Boolean(input.promptVetRecord),
     selfCheckGuide: getGuideForQuestion(input.nextQuestionId) ?? null,
   });

@@ -3,6 +3,11 @@ import type { HealthLog } from "@/lib/health-log/types";
 import { buildVetTimeline } from "@/lib/analytics/vet-timeline";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import type { JournalEntry } from "@/types/journal";
+import { detectDogBrainSignals } from "@/lib/dog-brain/signals";
+import {
+  brainPrioritySymptomsFromSignals,
+  brainPrioritySymptomEvidence,
+} from "@/lib/dog-brain/question-priority";
 
 /** Minimal HealthLog factory */
 function log(overrides: Partial<HealthLog> = {}): HealthLog {
@@ -141,6 +146,49 @@ describe("ContextSignals in HealthLog", () => {
   it("context_signals null when not provided", () => {
     const l = log();
     expect(l.context_signals).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dog Brain priority-symptom evidence (the data threaded into DogBrainContextData
+// alongside prioritySymptoms — same detector the context loader uses internally).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("brainPrioritySymptomEvidence from detected signals", () => {
+  it("produces evidence keyed by the SAME priority symptoms the loader threads out", () => {
+    const logs = [
+      log({ log_date: "2026-06-18", stool: "diarrhea" }),
+      log({ log_date: "2026-06-17", stool: "diarrhea" }),
+      log({ log_date: "2026-06-16", stool: "soft" }),
+    ];
+    const signals = detectDogBrainSignals(logs).signals;
+    const prioritySymptoms = brainPrioritySymptomsFromSignals(signals);
+    const evidence = brainPrioritySymptomEvidence(signals);
+
+    expect(prioritySymptoms).toContain("diarrhea");
+    // Every priority symptom that carries evidence references a real signal_type
+    // and an owner-friendly (non-diagnostic) summary.
+    expect(evidence["diarrhea"]?.signal_type).toBe("stool_change");
+    expect(evidence["diarrhea"]?.evidence_summary).toBeTruthy();
+    expect(evidence["diarrhea"]?.evidence_summary).not.toMatch(
+      /diagnos|disease|cancer/i,
+    );
+  });
+
+  it("empty logs ⇒ no priority symptoms AND no evidence (no-op shape)", () => {
+    const signals = detectDogBrainSignals([]).signals;
+    expect(brainPrioritySymptomsFromSignals(signals)).toEqual([]);
+    expect(brainPrioritySymptomEvidence(signals)).toEqual({});
+  });
+
+  it("all-normal logs ⇒ no evidence (no Brain memory ⇒ byte-identical no-op)", () => {
+    const normalLogs = [
+      log({ log_date: "2026-06-18" }),
+      log({ log_date: "2026-06-17" }),
+      log({ log_date: "2026-06-16" }),
+    ];
+    const signals = detectDogBrainSignals(normalLogs).signals;
+    expect(brainPrioritySymptomEvidence(signals)).toEqual({});
   });
 });
 
