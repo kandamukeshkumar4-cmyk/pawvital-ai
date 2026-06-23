@@ -90,7 +90,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
 
     acknowledgeBoundary();
 
-    expect(screen.getByText("Tell me what's going on with Buddy")).toBeTruthy();
+    expect(screen.getByText("What's going on with Buddy?")).toBeTruthy();
 
     const stored = JSON.parse(
       localStorage.getItem(TESTER_ACKNOWLEDGEMENT_STORAGE_KEY) ?? "{}"
@@ -103,22 +103,34 @@ describe("tester onboarding boundaries on the symptom checker", () => {
     renderSymptomChecker();
 
     expect(
-      await screen.findByText("Tell me what's going on with Buddy")
+      await screen.findByText("What's going on with Buddy?")
     ).toBeTruthy();
     expect(screen.queryByText("Before you use PawVital with Buddy")).toBeNull();
   });
 
   it("keeps the emergency chat flow available after acknowledgement", async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      json: async () => ({
-        type: "emergency",
-        message:
-          "Buddy may be having a medical emergency. Please go to the nearest emergency veterinary hospital now.",
-        session: {
-          answered_questions: {},
-          unresolved_question_ids: [],
-        },
-      }),
+    const fetchMock = jest.fn((input: RequestInfo | URL) => {
+      if (input === "/api/ai/symptom-chat") {
+        return Promise.resolve({
+          json: async () => ({
+            type: "emergency",
+            message:
+              "Buddy may be having a medical emergency. Please go to the nearest emergency veterinary hospital now.",
+            session: {
+              answered_questions: {},
+              unresolved_question_ids: [],
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+      // Non-clinical side-effect calls (translator, context strips): benign no-op.
+      return Promise.resolve({
+        json: async () => ({ translated: false, translations: [] }),
+        ok: true,
+        status: 200,
+      });
     });
     global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -127,7 +139,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText(
-        "Describe what's going on with Buddy or attach a photo..."
+        /Describe what's going on with Buddy/
       ),
       {
         target: { value: "Buddy collapsed and has pale gums." },
@@ -136,7 +148,10 @@ describe("tester onboarding boundaries on the symptom checker", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/ai/symptom-chat",
+        expect.any(Object)
+      );
     });
 
     expect(
@@ -199,7 +214,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
 
     fireEvent.change(
       screen.getByPlaceholderText(
-        "Describe what's going on with Buddy or attach a photo..."
+        /Describe what's going on with Buddy/
       ),
       {
         target: { value: "Buddy está vomitando" },
@@ -261,7 +276,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
 
       fireEvent.change(
         screen.getByPlaceholderText(
-          "Describe what's going on with Buddy or attach a photo..."
+          /Describe what's going on with Buddy/
         ),
         {
           target: { value: "Buddy is vomiting." },
