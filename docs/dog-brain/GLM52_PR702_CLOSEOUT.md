@@ -66,9 +66,22 @@
 ## What is still blocked
 
 1. Supabase production DB state unproven — need MCP/CLI access to verify `dog_brain_supplement_trials` exists in project `aammaxdsjhezmbvdkqee`; migration apply requires user approval.
-2. Build not verified on G: (environment-only failure); CI build status pending push.
-3. PR merge state pending push (GitHub re-evaluates after push).
+2. Build not verified on G: (environment-only failure); CI build status pending — no CI runs triggered for this PR yet.
+3. PR `mergeStateStatus=BLOCKED` by external gates (not code):
+   - Ruleset "Protectmaster" (id 14710736) requires status check "Threshold Review Gate" (integration_id 15368).
+   - That workflow (`threshold-review-gate.yml`) triggers on `pull_request_review`, not `pull_request` — so it only runs AFTER a code owner submits a review.
+   - `require_code_owner_review: true` + `required_review_thread_resolution: true` in the same ruleset.
+   - No review has been submitted on PR #702 (`reviewDecision=""`, `statusCheckRollup=[]`, no review threads).
+   - `mergeable=MERGEABLE`, `isDraft=false`, headRefOid=`50e1fb2` (pushed).
+   - This is a human/owner gate, not a code defect. I cannot merge and will not merge per instructions.
 
-## Next action
+## Final PR gate state (post-push)
 
-Push and re-check PR gates.
+- headRefOid: `50e1fb2ac02c59193b0550630b564751603802e6`
+- isDraft: false
+- mergeable: MERGEABLE
+- mergeStateStatus: BLOCKED
+- reviewDecision: "" (no reviews)
+- statusCheckRollup: [] (no checks — Threshold Review Gate not triggered)
+- reviewThreads: [] (no threads)
+- Unresolved actionable review threads: 0
