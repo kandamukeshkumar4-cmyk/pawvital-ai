@@ -16,6 +16,14 @@ const OutcomeSchema = z.object({
   notes: z.string().trim().max(2000).optional().nullable(),
 });
 
+// mark_active: owner has confirmed with their vet and is starting the trial.
+// Allowed only from ask_vet status — cannot skip to active from a terminal state.
+const MarkActiveSchema = z.object({
+  action: z.literal("mark_active"),
+});
+
+const PatchBodySchema = z.union([OutcomeSchema, MarkActiveSchema]);
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -132,7 +140,6 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  // Simple outcome update by id in query for minimal impl
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
   if (!id || !UUID_RE.test(id)) {
@@ -140,37 +147,71 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = OutcomeSchema.safeParse(body);
+  const parsed = PatchBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid outcome" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
   const auth = await requireAuthenticatedApiUser({ demoMessage: "Account required" });
   if ("response" in auth) return auth.response;
 
+  const nowIso = new Date().toISOString();
+
   try {
-    const nowIso = new Date().toISOString();
+    if ("action" in parsed.data && parsed.data.action === "mark_active") {
+      // Transition ask_vet → active. Guard: only allowed from ask_vet to prevent
+      // re-opening a terminal (outcome_recorded / stopped) trial via a replay.
+      const { data, error } = await auth.supabase
+        .from("dog_brain_supplement_trials")
+        .update({
+          status: "active",
+          started_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq("id", id)
+        .eq("user_id", auth.user.id)
+        .eq("status", "ask_vet") // outcome guard: only from ask_vet
+        .select()
+        .maybeSingle();
+      if (error) {
+        if (isMissingTable(error)) return NextResponse.json({ code: "TABLE_MISSING" }, { status: 503 });
+        throw error;
+      }
+      // If no row matched, either the trial is not owned by this user or it is
+      // already past ask_vet. Return 409 so the caller knows the guard fired.
+      if (!data) {
+        return NextResponse.json(
+          { error: "Not found, not owned, or not in ask_vet status" },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ data });
+    }
+
+    // outcome branch (better / same / worse / side_effect) — terminal transition.
+    // Recording an outcome is terminal — the follow-up is answered, so the
+    // trial must NOT stay "follow_up_due" (that would keep nagging the owner
+    // for feedback they already gave).
+    const outcomeData = parsed.data as { outcome: string; notes?: string | null };
     const { data, error } = await auth.supabase
       .from("dog_brain_supplement_trials")
       .update({
-        outcome: parsed.data.outcome,
-        notes: parsed.data.notes ?? null,
-        // Recording an outcome is terminal — the follow-up is answered, so the
-        // trial must NOT stay "follow_up_due" (that would keep nagging the owner
-        // for feedback they already gave).
+        outcome: outcomeData.outcome,
+        notes: outcomeData.notes ?? null,
         status: "outcome_recorded",
         outcome_at: nowIso,
         updated_at: nowIso,
       })
       .eq("id", id)
       .eq("user_id", auth.user.id)
+      .not("status", "eq", "outcome_recorded") // guard: no re-recording over a final outcome
       .select()
       .maybeSingle();
     if (error) {
       if (isMissingTable(error)) return NextResponse.json({ code: "TABLE_MISSING" }, { status: 503 });
       throw error;
     }
-    if (!data) return NextResponse.json({ error: "Not found or not owned" }, { status: 404 });
+    if (!data) return NextResponse.json({ error: "Not found, not owned, or already completed" }, { status: 409 });
     return NextResponse.json({ data });
   } catch (e) {
     console.error("[DogBrainSupplements] PATCH error", e);

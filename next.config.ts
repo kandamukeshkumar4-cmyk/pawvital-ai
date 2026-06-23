@@ -51,6 +51,11 @@ export function buildSecurityHeaders(
 const nextConfig: NextConfig = {
   // Exclude Node.js-only packages from bundling
   serverExternalPackages: ["pg", "pg-native", "pg-pool", "pg-protocol"],
+  // outputFileTracingRoot is not required for this standalone repo (only needed
+  // in monorepos where the app root differs from the workspace root). The local
+  // build fails on G: for a different reason: G: is exFAT which cannot create
+  // NTFS junctions required by Turbopack for @react-pdf/renderer. Fix: build on
+  // NTFS, WSL, or via Vercel remote build. No code change resolves this.
   async headers() {
     return [
       {

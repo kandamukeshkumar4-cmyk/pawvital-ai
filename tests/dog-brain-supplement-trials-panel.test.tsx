@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import {
   SupplementTrialsPanel,
   type SupplementTrial,
+  type SupplementSuggestion,
 } from "@/components/dog-brain/supplement-trials-panel";
 
 const PET = "11111111-1111-4111-8111-111111111111";
@@ -81,7 +82,9 @@ describe("SupplementTrialsPanel — concrete DB-backed trials", () => {
   });
 
   it("recording an outcome PATCHes with the outcome and shows the terminal state", async () => {
-    const fetchMock = mockFetch([trial()]);
+    // Outcome buttons are only visible when the trial is 'active' (not ask_vet).
+    // ask_vet trials show the lifecycle gate "Vet approved — start trial" button instead.
+    const fetchMock = mockFetch([trial({ status: "active" })]);
     render(<SupplementTrialsPanel petId={PET} petName="Scout" />);
     const worse = await screen.findByRole("button", { name: /^worse$/i });
     fireEvent.click(worse);
@@ -97,7 +100,8 @@ describe("SupplementTrialsPanel — concrete DB-backed trials", () => {
 
   it("one-tap suggestion chip starts a concrete trial for that supplement", async () => {
     const fetchMock = mockFetch([]);
-    render(<SupplementTrialsPanel petId={PET} petName="Scout" suggestions={["Probiotic"]} />);
+    const suggestions: SupplementSuggestion[] = [{ name: "Probiotic", reason_signal_key: null }];
+    render(<SupplementTrialsPanel petId={PET} petName="Scout" suggestions={suggestions} />);
     const chip = await screen.findByRole("button", { name: /\+ Probiotic/ });
     fireEvent.click(chip);
 
@@ -107,11 +111,51 @@ describe("SupplementTrialsPanel — concrete DB-backed trials", () => {
     });
   });
 
+  it("suggestion chip preserves reason_signal_key in POST body", async () => {
+    const fetchMock = mockFetch([]);
+    const suggestions: SupplementSuggestion[] = [
+      { name: "Fish Oil", reason_signal_key: "energy_behavior_change" },
+    ];
+    render(<SupplementTrialsPanel petId={PET} petName="Scout" suggestions={suggestions} />);
+    const chip = await screen.findByRole("button", { name: /\+ Fish Oil/ });
+    fireEvent.click(chip);
+
+    await waitFor(() => {
+      const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit)?.method === "POST");
+      const body = JSON.parse(String((post![1] as RequestInit).body));
+      expect(body.supplement_name).toBe("Fish Oil");
+      expect(body.reason_signal_key).toBe("energy_behavior_change");
+    });
+  });
+
   it("never renders dosage / frequency / brand / price (safety invariant)", async () => {
     mockFetch([trial()]);
-    const { container } = render(<SupplementTrialsPanel petId={PET} petName="Scout" suggestions={["Fish Oil"]} />);
+    const suggestions: SupplementSuggestion[] = [{ name: "Fish Oil", reason_signal_key: null }];
+    const { container } = render(<SupplementTrialsPanel petId={PET} petName="Scout" suggestions={suggestions} />);
     await screen.findByText("Fish Oil");
     expect(container.textContent?.toLowerCase()).not.toMatch(/dose|dosage|\bmg\b|\bml\b|\$|\/day|price/);
+  });
+
+  it("ask_vet trial shows lifecycle gate button, not outcome buttons", async () => {
+    mockFetch([trial({ status: "ask_vet" })]);
+    render(<SupplementTrialsPanel petId={PET} petName="Scout" />);
+    await screen.findByText("Fish Oil");
+    expect(screen.getByRole("button", { name: /vet approved/i })).toBeTruthy();
+    // Outcome buttons must NOT appear on ask_vet trials
+    expect(screen.queryByRole("button", { name: /^worse$/i })).toBeNull();
+  });
+
+  it("mark_active PATCHes with action=mark_active and re-reads state", async () => {
+    const fetchMock = mockFetch([trial({ status: "ask_vet" })]);
+    render(<SupplementTrialsPanel petId={PET} petName="Scout" />);
+    const btn = await screen.findByRole("button", { name: /vet approved/i });
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      const patch = fetchMock.mock.calls.find(([, init]) => (init as RequestInit)?.method === "PATCH");
+      expect(patch).toBeTruthy();
+      expect(JSON.parse(String((patch![1] as RequestInit).body))).toEqual({ action: "mark_active" });
+    });
   });
 
   it("renders nothing without a pet", () => {
