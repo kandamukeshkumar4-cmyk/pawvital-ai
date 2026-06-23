@@ -77,3 +77,10 @@
 - **Failed:** nothing.
 - **Next action:** wire the knowledge layer + the deferred analytics trace/context emits into the symptom-chat route (with route tests, minding emergency early-returns); then Phase 6 UX polish; then /thermo-review + open the PR.
 - **Stop/defer:** route/UI wiring of the knowledge layer is a follow-up (modules are tested infra, like the analytics module). No stop conditions hit.
+
+### Iteration 8 — 2026-06-23 (Phase 3c symptom-chat route analytics wiring)
+- **Changed:** wired the two clean single-site Dog Brain analytics emits into `src/app/api/ai/symptom-chat/route.ts` — `brain_context_loaded` (set a count flag where Dog Brain context loads) and `brain_question_trace.emitted` (set a flag where `brainQuestionTrace` is computed), both emitted once in the EXISTING deferred `runAfterSafely(after())` telemetry block. Added `trackEvent` to the route test's telemetry mock so the inline-run deferred block doesn't throw.
+- **Verified:** typecheck clean; eslint 0 errors (6 pre-existing warnings, none new); symptom-chat route tests **11 suites / 624 pass**; full targeted **106 suites / 2382 pass** (no regression). TRACE/TELEMETRY ONLY — no clinical decision, no payload shape, no emergency early-return touched; flags only flow into the deferred block.
+- **Failed:** nothing. `emergency_question_trace_suppressed` intentionally NOT wired — it would require touching 3+ emergency early-return sites (the "churns the giant file" risk the brief says to STOP on); the emergency path already returns no trace, so this is a missing telemetry event only, not a behavior gap.
+- **Next action:** Phase 6 UX polish (Playwright screenshots from the NTFS dev server; document if demo-mode loading stall blocks it), then `/thermo-review`, push, PR, final handoff.
+- **Stop/defer:** emergency-suppressed emit deferred (multi-site risk). No stop conditions hit.

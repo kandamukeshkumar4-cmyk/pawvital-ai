@@ -56,6 +56,7 @@ const mockEmit = jest.fn();
 const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockTrackRouteTelemetry = jest.fn();
 const mockTrackException = jest.fn();
+const mockTrackEvent = jest.fn();
 const mockPublishTriageLiveUpdate = jest.fn();
 const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
   user: { id: "test-user-id" },
@@ -267,6 +268,9 @@ jest.mock("@/lib/events/notification-handler", () => ({}));
 jest.mock("@/lib/azure/telemetry", () => ({
   trackRouteTelemetry: (...args: unknown[]) => mockTrackRouteTelemetry(...args),
   trackException: (...args: unknown[]) => mockTrackException(...args),
+  // The Dog Brain analytics module routes its events through trackEvent; provide
+  // it so the deferred telemetry block (run inline in tests) does not throw.
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
 }));
 
 // The route defers post-response side effects (telemetry) via runAfterSafely,

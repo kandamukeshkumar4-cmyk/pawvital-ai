@@ -165,6 +165,11 @@ import {
 } from "@/lib/health-log/dog-brain-context";
 import type { BrainSymptomEvidence } from "@/lib/dog-brain/question-priority";
 import {
+  recordDogBrainEvent,
+  brainContextLoadedEvent,
+  brainQuestionTraceEmittedEvent,
+} from "@/lib/dog-brain/analytics";
+import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
 } from "@/lib/symptom-chat/async-turn-offload";
@@ -801,6 +806,10 @@ export async function POST(request: Request) {
   };
   let statusCode = 200;
   let errorCode: string | undefined;
+  // Privacy-safe Dog Brain analytics flags — set on the main path, emitted once
+  // in the deferred telemetry block below. Never affect the response/payload.
+  let brainContextPrioritySymptomCount: number | null = null;
+  let brainTraceWasEmitted = false;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
   let liveUpdateChain: Promise<void> = Promise.resolve();
   const queueTriageLiveUpdate = (
@@ -1005,6 +1014,8 @@ export async function POST(request: Request) {
         }
         brainPrioritySymptoms = prioritySymptoms;
         brainPrioritySymptomEvidence = prioritySymptomEvidence;
+        // Brain memory was consulted this turn (count only — never the content).
+        brainContextPrioritySymptomCount = prioritySymptoms.length;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2488,6 +2499,8 @@ export async function POST(request: Request) {
       effectiveQuestionId === nextQuestionId
         ? nextQuestionState.brainQuestionTrace
         : null;
+    // The surfaced question is Brain-memory-driven this turn (telemetry flag only).
+    brainTraceWasEmitted = brainQuestionTrace !== null;
     const promptVetRecord = shouldPromptVetRecordUpload(
       session,
       effectiveQuestionId
@@ -2555,6 +2568,20 @@ export async function POST(request: Request) {
       });
       if (errorCode) {
         await trackException(errorCode, { routeName: ROUTE_NAME });
+      }
+      // Privacy-safe Dog Brain usage events (counts/enums only). Deferred so they
+      // never add latency to the response; no-op without App Insights.
+      if (brainContextPrioritySymptomCount !== null) {
+        await recordDogBrainEvent(
+          brainContextLoadedEvent({
+            prioritySymptomCount: brainContextPrioritySymptomCount,
+          }),
+        );
+      }
+      if (brainTraceWasEmitted) {
+        await recordDogBrainEvent(
+          brainQuestionTraceEmittedEvent({ source: "brain_memory", evidenceCount: 1 }),
+        );
       }
     });
     await queueTriageLiveUpdate(
