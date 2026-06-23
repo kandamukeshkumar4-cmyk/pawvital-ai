@@ -120,3 +120,15 @@ Audited directly against the live PawVital project `aammaxdsjhezmbvdkqee` (read-
 
 ### Build root — confirmed environmental (no code fix)
 - `outputFileTracingRoot` does not apply (standalone repo, not a monorepo). The failure is Turbopack creating an NTFS junction for `@react-pdf/renderer` under `.next/node_modules`, which exFAT (drive `G:`) cannot host at all (`mklink /J` → "Local NTFS volumes are required"). Documented inline in `next.config.ts`. Build path: NTFS / WSL / Vercel remote. `typecheck` (clean) is the code-correctness proof available on this filesystem.
+
+## Lifecycle safety hotfix (post-#706, branch codex/supplement-lifecycle-safety-hotfix)
+
+### Bug
+The outcome PATCH guarded the terminal transition with `.not("status","eq","outcome_recorded")`. That only blocked re-recording over a row that was *already* terminal. It still let an API caller record an outcome directly on an `ask_vet` row, skipping the vet-approval (`mark_active`) step the lifecycle requires (`ask_vet -> mark_active -> active/follow_up_due -> outcome_recorded`). The UI hides the buttons, but the backend was not enforcing the rule.
+
+### Fix
+- Replaced the weak guard with `.in("status", ["active", "follow_up_due"])` so an outcome can only be recorded once the trial has actually started.
+- A zero-row match (status `ask_vet`/`outcome_recorded`/`stopped`, not owned, or missing) now returns **409** with a clear JSON error — never 200, never 500. `mark_active` is unchanged (still only from `ask_vet`). Invalid `?id=` still returns 400. No dosage/frequency/brand/price fields added.
+
+### Tests
+`tests/dog-brain-supplement.test.ts` PATCH coverage rebuilt on a complete chainable Supabase mock (`from/select/update/eq/in/is/not/order/limit/maybeSingle/single/insert`) that captures the filter calls. Previously the mock omitted `.in`, so the route threw `TypeError` → 500 while the assertion still "passed". New cases: mark_active(ask_vet)→200+started_at; outcome(ask_vet)→409 no terminal write; outcome(active)→200 + asserts the `.in('status',['active','follow_up_due'])` guard and that `.not` is not used; outcome(follow_up_due)→200; outcome(outcome_recorded)→409; invalid id→400; plus a `console.error` spy proving happy paths log no server error. Verified the guard-semantics assertion fails when the old `.not` guard is restored.

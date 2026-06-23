@@ -192,6 +192,13 @@ export async function PATCH(request: Request) {
     // Recording an outcome is terminal — the follow-up is answered, so the
     // trial must NOT stay "follow_up_due" (that would keep nagging the owner
     // for feedback they already gave).
+    //
+    // Lifecycle: ask_vet -> mark_active -> active/follow_up_due -> outcome_recorded.
+    // The backend must enforce vet approval: an outcome can only be recorded once
+    // the trial has actually started. So the guarded update only matches a row in
+    // status `active` or `follow_up_due`. This refuses to record an outcome on an
+    // `ask_vet` row (skipping vet approval), on an already-terminal
+    // `outcome_recorded` / `stopped` row, or on a row this user does not own.
     const outcomeData = parsed.data as { outcome: string; notes?: string | null };
     const { data, error } = await auth.supabase
       .from("dog_brain_supplement_trials")
@@ -204,14 +211,16 @@ export async function PATCH(request: Request) {
       })
       .eq("id", id)
       .eq("user_id", auth.user.id)
-      .not("status", "eq", "outcome_recorded") // guard: no re-recording over a final outcome
+      .in("status", ["active", "follow_up_due"]) // guard: outcome only from a started trial
       .select()
       .maybeSingle();
     if (error) {
       if (isMissingTable(error)) return NextResponse.json({ code: "TABLE_MISSING" }, { status: 503 });
       throw error;
     }
-    if (!data) return NextResponse.json({ error: "Not found, not owned, or already completed" }, { status: 409 });
+    // Zero rows matched: status is ask_vet (vet approval not done), outcome_recorded,
+    // stopped, not owned, or missing. Refuse with 409 — never silently 200/500.
+    if (!data) return NextResponse.json({ error: "Not found, not owned, or not in an active trial" }, { status: 409 });
     return NextResponse.json({ data });
   } catch (e) {
     console.error("[DogBrainSupplements] PATCH error", e);

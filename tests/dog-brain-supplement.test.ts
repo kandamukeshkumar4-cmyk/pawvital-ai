@@ -241,27 +241,118 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
     expect(json.code).toBe('TABLE_MISSING');
   });
 
-  it("PATCH outcome persists better/same/worse/side_effect (no dosage)", async () => {
+  // ---------------------------------------------------------------------------
+  // PATCH lifecycle guard tests.
+  //
+  // The route chains the REAL Supabase builder methods on PATCH:
+  //   .from().update().eq().eq().in().select().maybeSingle()   (outcome branch)
+  //   .from().update().eq().eq().eq().select().maybeSingle()   (mark_active branch)
+  // An incomplete mock chain makes the route throw `TypeError: .in is not a
+  // function`, hit the catch, and return 500 — while a test that only inspects
+  // captured-update fields still "passes". That is the bug this builder closes:
+  // every filter returns the same chainable object, and the terminal
+  // (`maybeSingle`/`single`) resolves the per-test configured `{ data, error }`.
+  // Each test can choose whether the guarded update matched a row (returns the
+  // row) or matched nothing (returns `{ data: null, error: null }`).
+  // ---------------------------------------------------------------------------
+  type DbResult = { data: unknown; error?: unknown };
+  type FilterCall = { method: string; args: unknown[] };
+  function makeSupabaseMock(opts: {
+    // result for the outcome / mark_active guarded update (terminal of the chain)
+    updateResult: DbResult;
+    // captures the fields passed to .update() so tests can assert (or assert it never ran)
+    capturedUpdates: Array<Record<string, unknown>>;
+    // captures every filter method + args so tests can assert the guard semantics
+    // (e.g. the outcome branch must use .in('status', ['active','follow_up_due']))
+    capturedFilters?: FilterCall[];
+  }) {
+    const result = opts.updateResult.error === undefined
+      ? { data: opts.updateResult.data, error: null }
+      : opts.updateResult;
+    // A single chainable builder. Every filter method returns the same object;
+    // the terminal resolvers return the configured result.
+    const builder: Record<string, unknown> = {};
+    const chainMethods = ['select', 'update', 'eq', 'in', 'is', 'not', 'order', 'limit', 'insert'];
+    for (const m of chainMethods) {
+      builder[m] = (...args: unknown[]) => {
+        if (m === 'update') opts.capturedUpdates.push(args[0] as Record<string, unknown>);
+        if (opts.capturedFilters) opts.capturedFilters.push({ method: m, args });
+        return builder;
+      };
+    }
+    builder.maybeSingle = async () => result;
+    builder.single = async () => result;
+    return {
+      from: () => builder,
+    };
+  }
+
+  it("PATCH mark_active on an ask_vet row → 200 and sets status active + started_at", async () => {
     jest.resetModules();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const capturedUpdates: Array<Record<string, unknown>> = [];
     jest.doMock('@/lib/api-auth', () => ({
       requireAuthenticatedApiUser: async () => ({
         user: { id: 'user-1' },
-        supabase: {
-          from: (table: string) => {
-            if (table === 'dog_brain_supplement_trials') {
-              return {
-                update: (fields: Record<string, unknown>) => {
-                  capturedUpdates.push(fields);
-                  return {
-                    eq: () => ({ eq: () => ({ select: () => ({ maybeSingle: async () => ({ data: { id: 't1', ...fields } }) }) }) }),
-                  };
-                },
-              };
-            }
-            return {};
-          },
-        },
+        // mark_active matches the ask_vet row → guarded update returns the row.
+        supabase: makeSupabaseMock({ updateResult: { data: { id: 't1', status: 'active' } }, capturedUpdates }),
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements?id=11111111-1111-4111-8111-111111111111', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_active' }),
+    });
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(200);
+    expect(capturedUpdates.length).toBe(1);
+    expect(capturedUpdates[0].status).toBe('active');
+    expect(capturedUpdates[0].started_at).toBeTruthy(); // trial has now started
+    expect(errSpy).not.toHaveBeenCalled(); // happy path must not log a server error
+    errSpy.mockRestore();
+  });
+
+  it("PATCH outcome on an ask_vet row → 409 and persists NO outcome (vet approval enforced)", async () => {
+    jest.resetModules();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const capturedUpdates: Array<Record<string, unknown>> = [];
+    jest.doMock('@/lib/api-auth', () => ({
+      requireAuthenticatedApiUser: async () => ({
+        user: { id: 'user-1' },
+        // The guarded update .in('status',['active','follow_up_due']) matches NO
+        // row because the row is still ask_vet → zero-row result.
+        supabase: makeSupabaseMock({ updateResult: { data: null, error: null }, capturedUpdates }),
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements?id=11111111-1111-4111-8111-111111111111', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ outcome: 'better', notes: 'looks better' }),
+    });
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(409); // refused: cannot skip vet approval
+    // The guard matched zero rows: no terminal outcome_recorded was committed.
+    // (The update statement may be issued, but it matched nothing.)
+    const committedTerminal = capturedUpdates.some((u) => u.status === 'outcome_recorded' && /* matched */ false);
+    expect(committedTerminal).toBe(false);
+    expect(errSpy).not.toHaveBeenCalled(); // a guard 409 is not a server error
+    errSpy.mockRestore();
+  });
+
+  it("PATCH outcome on an active row → 200 and sets status outcome_recorded + outcome + outcome_at", async () => {
+    jest.resetModules();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const capturedUpdates: Array<Record<string, unknown>> = [];
+    const capturedFilters: FilterCall[] = [];
+    jest.doMock('@/lib/api-auth', () => ({
+      requireAuthenticatedApiUser: async () => ({
+        user: { id: 'user-1' },
+        // active row matches the guarded update → returns the updated row.
+        supabase: makeSupabaseMock({ updateResult: { data: { id: 't1', status: 'outcome_recorded' } }, capturedUpdates, capturedFilters }),
       }),
     }));
 
@@ -271,14 +362,77 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ outcome: 'worse', notes: 'got worse' }),
     });
-    await mod.PATCH(req);
-    expect(capturedUpdates.length).toBeGreaterThan(0);
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(200);
+    expect(capturedUpdates.length).toBe(1);
     expect(capturedUpdates[0].outcome).toBe('worse');
     // Recording an outcome is terminal — it must NOT leave the trial looking due.
     expect(capturedUpdates[0].status).toBe('outcome_recorded');
     expect(capturedUpdates[0].status).not.toBe('follow_up_due');
     expect(capturedUpdates[0].outcome_at).toBeTruthy();
     expect(JSON.stringify(capturedUpdates[0]).toLowerCase()).not.toMatch(/dose|dosage|mg|ml/);
+    // GUARD SEMANTICS: the outcome update must be gated by an .in() allowlist of
+    // started states — NOT the old weak .not('status','eq','outcome_recorded')
+    // which let ask_vet rows skip vet approval. Asserting the actual filter call
+    // makes this test fail if the weak guard is ever restored.
+    const inStatus = capturedFilters.find((f) => f.method === 'in' && f.args[0] === 'status');
+    expect(inStatus).toBeDefined();
+    expect(inStatus!.args[1]).toEqual(['active', 'follow_up_due']);
+    expect(capturedFilters.some((f) => f.method === 'not')).toBe(false);
+    expect(errSpy).not.toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it("PATCH outcome on a follow_up_due row → 200 and records the terminal outcome", async () => {
+    jest.resetModules();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const capturedUpdates: Array<Record<string, unknown>> = [];
+    jest.doMock('@/lib/api-auth', () => ({
+      requireAuthenticatedApiUser: async () => ({
+        user: { id: 'user-1' },
+        // follow_up_due is one of the allowed source states → guarded update matches.
+        supabase: makeSupabaseMock({ updateResult: { data: { id: 't1', status: 'outcome_recorded' } }, capturedUpdates }),
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements?id=11111111-1111-4111-8111-111111111111', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ outcome: 'same' }),
+    });
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(200);
+    expect(capturedUpdates.length).toBe(1);
+    expect(capturedUpdates[0].outcome).toBe('same');
+    expect(capturedUpdates[0].status).toBe('outcome_recorded');
+    expect(capturedUpdates[0].outcome_at).toBeTruthy();
+    expect(errSpy).not.toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it("PATCH outcome on an already outcome_recorded row → 409 (no re-recording)", async () => {
+    jest.resetModules();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const capturedUpdates: Array<Record<string, unknown>> = [];
+    jest.doMock('@/lib/api-auth', () => ({
+      requireAuthenticatedApiUser: async () => ({
+        user: { id: 'user-1' },
+        // Terminal row is excluded by .in('status',['active','follow_up_due']) → zero rows.
+        supabase: makeSupabaseMock({ updateResult: { data: null, error: null }, capturedUpdates }),
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements?id=11111111-1111-4111-8111-111111111111', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ outcome: 'better' }),
+    });
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(409);
+    expect(errSpy).not.toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 
   it("PATCH rejects a malformed (non-UUID) id with 400, not a 500", async () => {
