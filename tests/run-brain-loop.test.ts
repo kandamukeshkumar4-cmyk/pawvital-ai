@@ -12,7 +12,10 @@ jest.mock("@/lib/supabase-server", () => ({
 
 type DbRow = Record<string, unknown>;
 type FakeSupabase = { from: (table: string) => DbRow };
-type TestGlobal = typeof globalThis & { __simulate23505?: boolean };
+type TestGlobal = typeof globalThis & {
+  __simulate23505?: boolean;
+  __simulateFollowupsTableMissing?: boolean;
+};
 
 let fakeSupabase: FakeSupabase;
 let capturedFollowupInserts: DbRow[];
@@ -39,15 +42,28 @@ function resetFake() {
       };
     }
     if (table === "dog_brain_followups") {
+      const missingErr = () => ({
+        data: null,
+        error: {
+          code: "42P01",
+          message: "relation dog_brain_followups does not exist",
+        },
+      });
       return {
         select: () => makeChain(table),
         eq: () => makeChain(table),
-        maybeSingle: async () => ({ data: existingPending, error: null }),
+        maybeSingle: async () =>
+          (globalThis as TestGlobal).__simulateFollowupsTableMissing
+            ? missingErr()
+            : { data: existingPending, error: null },
         insert: (row: DbRow) => {
           capturedFollowupInserts.push(row);
           return {
             select: () => ({
               maybeSingle: async () => {
+                if ((globalThis as TestGlobal).__simulateFollowupsTableMissing) {
+                  return missingErr();
+                }
                 // simulate 23505 by caller if needed; here return success unless flag
                 if ((globalThis as TestGlobal).__simulate23505) {
                   const err = new Error("duplicate") as Error & { code?: string };
@@ -74,6 +90,7 @@ let currentLogs: DbRow[] = [];
 beforeEach(() => {
   resetFake();
   (globalThis as TestGlobal).__simulate23505 = false;
+  (globalThis as TestGlobal).__simulateFollowupsTableMissing = false;
   currentLogs = [];
 });
 
@@ -142,5 +159,25 @@ describe("runDogBrainLoopAfterHealthLog (direct)", () => {
     expect(res.errors.length).toBeGreaterThan(0);
     // strict: the exact injected message is collected
     expect(res.errors[0].message).toBe("load fail injected");
+  });
+
+  it("missing dog_brain_followups table is reported as error, not mislabeled as dedupe (PROOF #11)", async () => {
+    currentLogs = [
+      { log_date: "2026-06-20", stool: "diarrhea", appetite: "normal", water: "normal", urination: "normal", vomiting_count: 0, energy: "normal", meds_given: false, context_signals: null },
+    ];
+    (globalThis as TestGlobal).__simulateFollowupsTableMissing = true;
+
+    const res = await runDogBrainLoopAfterHealthLog("user-1", "pet-1");
+
+    // Persistence failure (missing table) must be an honest nonfatal error,
+    // never hidden as a successful dedupe.
+    expect(res.errors.length).toBeGreaterThanOrEqual(1);
+    expect(res.dedupedFollowups.length).toBe(0);
+    expect(res.createdFollowups.length).toBe(0);
+    // No insert should have been attempted once the pre-check returned the error.
+    expect(capturedFollowupInserts.length).toBe(0);
+    // Sanity: the signal was still detected (loop is honest about what it saw);
+    // only the persistence path failed.
+    expect(res.signals.length).toBeGreaterThanOrEqual(1);
   });
 });

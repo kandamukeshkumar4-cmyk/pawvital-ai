@@ -71,7 +71,9 @@ async function persistPlan(
       .maybeSingle();
 
     if (existErr) {
-      if (isMissingTable(existErr)) return { deduped: true };
+      // PROOF #11: a missing table (or permission error) on the dedupe pre-check
+      // is a persistence failure — report it honestly as an error, never as a
+      // successful dedupe. The caller collects this as a nonfatal error.
       return { deduped: false, error: existErr };
     }
     if (existing) {
@@ -92,7 +94,9 @@ async function persistPlan(
       .maybeSingle();
 
     if (error) {
-      if (isMissingTable(error)) return { deduped: true };
+      // 23505 is the only true dedupe: a concurrent insert won the race after
+      // our pre-check. Everything else (missing table, permission, schema) is
+      // an honest persistence failure.
       if (error.code === "23505") {
         return { deduped: true };
       }
