@@ -147,6 +147,7 @@ export async function loadDogBrainContextWithSignals({
       journalResult,
       vetRecordsResult,
       followupsResult,
+      supplementTrialsResult,
     ] = await Promise.all([
         supabase
           .from("daily_health_logs")
@@ -185,6 +186,14 @@ export async function loadDogBrainContextWithSignals({
           .eq("pet_id", petId)
           .order("updated_at", { ascending: false })
           .limit(20),
+        // Supplement trial outcomes (if table exists). Best-effort; feeds Brain context.
+        supabase
+          .from("dog_brain_supplement_trials")
+          .select("supplement_name, status, outcome, follow_up_due_at, updated_at")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("updated_at", { ascending: false })
+          .limit(10),
       ]);
 
     const sections: string[] = [];
@@ -279,6 +288,22 @@ export async function loadDogBrainContextWithSignals({
     const followups = (followupsResult.data ?? []) as FollowupContextRow[];
     const followupSummary = summarizeFollowupsForContext(followups, petName);
     if (followupSummary) sections.push(followupSummary);
+
+    // ── Supplement trial outcomes (if present) ──
+    const trials = (supplementTrialsResult?.data ?? []) as Array<{
+      supplement_name: string;
+      status: string;
+      outcome: string | null;
+      follow_up_due_at: string | null;
+    }>;
+    if (trials.length > 0) {
+      const tLines = trials.map((t) => {
+        const due = t.follow_up_due_at ? ` (due ${formatDate(t.follow_up_due_at)})` : "";
+        const out = t.outcome ? ` — outcome: ${t.outcome}` : "";
+        return `${t.supplement_name} [${t.status}]${out}${due}`;
+      });
+      sections.push(`Supplement support trials (ask-vet only; ${disclaimer}): ${tLines.join(" | ")}`);
+    }
 
     // Recurring-signal symptom keys for the symptom-checker question tiebreak,
     // derived from the SAME logs already loaded above (detectDogBrainSignals

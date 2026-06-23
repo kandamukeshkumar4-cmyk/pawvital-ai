@@ -8,9 +8,13 @@
  */
 
 import { jest } from "@jest/globals";
+import type { RunBrainLoopResult } from "@/lib/dog-brain/run-brain-loop";
 
 const mockCheckRateLimit = jest.fn<() => Promise<{ success: boolean; reset: number }>>();
 const mockCreateServerSupabaseClient = jest.fn<() => Promise<unknown>>();
+const mockRunDogBrainLoopAfterHealthLog = jest.fn<
+  (userId: string, petId: string) => Promise<RunBrainLoopResult>
+>();
 
 jest.mock("@/lib/rate-limit", () => ({
   generalApiLimiter: {},
@@ -20,6 +24,11 @@ jest.mock("@/lib/rate-limit", () => ({
 
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: () => mockCreateServerSupabaseClient(),
+}));
+
+jest.mock("@/lib/dog-brain/run-brain-loop", () => ({
+  runDogBrainLoopAfterHealthLog: (userId: string, petId: string) =>
+    mockRunDogBrainLoopAfterHealthLog(userId, petId),
 }));
 
 type UpsertResult = { data: unknown; error: { code?: string; message?: string } | null };
@@ -89,6 +98,13 @@ async function callPost(body: unknown) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCheckRateLimit.mockResolvedValue({ success: true, reset: Date.now() + 60_000 });
+  mockRunDogBrainLoopAfterHealthLog.mockResolvedValue({
+    state: "stable",
+    signals: [],
+    createdFollowups: [],
+    dedupedFollowups: [],
+    errors: [],
+  });
 });
 
 describe("POST /api/health-log — context_signals packs accepted by the real schema", () => {
@@ -193,5 +209,67 @@ describe("POST /api/health-log — photo_urls persists independently of context_
 
     expect(res.status).toBe(201);
     expect(upsertRows[0].photo_urls).toEqual(["user-1/health-log/ok.jpg"]);
+  });
+});
+
+describe("POST /api/health-log — Dog Brain backend-owned loop (after-save wiring)", () => {
+  // Stub-only route wiring tests per restructure. Never invoke the real loop here.
+  // Behavioral contracts (abnormal/normal/dedupe/error creation) live in tests/run-brain-loop.test.ts
+  it("loop error is swallowed and response is still 201 with data (dog_brain may be null)", async () => {
+    const { supabase } = buildSupabase([{ data: { id: "log-1" }, error: null }]);
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    mockRunDogBrainLoopAfterHealthLog.mockRejectedValueOnce(new Error("loop fail for test"));
+
+    const res = await callPost(baseBody({ context_signals: {} }));
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.data).toBeTruthy();
+    // dog_brain may be null on error path; the key presence is not asserted here to keep stub deterministic
+  });
+
+  it("when loop resolves, response dog_brain matches mapper output exactly", async () => {
+    const { supabase } = buildSupabase([{ data: { id: "log-2" }, error: null }]);
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const payload: RunBrainLoopResult = {
+      state: "watch",
+      signals: [{ signal_type: "stool_change", severity: "watch" }],
+      createdFollowups: [{ id: "fu-stool", signal_key: "stool_change" }],
+      dedupedFollowups: [],
+      errors: [],
+    };
+
+    mockRunDogBrainLoopAfterHealthLog.mockResolvedValueOnce(payload);
+
+    const res = await callPost(baseBody({ context_signals: {} }));
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.data).toBeTruthy();
+
+    // Import mapper and assert exact shape (proves mapper is used and summary is attached)
+    const { toDogBrainSummary } = await import("@/app/api/health-log/route");
+    expect(json.dog_brain).toEqual(toDogBrainSummary(payload));
+  });
+
+  it("loop is invoked exactly once with (userId, petId) after successful upsert", async () => {
+    const { supabase } = buildSupabase([{ data: { id: "log-3" }, error: null }]);
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    mockRunDogBrainLoopAfterHealthLog.mockResolvedValueOnce({
+      state: "stable",
+      signals: [],
+      createdFollowups: [],
+      dedupedFollowups: [],
+      errors: [],
+    });
+
+    await callPost(baseBody({ context_signals: {} }));
+
+    expect(mockRunDogBrainLoopAfterHealthLog).toHaveBeenCalledTimes(1);
+    expect(mockRunDogBrainLoopAfterHealthLog).toHaveBeenCalledWith(
+      "user-1",
+      "11111111-1111-4111-8111-111111111111",
+    );
   });
 });

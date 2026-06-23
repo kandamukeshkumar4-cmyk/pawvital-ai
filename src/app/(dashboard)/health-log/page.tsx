@@ -304,6 +304,13 @@ const WHITE_CARD: React.CSSProperties = {
 
 const SAVE_GRADIENT = "linear-gradient(180deg,#17a06d,#0a7048)";
 
+interface DogBrainSaveSummary {
+  state?: string;
+  signal_count?: number;
+  created_followups?: number;
+  deduped_followups?: number;
+}
+
 export default function HealthLogPage() {
   const { activePet, pets } = useAppStore();
   const [logs, setLogs] = useState<HealthLog[]>([]);
@@ -311,6 +318,7 @@ export default function HealthLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [lastBrainSummary, setLastBrainSummary] = useState<DogBrainSaveSummary | null>(null);
   const [celebrate, setCelebrate] = useState(0);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [afterSaveSignals, setAfterSaveSignals] = useState<DetectedSignal[]>([]);
@@ -414,6 +422,10 @@ export default function HealthLogPage() {
       });
       setSavedAt(saved.log_date);
       setCelebrate((c) => c + 1); // fire the reward animation
+      // Show backend dog_brain summary (state + counts) when present
+      if (json.dog_brain) {
+        setLastBrainSummary(json.dog_brain);
+      }
       // Trigger after-save brain signals refresh using the live detector
       void loadAfterSaveSignals(saved.pet_id);
     } catch {
@@ -1431,6 +1443,13 @@ export default function HealthLogPage() {
             <p className="text-sm font-medium text-[#0b7a4d]">
               Check-in saved! <span className="font-normal">{savedAt}</span>
             </p>
+            {lastBrainSummary ? (
+              <p className="ml-auto text-[11px] text-[#6f7069]">
+                Dog Brain: {lastBrainSummary.state || "updated"} · signals{" "}
+                {lastBrainSummary.signal_count ?? 0} · follow-ups created{" "}
+                {lastBrainSummary.created_followups ?? 0}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

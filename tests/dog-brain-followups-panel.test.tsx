@@ -3,6 +3,7 @@
 import * as React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FollowupsPanel } from "@/components/dog-brain/followups-panel";
+import type { DetectedSignal } from "@/lib/dog-brain/types";
 
 const PET = "pet-1";
 const PROMPT = "Stool was off 3 days ago. Better, same, or worse today?";
@@ -86,5 +87,30 @@ describe("FollowupsPanel — Brain follow-ups surfaced in the Reminders queue", 
       ),
     );
     expect(container.textContent).toBe("");
+  });
+
+  it("render with signals prop never POSTs (backend owns creation)", async () => {
+    const fetchMock = jest.fn(() =>
+      Promise.resolve({ json: async () => ({ data: [] }) } as Response),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const signals: DetectedSignal[] = [
+      {
+        signal_type: "stool_change",
+        severity: "watch",
+        owner_message: "Stool off",
+        dedupe_key: "stool_change:test",
+      },
+    ];
+    render(<FollowupsPanel petId={PET} signals={signals} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    const postCalls = fetchMock.mock.calls.filter(
+      ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(postCalls).toHaveLength(0);
+    // Still does the GET for display
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/dog-brain/followups?pet_id="));
   });
 });
