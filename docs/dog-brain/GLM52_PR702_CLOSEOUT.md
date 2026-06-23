@@ -18,7 +18,7 @@ Clear separation of where things stand:
 | DB migration `20260622_dog_brain_supplement_trials.sql` | **APPLIED + verified** on active project `aammaxdsjhezmbvdkqee` (2026-06-23, user-approved) — see Supabase state |
 | Supplements UI wiring | **Wired** — `SupplementTrialsPanel` (real GET/POST/PATCH, persisted, no dosing) on the Supplements page — see "UI status" |
 | Client render side effects | **None** — `FollowupsPanel` does GET + PATCH only |
-| Build | **Unproven** — fails on G: for environment reasons (junction/readlink); needs a clean Linux/CI build |
+| Build | **Fails on G: — PROVEN environment-only** (G: is exFAT, which cannot create the junctions Turbopack needs); needs an NTFS/Linux/CI build — see "Build status" |
 | PR gate | **Blocked** — required "Threshold Review Gate" check cannot run (Actions quota dead since 2026-06-03) |
 
 ## This session — supplement trial hardening
@@ -77,9 +77,23 @@ Files changed this session:
 - Consequence: `mergeStateStatus=BLOCKED` and the required check can't auto-satisfy until either Actions quota is restored (then re-push or `workflow_dispatch` to fire the gate) or a maintainer admin-merges (the documented path for recent Dog Brain PRs).
 - This is an external ops/billing gate, not a code defect. Not merging, per instructions.
 
-## Verification (this session)
+## Verification (latest run)
 
-Recorded in the handoff for this loop. Focused supplement suite green; full results in the loop report.
+- `npm run typecheck` → pass (exit 0).
+- `npx eslint .` → 0 errors, 51 pre-existing warnings.
+- Focused (`run-brain-loop|dog-brain-summary-mapper|dog-brain-supplement|dog-brain-followups-panel|health-log.route`) → 6 suites / 42 tests pass.
+- Broader (`dog-brain|health-log|followups|vet-record`) → 22 suites / 174 tests pass.
+- Clinical/symptom slice → only the known pre-existing `symptom-checker.tester-onboarding.test.ts:139` fail; no clinical/symptom files touched by this PR.
+
+## Build status — fails on G:, PROVEN environment-only (not code)
+
+- `npm run build` → exit 1 with `TurbopackInternalError: failed to create junction point at "…\.next\node_modules\@react-pdf\renderer-…" … creation of a new symbolic link or junction point failed: Incorrect function. (os error 1)`.
+- **Proof it is the filesystem, not the code:**
+  - `Get-Volume -DriveLetter G` → `FileSystemType: exFAT` (the worktree lives on an exFAT volume).
+  - `mklink /J <G: path>` → `Local NTFS volumes are required to complete the operation.` — exFAT cannot host junctions/symlinks at all, independent of any build.
+  - Turbopack creates a junction for the `@react-pdf/renderer` dependency under `.next/node_modules` during setup, **before** compiling any route, so the build dies on the first junction regardless of source.
+  - This PR touches none of `@react-pdf/renderer`, `.next/`, `next.config.ts`, build tooling, or package files.
+- **Resolution:** build on an NTFS local volume or in Linux/CI. Not a code blocker; the typecheck + full test slices are the code-correctness proof available on this filesystem.
 
 ## Safety check (unchanged + extended)
 
