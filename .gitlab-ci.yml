@@ -1,0 +1,39 @@
+# GitLab CI gate — stands in for the GitHub "Threshold Review Gate" while GitHub
+# Actions is disabled at the account level (HTTP 422 "Actions has been disabled
+# for this user"). Runs on the gitlab.com mirror (kandadamukesh8/pawvital-ai),
+# which master is pushed to after every merge.
+#
+# Scope: the deterministic checks that need no secrets — typecheck, lint, and the
+# Jest suite. The production build is intentionally NOT run here (it needs
+# Supabase/NIM env vars and is already performed by Vercel's remote build at
+# deploy time).
+image: node:20
+
+stages:
+  - verify
+
+# Cache the npm download dir keyed on the lockfile so reruns are fast.
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+
+verify:
+  stage: verify
+  interruptible: true
+  before_script:
+    - node --version
+    - npm ci --cache .npm --prefer-offline --no-audit --no-fund
+  script:
+    # Type safety — must be clean.
+    - npm run typecheck
+    # Lint — fails only on errors (pre-existing warnings are allowed).
+    - npx eslint .
+    # Full Jest suite — the regression gate.
+    - npm test -- --ci
+  rules:
+    # Run on any branch push and on merge requests.
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
