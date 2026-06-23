@@ -87,4 +87,22 @@ describe("FollowupsPanel — Brain follow-ups surfaced in the Reminders queue", 
     );
     expect(container.textContent).toBe("");
   });
+
+  it("render with signals prop never POSTs (backend owns creation)", async () => {
+    const fetchMock = jest.fn(() =>
+      Promise.resolve({ json: async () => ({ data: [] }) } as Response),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const signals = [{ signal_type: "stool_change", severity: "watch", owner_message: "Stool off" } as any];
+    render(<FollowupsPanel petId={PET} signals={signals} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    const postCalls = fetchMock.mock.calls.filter(
+      ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(postCalls).toHaveLength(0);
+    // Still does the GET for display
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/dog-brain/followups?pet_id="));
+  });
 });

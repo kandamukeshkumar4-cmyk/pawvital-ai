@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageCircleQuestion } from "lucide-react";
 import type { DetectedSignal } from "@/lib/dog-brain/types";
 
@@ -12,16 +12,14 @@ export interface Followup {
 }
 
 /**
- * Durable Dog Brain follow-up loop, shared across surfaces (dashboard health
- * brief + Reminders queue). When `signals` are supplied it ensures a follow-up
- * exists for each active watch/alert pattern (idempotent server-side); it always
- * lists the pending follow-ups and lets the owner resolve better / same / worse
- * (PATCH feeds the outcome back into Brain memory). Renders nothing until there
- * is a pending item, so it is safe to drop onto any page.
+ * Dog Brain follow-ups display + resolve only (backend-owned creation).
+ * Lists pending (GET) and allows owner to resolve better/same/worse (PATCH feeds outcome to Brain context).
+ * Renders nothing until there is a pending item. `signals` prop (if passed) is ignored for creation.
  */
 export function FollowupsPanel({
   petId,
-  signals = [],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  signals: _signals = [],
 }: {
   petId: string | null;
   /** Omit on read-only surfaces (e.g. Reminders) to display + resolve without
@@ -29,34 +27,11 @@ export function FollowupsPanel({
   signals?: DetectedSignal[];
 }) {
   const [items, setItems] = useState<Followup[]>([]);
-  const signalKey = useMemo(
-    () => signals.map((s) => `${s.signal_type}:${s.severity}`).join(","),
-    [signals],
-  );
 
   useEffect(() => {
     if (!petId) return;
     let cancelled = false;
-    const actionable = signals.filter(
-      (s) => s.severity === "watch" || s.severity === "alert",
-    );
     (async () => {
-      if (actionable.length > 0) {
-        await Promise.allSettled(
-          actionable.map((s) =>
-            fetch("/api/dog-brain/followups", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                pet_id: petId,
-                signal_key: s.signal_type,
-                prompt: `${s.owner_message} Is it better, the same, or worse today?`,
-              }),
-            }).catch(() => undefined),
-          ),
-        );
-      }
-      if (cancelled) return;
       try {
         const r = await fetch(`/api/dog-brain/followups?pet_id=${petId}`);
         const j = (await r.json().catch(() => null)) as { data?: Followup[] } | null;
@@ -68,8 +43,7 @@ export function FollowupsPanel({
     return () => {
       cancelled = true;
     };
-    // signalKey makes the effect re-run only when the set of signals changes.
-  }, [petId, signalKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [petId]); // signals prop intentionally ignored for creation — backend owns follow-up creation
 
   // Track the owner's selection per item so the chosen choice highlights before
   // the optimistic removal (matches the slide's selected-button styling).

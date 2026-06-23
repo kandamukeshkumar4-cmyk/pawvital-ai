@@ -8,6 +8,20 @@ import {
 } from "@/lib/rate-limit";
 import { isMissingTable } from "@/lib/api/table-missing";
 import { ContextSignalsSchema } from "@/lib/health-log/context-signals-schema";
+import { runDogBrainLoopAfterHealthLog, type RunBrainLoopResult } from "@/lib/dog-brain/run-brain-loop";
+
+/**
+ * Pure mapper for the Dog Brain summary attached to health-log responses.
+ * Extracted for testability and to keep route wiring simple.
+ */
+export function toDogBrainSummary(loop: RunBrainLoopResult) {
+  return {
+    state: loop.state,
+    signal_count: loop.signals.length,
+    created_followups: loop.createdFollowups.length,
+    deduped_followups: loop.dedupedFollowups.length,
+  };
+}
 
 /**
  * Daily Health Log API.
@@ -204,7 +218,23 @@ export async function POST(request: Request) {
       }
       throw error;
     }
-    return NextResponse.json({ data }, { status: 201 });
+
+    // Backend-owned Dog Brain closed loop:
+    // Run AFTER successful log save. Never fail the save if loop errors.
+    // Include a safe summary (state + counts) in response for UI.
+    let dog_brain: { state?: string; signal_count?: number; created_followups?: number; deduped_followups?: number } | null = null;
+    try {
+      const loop = await runDogBrainLoopAfterHealthLog(user.id, parsed.data.pet_id);
+      dog_brain = toDogBrainSummary(loop);
+      if (loop.errors.length > 0) {
+        console.error("[DogBrain] loop after health-log had non-fatal errors:", loop.errors);
+      }
+    } catch (loopErr) {
+      // Swallow — health log save must succeed.
+      console.error("[DogBrain] runDogBrainLoopAfterHealthLog threw (non-fatal):", loopErr);
+    }
+
+    return NextResponse.json({ data, dog_brain }, { status: 201 });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "DEMO_MODE") {
       return NextResponse.json(
