@@ -1,12 +1,12 @@
 import { createSession } from "@/lib/triage-engine";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 
-const mockGetNextQuestionAvoidingRepeat = jest.fn();
+const mockGetNextQuestionWithSource = jest.fn();
 const mockDeriveBrainQuestionTrace = jest.fn();
 
 jest.mock("@/lib/symptom-chat/answer-coercion", () => ({
-  getNextQuestionAvoidingRepeat: (...args: unknown[]) =>
-    mockGetNextQuestionAvoidingRepeat(...args),
+  getNextQuestionWithSource: (...args: unknown[]) =>
+    mockGetNextQuestionWithSource(...args),
   deriveBrainQuestionTrace: (...args: unknown[]) =>
     mockDeriveBrainQuestionTrace(...args),
 }));
@@ -14,7 +14,10 @@ jest.mock("@/lib/symptom-chat/answer-coercion", () => ({
 describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetNextQuestionAvoidingRepeat.mockReturnValue(null);
+    mockGetNextQuestionWithSource.mockReturnValue({
+      questionId: null,
+      source: null,
+    });
     mockDeriveBrainQuestionTrace.mockReturnValue(null);
   });
 
@@ -31,7 +34,7 @@ describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
       brainPrioritySymptoms: ["diarrhea"],
     });
 
-    expect(mockGetNextQuestionAvoidingRepeat).toHaveBeenCalledWith(
+    expect(mockGetNextQuestionWithSource).toHaveBeenCalledWith(
       session,
       ["lethargy"],
       ["diarrhea"],
@@ -41,7 +44,10 @@ describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
   it("Brain memory cannot override a pending-clarification re-ask (urgency/anchor safety)", () => {
     // The selector would return a Brain-driven question, but an unresolved
     // pending question must take priority and be re-asked instead.
-    mockGetNextQuestionAvoidingRepeat.mockReturnValue("diarrhea_duration");
+    mockGetNextQuestionWithSource.mockReturnValue({
+      questionId: "diarrhea_duration",
+      source: "brain",
+    });
 
     const session = createSession();
     session.last_question_asked = "breathing_effort";
@@ -62,14 +68,18 @@ describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
 
     expect(result.needsClarificationQuestionId).toBe("breathing_effort");
     expect(result.nextQuestionId).toBe("breathing_effort");
-    // Pending clarification wins ⇒ NO Brain trace, and the trace helper is never
-    // even consulted on a clarification turn.
+    // Pending clarification wins ⇒ NO Brain trace, and the selector + trace
+    // helper are never even consulted on a clarification turn.
     expect(result.brainQuestionTrace).toBeNull();
+    expect(mockGetNextQuestionWithSource).not.toHaveBeenCalled();
     expect(mockDeriveBrainQuestionTrace).not.toHaveBeenCalled();
   });
 
   it("emits the brainQuestionTrace returned by the helper when Brain drove the question", () => {
-    mockGetNextQuestionAvoidingRepeat.mockReturnValue("diarrhea_duration");
+    mockGetNextQuestionWithSource.mockReturnValue({
+      questionId: "diarrhea_duration",
+      source: "brain",
+    });
     const trace = {
       source: "dog_brain" as const,
       signal_type: "stool_change" as const,
@@ -99,10 +109,10 @@ describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
     });
 
     expect(result.brainQuestionTrace).toEqual(trace);
-    // Helper receives the actually-selected question id + the evidence map.
+    // Helper receives the selector's source + the evidence map + selected id —
+    // no re-derivation of which branch won.
     expect(mockDeriveBrainQuestionTrace).toHaveBeenCalledWith(
-      session,
-      [],
+      "brain",
       ["diarrhea"],
       {
         diarrhea: {
@@ -126,7 +136,7 @@ describe("orchestrateNextQuestion — Dog Brain priority wiring", () => {
       visualEvidence: null,
     });
 
-    expect(mockGetNextQuestionAvoidingRepeat).toHaveBeenCalledWith(
+    expect(mockGetNextQuestionWithSource).toHaveBeenCalledWith(
       session,
       ["lethargy"],
       [],

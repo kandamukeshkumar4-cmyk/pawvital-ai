@@ -91,11 +91,10 @@ describe("Dog Brain memory cannot downgrade deterministic urgency", () => {
 
     // Even with Brain priority symptoms + evidence present, deriving the trace is
     // a pure read: it cannot change the session, urgency, or red flags. And on an
-    // emergency turn the complaint (vomiting) drives selection, so the brain trace
-    // for an unrelated diarrhea question stays null when the complaint owns it.
+    // emergency turn the complaint (vomiting) drives selection — the selector
+    // reports source="complaint", so the Brain trace stays null.
     const trace = deriveBrainQuestionTrace(
-      session,
-      ["vomiting"],
+      "complaint",
       ["diarrhea"],
       evidenceMap,
       // A vomiting follow-up the complaint branch owns — not a brain-driven id.
