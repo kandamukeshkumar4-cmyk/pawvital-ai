@@ -1,80 +1,74 @@
 # GLM 5.2 — PR #702 Closeout Loop Memory
 
 > Single state file for the Dog Brain backend-owned closed loop closeout.
-> Keep short. Update every iteration.
 
 ## Current state
 
 - branch: `codex/dog-brain-backend-owned-loop`
 - worktree: `G:\MY Website\pawvital-ai-glm-dogbrain-loop`
-- HEAD (start of session): `a07b77de17a29dbb7ba6c566a79f944d27fcef1f`
+- HEAD (after fixes): `bc7a68e` (pending push)
 - PR: https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/702
-- PR state: OPEN, not draft, MERGEABLE, mergeStateStatus=BLOCKED, no review threads, no status checks
+- PR state (pre-push): OPEN, not draft, mergeable=UNKNOWN, mergeStateStatus=UNKNOWN, no review threads, no status checks
 
-## Baseline verification (run before any edit)
+## Commits made this session (on top of a07b77d)
 
-| Check | Result |
-|---|---|
-| `git fetch origin` | ok |
-| `git status --short --branch` | clean on `codex/dog-brain-backend-owned-loop` |
-| `npm run typecheck` | PASS (exit 0) |
-| `npx eslint .` | PASS (0 errors, 51 pre-existing warnings) |
-| focused tests (`run-brain-loop|dog-brain-summary-mapper|dog-brain-supplement|dog-brain-followups-panel|health-log.route`) | PASS 5 suites / 31 tests |
-| broader (`dog-brain|health-log|followups|vet-record`) | PASS 21 suites / 164 tests |
-| clinical/symptom | 79 suites / 2126 pass, 1 fail (pre-existing, proven below) |
-| `npm run build` | not yet run (known G: Turbopack junction issue per prior PR body) |
+1. `6f13038` fix(dog-brain): report followup persistence failures honestly
+2. `9ef745a` docs(dog-brain): add GLM 5.2 PR #702 closeout loop memory
+3. `bc7a68e` fix(dog-brain): match supplement trials FK to project profiles pattern
 
-## Pre-existing failure proof
+## Files changed this session
+
+- `src/lib/dog-brain/run-brain-loop.ts` — PROOF #11 fix: missing-table/permission errors on `dog_brain_followups` no longer mislabeled as `{ deduped: true }`; now returns `{ deduped: false, error }` so caller records honest nonfatal error. 23505 remains the only true dedupe.
+- `tests/run-brain-loop.test.ts` — new test proving missing `dog_brain_followups` table → `errors.length >= 1`, `dedupedFollowups.length === 0`, no insert attempted, signal still detected. Added `__simulateFollowupsTableMissing` flag to fake Supabase.
+- `supabase/migrations/20260622_dog_brain_supplement_trials.sql` — FK target changed from `auth.users(id)` to `public.profiles(id)` to match the existing project pattern (`20260619`: `dog_brain_followups`, `vet_record_summaries`).
+- `tests/dog-brain-supplement.test.ts` — extended migration structural test to assert `REFERENCES public.profiles(id)` present, `REFERENCES auth.users` absent, RLS enabled, owner-scoped policy, grants, indexes.
+- `docs/dog-brain/GLM52_PR702_CLOSEOUT.md` — this state file.
+
+## Verification results
+
+| Check | Command | Result |
+|---|---|---|
+| typecheck | `npm run typecheck` | PASS (exit 0) |
+| eslint (full) | `npx eslint .` | PASS (0 errors, 51 pre-existing warnings) |
+| focused tests | `npm test -- --testPathPatterns="run-brain-loop\|dog-brain-summary-mapper\|dog-brain-supplement\|dog-brain-followups-panel\|health-log.route"` | PASS 5 suites / 32 tests (was 31, +1 PROOF #11) |
+| broader slice | `npm test -- --testPathPatterns="dog-brain\|health-log\|followups\|vet-record"` | PASS 21 suites / 164 tests |
+| clinical/symptom | `npm test -- --testPathPatterns="clinical\|symptom"` | 79 suites / 2126 pass, 1 pre-existing fail |
+| build (Turbopack) | `npm run build` | FAIL — `TurbopackInternalError: failed to create junction point ... os error 1` (G: drive filesystem limitation, environment-only) |
+| build (webpack) | `npx next build --webpack` | FAIL — `EISDIR: illegal operation on a directory, readlink '.../admin/tester-feedback/route.ts'` (G: workspace root detection with multiple lockfiles, environment-only) |
+
+## Pre-existing failure proof (NOT introduced by this PR)
 
 - `tests/symptom-checker.tester-onboarding.test.ts:139` fails with `fetchMock expected 1, received 6`.
 - `git diff origin/master..HEAD -- tests/symptom-checker.tester-onboarding.test.ts` = empty (PR did not touch the test).
 - `git diff origin/master..HEAD -- src/app/api/ai/symptom-chat/route.ts src/lib/triage-engine.ts src/lib/clinical-matrix.ts src/lib/symptom-memory.ts` = empty (PR did not touch clinical files).
-- Test code at line 138-145 is byte-identical on `origin/master` (verified via `git show origin/master:tests/symptom-checker.tester-onboarding.test.ts`).
-- Conclusion: pre-existing, unrelated to PR #702.
+- Test code byte-identical on origin/master (`git show origin/master:tests/symptom-checker.tester-onboarding.test.ts`).
 
-## Diff vs origin/master (14 files, only intended Dog Brain scope)
+## Build failure proof (environment-only, not code)
 
-- docs/dog-brain/PROGRESS.md
-- src/app/(dashboard)/health-log/page.tsx
-- src/app/api/dog-brain/supplements/route.ts
-- src/app/api/health-log/route.ts
-- src/components/dog-brain/followups-panel.tsx
-- src/lib/dog-brain/followup-planner.ts
-- src/lib/dog-brain/run-brain-loop.ts
-- src/lib/health-log/dog-brain-context.ts
-- supabase/migrations/20260622_dog_brain_supplement_trials.sql
-- tests/dog-brain-followups-panel.test.tsx
-- tests/dog-brain-summary-mapper.test.ts
-- tests/dog-brain-supplement.test.ts
-- tests/health-log.route.test.ts
-- tests/run-brain-loop.test.ts
+- Turbopack: `failed to create junction point at "G:\\...\\.next\\node_modules\\@react-pdf\\renderer-..."` — Windows G: drive does not support junction creation reliably. Error is in Turbopack filesystem internals, not in PR code.
+- Webpack: `EISDIR: illegal operation on a directory, readlink 'G:\MY Website\pawvital-ai-glm-dogbrain-loop\src\app\api\admin\tester-feedback\route.ts'` — workspace root detection fails due to multiple lockfiles on G:. The file is a normal tracked file; webpack's readlink fails on the G: workspace structure.
+- Both failures are reproducible on G: only; CI runs on Linux where these filesystem limitations do not apply.
+- PR does not touch `@react-pdf/renderer`, `.next/`, build internals, or `src/app/api/admin/tester-feedback/route.ts`.
 
-## Findings from code review (PROOF #11 violation)
+## Supabase state
 
-`src/lib/dog-brain/run-brain-loop.ts`:
-- L74: `if (isMissingTable(existErr)) return { deduped: true };` — pre-check on `dog_brain_followups` returns "deduped" when table missing. Hides persistence failure as success.
-- L95: `if (isMissingTable(error)) return { deduped: true };` — insert path same bug.
+- Active project ref: `aammaxdsjhezmbvdkqee` (proven from `G:\MY Website\pawvital-ai\.env.local` NEXT_PUBLIC_SUPABASE_URL; matches existing `20260619` migration comment).
+- BLOCKER: no Supabase MCP tool or `supabase` CLI available in this environment to verify whether `dog_brain_supplement_trials` exists in the live project.
+- Migration `supabase/migrations/20260622_dog_brain_supplement_trials.sql` is file-only; NOT applied to production (per prior PR body + no apply approved this run).
+- Migration has: RLS enabled, owner-scoped policy (`auth.uid() = user_id`), grants to `authenticated`, indexes on `(user_id, pet_id, status)` and `follow_up_due_at`, FK to `public.profiles(id)` (matches project pattern).
 
-Caller at L156-168: when `p.deduped` is true, pushes to `result.dedupedFollowups` (claims successful dedupe). When `p.error` is set, pushes to `result.errors` (honest).
+## Safety check
 
-PROOF #11: "Missing DB tables or failed persistence must be reported honestly as a nonfatal error, not hidden as 'deduped' success."
+- Emergency urgency boundary: PASS — `dog-brain-context-urgency-guard.test.ts` passes (2 tests); Dog Brain context is supportive-only, read by `buildNarrativeReportPrompt` only, never by deterministic triage. No clinical files touched (`git diff` empty for triage-engine.ts, clinical-matrix.ts, symptom-chat/route.ts, symptom-memory.ts).
+- Supplement safety: PASS — route stores `supplement_name`, `reason_signal_key`, `status`, `outcome` (enum: better/same/worse/side_effect), `notes`. No dosage/frequency/brand/price fields. `status` starts as `ask_vet`. Test asserts no `dose|dosage|mg|ml` in persisted row.
+- No client-created follow-ups: PASS — `followups-panel.tsx` useEffect does GET only (no POST). `resolve()` does PATCH only. Test `render with signals prop never POSTs` passes.
 
-## Fix plan (iteration 1)
+## What is still blocked
 
-1. Add test in `tests/run-brain-loop.test.ts` that simulates `dog_brain_followups` table missing and asserts: `errors.length > 0`, `dedupedFollowups.length === 0`.
-2. Fix `run-brain-loop.ts` L74 and L95 to return `{ deduped: false, error }` on missing-table.
-3. Run focused test, then typecheck, then broader slice.
-4. Commit only if all pass.
-
-## Commands run log
-
-(see Baseline verification table above)
-
-## Blockers
-
-- Supabase active project state: NOT YET PROVEN. Need to identify active ref from env without printing secrets, then verify `dog_brain_supplement_trials` exists in active project. Per prior PR body, MCP listed `pawvital-ai-prod` as INACTIVE — will re-verify.
-- `npm run build` on G: known Turbopack junction issue — will attempt and document.
+1. Supabase production DB state unproven — need MCP/CLI access to verify `dog_brain_supplement_trials` exists in project `aammaxdsjhezmbvdkqee`; migration apply requires user approval.
+2. Build not verified on G: (environment-only failure); CI build status pending push.
+3. PR merge state pending push (GitHub re-evaluates after push).
 
 ## Next action
 
-Iteration 1: write red test, fix run-brain-loop.ts, verify green.
+Push and re-check PR gates.
