@@ -87,14 +87,17 @@ export function SymptomContextStrip({ petId, petName }: { petId: string | null; 
           fetch(`/api/dog-brain/signals?pet_id=${petId}`),
         ]);
         const lg = (await lgRes.json().catch(() => null)) as { data?: HealthLog[] } | null;
-        const rem = (await remRes.json().catch(() => null)) as { data?: unknown[] } | null;
+        const rem = (await remRes.json().catch(() => null)) as { data?: { type?: string }[] } | null;
         const sig = (await sigRes.json().catch(() => null)) as { signals?: DetectedSignal[] } | null;
         if (cancelled) return;
         const logs = Array.isArray(lg?.data) ? lg!.data : [];
+        const reminders = Array.isArray(rem?.data) ? rem!.data : [];
         setCounts({
           logs: logs.length,
           photos: logs.reduce((n, l) => n + (Array.isArray(l.photo_urls) ? l.photo_urls.length : 0), 0),
-          vetRecords: Array.isArray(rem?.data) ? rem!.data.length : 0,
+          // "Vet records" mirrors the dashboard: vet-appointment reminders, not
+          // every reminder (medication/heartworm aren't vet records).
+          vetRecords: reminders.filter((r) => r?.type === "vet_appointment").length,
           symptomChecks: Array.isArray(sig?.signals) ? sig!.signals.length : 0,
           openFollowUps: Array.isArray(sig?.signals)
             ? sig!.signals.filter((s) => s.severity !== "info").length
@@ -124,7 +127,7 @@ export function SymptomContextStrip({ petId, petName }: { petId: string | null; 
     { Icon: Clock, color: "#6f8a5c", value: counts.logs, label: "Daily logs", sub: "Last 90 days" },
     { Icon: ImageIcon, color: "#7d6ab5", value: counts.photos, label: "Photos", sub: "Last 90 days" },
     { Icon: FileText, color: "#4d7cb5", value: counts.vetRecords, label: "Vet records", sub: "On file" },
-    { Icon: ClipboardList, color: "#b5740a", value: counts.symptomChecks, label: "Symptom checks", sub: "Last 90 days" },
+    { Icon: ClipboardList, color: "#b5740a", value: counts.symptomChecks, label: "Signals tracked", sub: "Last 90 days" },
     {
       Icon: Clock,
       color: "#e0890a",
