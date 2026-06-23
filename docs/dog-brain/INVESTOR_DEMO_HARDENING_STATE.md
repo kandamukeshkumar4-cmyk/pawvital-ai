@@ -19,7 +19,7 @@
 | 2 | 60/90-day memory ranking (`src/lib/dog-brain/memory-ranking.ts`) | **DONE (iter 2)** | Pure module + 13 tests; wired in dog-brain-context.ts; severity stays dominant (urgency-safe). |
 | 3 | Privacy-safe analytics (`src/lib/dog-brain/analytics.ts`) | **MODULE DONE (iter 3)** | 8 events + builders + tests over existing App Insights sink; call-site wiring is next. |
 | 4 | Live E2E workflow (`.github/workflows/dog-brain-live-e2e.yml`) | **NOT BUILT** | File absent. |
-| 5 | Supabase migration-ledger verify (`dog_brain_supplement_trials`) | **UNVERIFIED** | Needs live check / runbook. |
+| 5 | Supabase migration-ledger verify (`dog_brain_supplement_trials`) | **RUNBOOK (iter 4)** | STOP: MCP bound to wrong project (JobsearchAi, not PawVital). Runbook written with exact verify + repair commands + Node pg one-off. Live verify deferred to operator with correct creds. |
 | 6 | UX polish across tabs | **NOT STARTED** | — |
 | 8 | Clinical knowledge layer (`src/lib/clinical/knowledge-base.ts`, root-cause, supplement-guardrails) | **NOT BUILT** | Files absent. |
 
@@ -49,3 +49,10 @@
 - **Failed:** nothing.
 - **Next action:** wire emitters at safe call-sites — `brain_context_loaded` in `dog-brain-context.ts`, follow-up/supplement lifecycle emits, and `question_trace`/`emergency_suppressed` in the symptom-chat route (trace-only, with route tests). Then Phase 5 migration-ledger verify (Supabase MCP available).
 - **Stop/defer:** route trace wiring deliberately separated into its own route-test-gated commit. No stop conditions hit.
+
+### Iteration 4 — 2026-06-23 (Phase 5 migration-ledger runbook — STOP hit, handled)
+- **Changed:** added `docs/runbooks/supabase-migration-ledger-repair.md` (exact read-only verify SQL, Node `pg` one-off for this host, CLI `migration repair` path, evidence checklist).
+- **Verified:** Supabase MCP `list_projects` returns ONLY `oripsqtuvyvhdhcnkgbz` ("JobsearchAi") — NOT PawVital `aammaxdsjhezmbvdkqee`. Confirmed target migration `supabase/migrations/20260622000000_dog_brain_supplement_trials.sql` is idempotent (IF NOT EXISTS table/columns/indexes, DROP/CREATE policy) with RLS + 3 indexes + owner-only policy in its DDL.
+- **Failed / STOP:** live DB verification — **STOP CONDITION "Supabase project is wrong"**. Did NOT run anything against the wrong project. Followed Phase 5's prescribed fallback (write runbook). psql/CLI absent + stale env passwords (per memory) compound this; needs operator with current PawVital creds.
+- **Next action:** Phase 4 — `.github/workflows/dog-brain-live-e2e.yml` (manual, env-gated) + e2e script skeleton; then Phase 3b route trace wiring with route tests; then Phase 8 clinical knowledge layer.
+- **Stop/defer:** Phase 5 live verify deferred to operator (documented, not faked). No full-loop stop — other phases proceed.
