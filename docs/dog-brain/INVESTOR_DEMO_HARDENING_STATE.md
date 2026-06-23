@@ -21,7 +21,7 @@
 | 4 | Live E2E workflow (`.github/workflows/dog-brain-live-e2e.yml`) | **HARNESS DONE (iter 5)** | Manual workflow_dispatch + env-gated `tests/e2e/dog-brain-live-e2e.ts` (seed→memory-question poll→emergency-suppression→cleanup→0-residual). Typechecks+lints; NOT yet executed live (needs operator secrets). |
 | 5 | Supabase migration-ledger verify (`dog_brain_supplement_trials`) | **RUNBOOK (iter 4)** | STOP: MCP bound to wrong project (JobsearchAi, not PawVital). Runbook written with exact verify + repair commands + Node pg one-off. Live verify deferred to operator with correct creds. |
 | 6 | UX polish across tabs | **NOT STARTED** | — |
-| 8 | Clinical knowledge layer (`src/lib/clinical/knowledge-base.ts`, root-cause, supplement-guardrails) | **NOT BUILT** | Files absent. |
+| 8 | Clinical knowledge layer (`src/lib/clinical/knowledge-base.ts`, root-cause, supplement-guardrails) | **MODULES DONE (iter 7)** | 4 pure deterministic modules + 17 tests (all 8 domains, evidence-gated hypotheses, hard-fail supplement guardrails). NON-AUTHORITATIVE floor — does not touch triage urgency. Route/UI wiring is follow-up. |
 
 ### Do-not-touch (clinical determinism)
 - `src/lib/triage-engine.ts`, `src/lib/clinical-matrix.ts`, `src/lib/symptom-memory.ts`
@@ -70,3 +70,10 @@
 - **Failed:** nothing.
 - **Next action:** Phase 8 — curated deterministic `src/lib/clinical/{knowledge-base,clinical-patterns,root-cause-hypotheses,supplement-guardrails}.ts` (evidence-linked, ask-vet framing, NO dosage/brand/price/diagnosis) + tests. Then the higher-risk symptom-chat route trace/context emits with route tests. Then Phase 6 UX polish.
 - **Stop/defer:** `brain_context_loaded` + route trace emits intentionally deferred (giant route, multiple emergency early-returns → needs careful flag threading + route tests). No stop conditions hit.
+
+### Iteration 7 — 2026-06-23 (Phase 8 clinical knowledge layer)
+- **Changed:** added 4 pure deterministic modules — `src/lib/clinical/knowledge-base.ts` (8 domains: gi/urinary/skin_ear/respiratory/mobility/senior/medication_supplement/toxin_exposure, each with trigger_signal_keys, owner_observable_questions, NON-AUTHORITATIVE urgency_floor, missing_information, vet_handoff_points, disallowed_outputs, source_refs); `clinical-patterns.ts` (cluster matcher with min-signal thresholds); `root-cause-hypotheses.ts` (non-diagnostic, evidence-gated — no evidence → no hypothesis); `supplement-guardrails.ts` (SupplementSuggestion contract + hard-fail validator for dosage/brand/price/disease-claim/no-evidence + evidence-gated builder). Added `tests/clinical-knowledge-layer.test.ts` (17 tests).
+- **Verified:** typecheck clean; eslint clean; **106 suites / 2382 tests pass** (+17, no regression). Safety proven: a string-scan test asserts NO dosage/price/brand/disease-claim across all curated content; hypotheses never expose disease names and require dog-specific evidence; the builder's own output always passes the guardrails; the owner-facing floor is explicitly separate from triage urgency (`triage-engine`/`clinical-matrix` untouched).
+- **Failed:** nothing.
+- **Next action:** wire the knowledge layer + the deferred analytics trace/context emits into the symptom-chat route (with route tests, minding emergency early-returns); then Phase 6 UX polish; then /thermo-review + open the PR.
+- **Stop/defer:** route/UI wiring of the knowledge layer is a follow-up (modules are tested infra, like the analytics module). No stop conditions hit.
