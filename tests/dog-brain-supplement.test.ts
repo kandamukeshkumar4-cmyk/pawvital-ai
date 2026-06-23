@@ -25,6 +25,12 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
     // Indexes support pet_id and follow_up_due_at loop queries.
     expect(sql).toMatch(/pet_id/);
     expect(sql).toMatch(/follow_up_due_at/);
+    // Terminal answered status + its timestamp column.
+    expect(sql).toMatch(/outcome_recorded/);
+    expect(sql).toMatch(/outcome_at timestamptz/);
+    // Partial unique index backstops idempotent trial starts (open trials only).
+    expect(sql).toMatch(/UNIQUE INDEX[\s\S]*uniq_supplement_trial_open/);
+    expect(sql).toMatch(/WHERE status IN \('ask_vet','active'\)/);
   });
 
   it("route and handler load (exercises shipped code, no dosage in guard)", async () => {
@@ -43,6 +49,13 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
       requireAuthenticatedApiUser: async () => ({ user: { id: 'user-1' } }),
     }));
     const capturedInserts: Array<Record<string, unknown>> = [];
+    // Chainable stub: every filter returns itself; maybeSingle resolves `result`.
+    const chain = (result: { data: unknown; error: unknown }) => {
+      const c: Record<string, unknown> = {};
+      for (const m of ['select', 'eq', 'in', 'is', 'order', 'limit']) c[m] = () => c;
+      c.maybeSingle = async () => result;
+      return c;
+    };
     jest.doMock('@/lib/api/pet-guard', () => ({
       requireOwnedPet: async () => ({
         user: { id: 'user-1' },
@@ -51,6 +64,8 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
           from: (table: string) => {
             if (table === 'dog_brain_supplement_trials') {
               return {
+                // Idempotency pre-query: no existing open trial.
+                select: () => chain({ data: null, error: null }),
                 insert: (row: Record<string, unknown>) => {
                   capturedInserts.push(row);
                   return { select: () => ({ maybeSingle: async () => ({ data: { id: 'trial-1', ...row }, error: null }) }) };
@@ -75,14 +90,155 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
       }),
     });
     const res = await mod.POST(req);
-    // Should reach the insert (201 or data present)
-    expect(res.status === 201 || res.status === undefined).toBe(true); // some impls return json directly in tests
-    expect(capturedInserts.length).toBeGreaterThan(0);
+    expect(res.status).toBe(201);
+    expect(capturedInserts.length).toBe(1);
     expect(capturedInserts[0].supplement_name).toBe('Fish Oil');
     expect(capturedInserts[0].status).toBe('ask_vet');
     expect(capturedInserts[0].follow_up_due_at).toBeTruthy(); // required by plan
+    // Lifecycle: an ask_vet trial has NOT started — started_at must stay null.
+    expect(capturedInserts[0].started_at).toBeNull();
     // no dosage in the row we persisted
     expect(JSON.stringify(capturedInserts[0]).toLowerCase()).not.toMatch(/dose|dosage|mg|ml/);
+  });
+
+  it("duplicate POST returns existing open trial (deduped) and never inserts twice", async () => {
+    jest.resetModules();
+    const capturedInserts: Array<Record<string, unknown>> = [];
+    const existingTrial = {
+      id: 'trial-existing',
+      supplement_name: 'Fish Oil',
+      reason_signal_key: 'energy_behavior_change',
+      status: 'ask_vet',
+    };
+    const chain = (result: { data: unknown; error: unknown }) => {
+      const c: Record<string, unknown> = {};
+      for (const m of ['select', 'eq', 'in', 'is', 'order', 'limit']) c[m] = () => c;
+      c.maybeSingle = async () => result;
+      return c;
+    };
+    jest.doMock('@/lib/api/pet-guard', () => ({
+      requireOwnedPet: async () => ({
+        user: { id: 'user-1' },
+        petId: '11111111-1111-4111-8111-111111111111',
+        supabase: {
+          from: (table: string) => {
+            if (table === 'dog_brain_supplement_trials') {
+              return {
+                // Pre-query finds an existing OPEN trial → route must dedupe.
+                select: () => chain({ data: existingTrial, error: null }),
+                insert: (row: Record<string, unknown>) => {
+                  capturedInserts.push(row);
+                  return { select: () => ({ maybeSingle: async () => ({ data: { id: 'should-not-happen', ...row }, error: null }) }) };
+                },
+              };
+            }
+            return {};
+          },
+        },
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        pet_id: '11111111-1111-4111-8111-111111111111',
+        supplement_name: 'Fish Oil',
+        reason_signal_key: 'energy_behavior_change',
+      }),
+    });
+    const res = await mod.POST(req);
+    const json = await res.json();
+    expect(json.deduped).toBe(true);
+    expect(json.data.id).toBe('trial-existing');
+    expect(capturedInserts.length).toBe(0); // never inserted a duplicate
+  });
+
+  it("23505 race on insert is handled as dedupe, not a 500", async () => {
+    jest.resetModules();
+    const raced = { id: 'trial-raced', supplement_name: 'Fish Oil', status: 'ask_vet' };
+    // Pre-query returns null (no existing); the dedupe re-fetch after 23505 returns the raced row.
+    let selectCalls = 0;
+    const chain = (result: { data: unknown; error: unknown }) => {
+      const c: Record<string, unknown> = {};
+      for (const m of ['select', 'eq', 'in', 'is', 'order', 'limit']) c[m] = () => c;
+      c.maybeSingle = async () => result;
+      return c;
+    };
+    jest.doMock('@/lib/api/pet-guard', () => ({
+      requireOwnedPet: async () => ({
+        user: { id: 'user-1' },
+        petId: '11111111-1111-4111-8111-111111111111',
+        supabase: {
+          from: (table: string) => {
+            if (table === 'dog_brain_supplement_trials') {
+              return {
+                select: () => {
+                  selectCalls += 1;
+                  return chain(selectCalls === 1 ? { data: null, error: null } : { data: raced, error: null });
+                },
+                insert: () => ({ select: () => ({ maybeSingle: async () => ({ data: null, error: { code: '23505' } }) }) }),
+              };
+            }
+            return {};
+          },
+        },
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        pet_id: '11111111-1111-4111-8111-111111111111',
+        supplement_name: 'Fish Oil',
+      }),
+    });
+    const res = await mod.POST(req);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.deduped).toBe(true);
+    expect(json.data.id).toBe('trial-raced');
+  });
+
+  it("missing table on pre-query is reported honestly (503 TABLE_MISSING), not faked dedupe", async () => {
+    jest.resetModules();
+    const chain = (result: { data: unknown; error: unknown }) => {
+      const c: Record<string, unknown> = {};
+      for (const m of ['select', 'eq', 'in', 'is', 'order', 'limit']) c[m] = () => c;
+      c.maybeSingle = async () => result;
+      return c;
+    };
+    jest.doMock('@/lib/api/pet-guard', () => ({
+      requireOwnedPet: async () => ({
+        user: { id: 'user-1' },
+        petId: '11111111-1111-4111-8111-111111111111',
+        supabase: {
+          from: (table: string) => {
+            if (table === 'dog_brain_supplement_trials') {
+              return { select: () => chain({ data: null, error: { code: '42P01', message: 'relation does not exist' } }) };
+            }
+            return {};
+          },
+        },
+      }),
+    }));
+
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        pet_id: '11111111-1111-4111-8111-111111111111',
+        supplement_name: 'Fish Oil',
+      }),
+    });
+    const res = await mod.POST(req);
+    const json = await res.json();
+    expect(res.status).toBe(503);
+    expect(json.code).toBe('TABLE_MISSING');
   });
 
   it("PATCH outcome persists better/same/worse/side_effect (no dosage)", async () => {
@@ -118,7 +274,26 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
     await mod.PATCH(req);
     expect(capturedUpdates.length).toBeGreaterThan(0);
     expect(capturedUpdates[0].outcome).toBe('worse');
+    // Recording an outcome is terminal — it must NOT leave the trial looking due.
+    expect(capturedUpdates[0].status).toBe('outcome_recorded');
+    expect(capturedUpdates[0].status).not.toBe('follow_up_due');
+    expect(capturedUpdates[0].outcome_at).toBeTruthy();
     expect(JSON.stringify(capturedUpdates[0]).toLowerCase()).not.toMatch(/dose|dosage|mg|ml/);
+  });
+
+  it("PATCH rejects a malformed (non-UUID) id with 400, not a 500", async () => {
+    jest.resetModules();
+    jest.doMock('@/lib/api-auth', () => ({
+      requireAuthenticatedApiUser: async () => ({ user: { id: 'user-1' }, supabase: {} }),
+    }));
+    const mod = await import('@/app/api/dog-brain/supplements/route');
+    const req = new Request('http://localhost/api/dog-brain/supplements?id=not-a-uuid', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ outcome: 'better' }),
+    });
+    const res = await mod.PATCH(req);
+    expect(res.status).toBe(400);
   });
 
   it("unowned pet denied for supplement trial", async () => {
