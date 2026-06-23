@@ -1305,25 +1305,25 @@ export default function SymptomCheckerPage() {
                   </div>
                 )}
                 <div
-                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  className="flex items-center gap-1.5"
                   style={{
-                    border: "1px solid #e6e5e0",
-                    borderRadius: "13px",
-                    padding: "8px 8px 8px 4px",
+                    border: "1px solid #e7e7e2",
+                    borderRadius: "18px",
+                    padding: "7px 7px 7px 9px",
                     background: "#fff",
+                    boxShadow:
+                      "0 1px 2px rgba(16,24,40,0.04), 0 4px 14px rgba(16,24,40,0.05)",
                   }}
                 >
-                  <div className="flex flex-shrink-0">
+                  <div className="flex flex-shrink-0 items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex cursor-pointer flex-col items-center gap-[3px] px-3 py-1.5"
-                      style={{ color: "#6f7069" }}
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[#8a8a8f] transition-all duration-150 hover:bg-[#eef6f1] hover:text-[#0b7a4d] active:scale-90"
                       title="Attach photo"
                       aria-label="Attach photo"
                     >
-                      <ImagePlus className="h-[18px] w-[18px]" />
-                      <span className="text-[11px]">Attach photo</span>
+                      <ImagePlus className="h-[19px] w-[19px]" strokeWidth={1.8} />
                     </button>
                     <SpeechInputButton
                       disabled={loading || awaitingAsyncResult}
@@ -1342,35 +1342,40 @@ export default function SymptomCheckerPage() {
                     ref={fileInputRef}
                     className="hidden"
                   />
-                  <div className="min-w-0 flex-1">
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={
-                        messages.length === 0
-                          ? `Describe what's going on with ${displayPetName} or attach a photo...`
-                          : "Type your answer here..."
-                      }
-                      rows={1}
-                      className="min-w-0 w-full resize-none border-0 bg-transparent px-2 py-1 text-[14px] focus:outline-none focus:ring-0"
-                      style={{ color: "#1d1d1b" }}
-                    />
-                    <p className="px-2 text-[11.5px]" style={{ color: "#b6b7af" }}>
-                      Press Enter to send
-                    </p>
-                  </div>
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      messages.length === 0
+                        ? `Describe what's going on with ${displayPetName}…`
+                        : "Type your answer…"
+                    }
+                    rows={1}
+                    className="min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-[7px] text-[14.5px] leading-snug placeholder:text-[#aeaeb2] focus:outline-none focus:ring-0"
+                    style={{ color: "#1d1d1b" }}
+                  />
                   <button
                     onClick={() => sendMessage()}
                     disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
-                    className="flex h-[42px] w-full flex-shrink-0 items-center justify-center text-white transition-opacity disabled:opacity-50 sm:w-[42px]"
-                    style={{ background: "linear-gradient(180deg,#17a06d,#0a7048)", borderRadius: "11px" }}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white transition-all duration-150 hover:brightness-[1.06] active:scale-95 disabled:opacity-40"
+                    style={{
+                      background: "linear-gradient(180deg,#17a06d,#0a7048)",
+                      boxShadow: "0 1px 2px rgba(10,112,72,0.28), 0 2px 8px rgba(10,112,72,0.18)",
+                    }}
                     aria-label="Send message"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                 </div>
+                <p
+                  className="mt-2 px-1 text-center text-[11.5px]"
+                  style={{ color: "#b6b7af" }}
+                >
+                  Press <kbd className="font-medium text-[#8a8a8f]">Enter</kbd> to send ·{" "}
+                  <kbd className="font-medium text-[#8a8a8f]">Shift + Enter</kbd> for a new line
+                </p>
 
                 {/* Generate Report button */}
                 {readyForReport && !generatingReport && (
