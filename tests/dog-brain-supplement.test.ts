@@ -14,6 +14,17 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
     expect(sql).toMatch(/user_id uuid/);
     expect(sql).toMatch(/RLS|ROW LEVEL SECURITY|POLICY/);
     expect(sql).toMatch(/follow_up_due_at/);
+    // FK target must match the existing project auth/profile pattern used by
+    // dog_brain_followups and vet_record_summaries (20260619 migration).
+    expect(sql).toMatch(/REFERENCES public\.profiles\(id\)/);
+    expect(sql).not.toMatch(/REFERENCES auth\.users/);
+    // RLS enabled + owner-scoped policy + grants.
+    expect(sql).toMatch(/ENABLE ROW LEVEL SECURITY/);
+    expect(sql).toMatch(/auth\.uid\(\) = user_id/);
+    expect(sql).toMatch(/GRANT SELECT, INSERT, UPDATE, DELETE/);
+    // Indexes support pet_id and follow_up_due_at loop queries.
+    expect(sql).toMatch(/pet_id/);
+    expect(sql).toMatch(/follow_up_due_at/);
   });
 
   it("route and handler load (exercises shipped code, no dosage in guard)", async () => {
