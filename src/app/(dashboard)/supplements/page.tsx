@@ -29,6 +29,9 @@ interface SupplementItem {
   brand: string;
   price: string;
   priority: "essential" | "recommended" | "optional";
+  notes?: string;
+  /** ISO date string (row.created_at) for tracked supplements. */
+  added?: string;
 }
 
 interface SupplementPlan {
@@ -46,6 +49,17 @@ function classifySupplements(supplements: SupplementItem[]) {
     ask_vet: supplements.filter((s) => s.priority === "recommended"),
     followups: supplements.filter((s) => s.priority === "optional"),
   };
+}
+
+/** Format an ISO date (row.created_at) like "May 10, 2026"; "" if unparseable. */
+function formatAddedDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 /** Reminder toggle — track 46x26 radius 13 (on #15a06a / off #cfd0c8), knob 20px white. */
@@ -90,6 +104,7 @@ function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
   const statusBg = isActive ? "#e9f6ef" : "#fdf3e3";
   const statusFg = isActive ? "#0b7a4d" : "#b5740a";
   const evidence = [item.dosage, item.frequency].filter(Boolean).join(" · ");
+  const addedDate = item.added ? formatAddedDate(item.added) : "";
 
   return (
     <div
@@ -173,48 +188,69 @@ function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
         </div>
       </div>
 
-      {/* Detail grid (gap 30, margin-top 18) — real fields only */}
+      {/* Detail grid (gap 30, margin-top 18) — Purpose · Notes · Added */}
       <div style={{ display: "flex", gap: 30, marginTop: 18 }}>
+        {/* Purpose */}
         {item.purpose && (
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Purpose</div>
             <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.purpose}</div>
           </div>
         )}
-        {evidence && (
-          <div style={{ flex: 1.2 }}>
-            <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Evidence</div>
-            <div style={{ fontSize: 14.5, color: "#c87d3e", fontWeight: 600 }}>{evidence}</div>
-            <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>View related</div>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#0b7a4d",
-                marginTop: 2,
-              }}
-            >
-              <Link href="/health-log" style={{ cursor: "pointer" }}>
-                Daily logs
-              </Link>
-              <span style={{ color: "#cbccc3" }}>·</span>
-              <Link href="/analytics" style={{ cursor: "pointer" }}>
-                Health signals
-              </Link>
-            </div>
-          </div>
-        )}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Suggested by PawVital</div>
-          {item.brand ? (
-            <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.brand}</div>
+        {/* Notes (tracked) or Evidence (AI-plan fallback) + View related */}
+        <div style={{ flex: 1.2 }}>
+          {item.notes ? (
+            <>
+              <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Notes</div>
+              <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.notes}</div>
+            </>
           ) : (
-            <div style={{ fontSize: 14.5, color: "#9a9b93" }}>Personalized for your dog</div>
+            evidence && (
+              <>
+                <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Evidence</div>
+                <div style={{ fontSize: 14.5, color: "#c87d3e", fontWeight: 600 }}>{evidence}</div>
+              </>
+            )
           )}
-          {item.price && (
-            <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>Est. {item.price}</div>
+          <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>View related</div>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#0b7a4d",
+              marginTop: 2,
+            }}
+          >
+            <Link href="/health-log" style={{ cursor: "pointer" }}>
+              Daily logs
+            </Link>
+            <span style={{ color: "#cbccc3" }}>·</span>
+            <Link href="/analytics" style={{ cursor: "pointer" }}>
+              Health signals
+            </Link>
+          </div>
+        </div>
+        {/* Added (tracked) or Suggested by PawVital (AI-plan fallback) */}
+        <div style={{ flex: 1 }}>
+          {addedDate ? (
+            <>
+              <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Added</div>
+              <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{addedDate}</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, color: "#9a9b93", marginBottom: 5 }}>Suggested by PawVital</div>
+              {item.brand ? (
+                <div style={{ fontSize: 14.5, color: "#3a3b34" }}>{item.brand}</div>
+              ) : (
+                <div style={{ fontSize: 14.5, color: "#9a9b93" }}>Personalized for your dog</div>
+              )}
+              {item.price && (
+                <div style={{ fontSize: 13, color: "#9a9b93", marginTop: 8 }}>Est. {item.price}</div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -578,6 +614,9 @@ export default function SupplementsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("active");
+  // Real tracked supplements (DB `supplements` table). When non-empty these are
+  // shown instead of the AI-generated plan; empty falls back to the plan.
+  const [tracked, setTracked] = useState<SupplementItem[]>([]);
 
   const fetchPlan = useCallback(async () => {
     if (!activePet) return;
@@ -631,6 +670,47 @@ export default function SupplementsPage() {
     else setPlan(null);
   }, [activePet, fetchPlan]);
 
+  // Load the pet's real tracked supplements. Read-only; failures degrade to the
+  // AI-plan fallback (empty `tracked`).
+  useEffect(() => {
+    const petId = activePet?.id;
+    if (!petId) {
+      setTracked([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/supplements?pet_id=${petId}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((j: { data?: any[] }) => {
+        if (cancelled) return;
+        const rows = Array.isArray(j?.data) ? j.data : [];
+        setTracked(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rows.map((row: any) => ({
+            name: row.name || "Supplement",
+            purpose: row.purpose || "",
+            dosage: row.dosage || "",
+            frequency: row.frequency || "",
+            brand: row.brand || "",
+            price: "",
+            priority: (row.priority || "optional") as
+              | "essential"
+              | "recommended"
+              | "optional",
+            notes: row.notes ?? "",
+            added: row.created_at,
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTracked([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePet?.id]);
+
   if (quarantinedSurface) {
     return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
   }
@@ -665,7 +745,8 @@ export default function SupplementsPage() {
     );
   }
 
-  const supplements = plan?.supplements ?? [];
+  // Prefer the pet's real tracked supplements; fall back to the AI plan.
+  const supplements = tracked.length > 0 ? tracked : plan?.supplements ?? [];
   const classified = classifySupplements(supplements);
   const tabItems = classified[activeTab];
 
