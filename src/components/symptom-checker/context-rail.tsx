@@ -172,7 +172,7 @@ export function SymptomContextStrip({ petId, petName }: { petId: string | null; 
           ))}
         </div>
         <a
-          href="/dog-brain"
+          href="/analytics"
           target="_top"
           className="flex-shrink-0 cursor-pointer text-[13.5px] font-semibold"
           style={{
