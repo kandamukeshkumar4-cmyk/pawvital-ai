@@ -15,7 +15,7 @@ Clear separation of where things stand:
 | Area | State |
 |---|---|
 | Backend code (supplement trials + brain loop) | **Landed** on branch, locally verified |
-| DB migration `20260622_dog_brain_supplement_trials.sql` | **Pending** — not applied to active DB; unprovable from this environment (see Supabase state) |
+| DB migration `20260622_dog_brain_supplement_trials.sql` | **APPLIED + verified** on active project `aammaxdsjhezmbvdkqee` (2026-06-23, user-approved) — see Supabase state |
 | Supplements UI wiring | **API-only / not wired** — see "UI status" |
 | Client render side effects | **None** — `FollowupsPanel` does GET + PATCH only |
 | Build | **Unproven** — fails on G: for environment reasons (junction/readlink); needs a clean Linux/CI build |
@@ -51,13 +51,19 @@ Files changed this session:
 - The page renders AI supplement plans that include dosage / frequency / brand / price. Wiring a Dog Brain "ask-vet trial start" off those cards would mix AI treatment data into the Dog Brain-owned flow, which the safety rule forbids — a correct wiring needs a separately-framed surface.
 - Decision for this closeout: leave the Supplements UI **API-only** and record it honestly here rather than force a browser-observable redesign into a backend-durability closeout (prior restyles of this page were rejected). The supplement trial API is fully usable by a future, cleanly-separated UI surface.
 
-## Supabase state — UNPROVEN from this environment
+## Supabase state — APPLIED + VERIFIED (2026-06-23, user-approved)
 
-- Intended active project ref (per prior memory and `20260619` migration comment): `aammaxdsjhezmbvdkqee`.
-- This worktree has **no `.env.local`** (only `.env.example`), so the active ref cannot be read here.
-- The connected Supabase MCP exposes **only an unrelated project** (`JobsearchAi`, ref `oripsqtuvyvhdhcnkgbz`) — it has no access to the PawVital project, so `to_regclass('public.dog_brain_supplement_trials')` and `schema_migrations` cannot be checked against the live DB from here.
-- **BLOCKER:** `dog_brain_supplement_trials` existence in the active DB is unproven. The migration is file-only and is **NOT** applied.
-- **Exact migration needed:** `supabase/migrations/20260622_dog_brain_supplement_trials.sql`, applied to project `aammaxdsjhezmbvdkqee`, then re-verify RLS / policy / grants / indexes. **Do not apply without explicit user approval.**
+- Active project ref: `aammaxdsjhezmbvdkqee` (confirmed from `G:\MY Website\pawvital-ai\.env.local` `NEXT_PUBLIC_SUPABASE_URL` host `db.aammaxdsjhezmbvdkqee.supabase.co`).
+- The connected Supabase MCP only exposes an unrelated `JobsearchAi` project, and neither `psql` nor the `supabase` CLI is installed; the migration was applied via a one-off Node `pg` client (driver bundled in `pawvital-ai`) using the worktree `DATABASE_URL` (direct `:5432`), inside a single transaction. The script printed no secrets and was deleted after use.
+- Pre-check: `profiles` + `pets` present; `dog_brain_supplement_trials` was **absent** (never applied) → confirmed the prior blocker was real.
+- Post-apply verification against the live DB:
+  - columns: `id, user_id, pet_id, supplement_name, reason_signal_key, status, started_at, follow_up_due_at, outcome, outcome_at, notes, created_at, updated_at`
+  - `relrowsecurity = true` (RLS on)
+  - policy: `dog_brain_supplement_trials_owner_all`
+  - indexes: `dog_brain_supplement_trials_pkey`, `idx_dog_brain_supplement_trials_due`, `idx_dog_brain_supplement_trials_user_pet`, `uniq_supplement_trial_open`
+  - status CHECK includes `outcome_recorded`; outcome CHECK = better/same/worse/side_effect
+  - grants to `authenticated`: SELECT, INSERT, UPDATE, DELETE (+ default REFERENCES/TRIGGER/TRUNCATE)
+- The supplement trial API path is now backed by a real, RLS-protected, indexed table.
 
 ## PR gate state — corrected root cause
 
