@@ -17,6 +17,8 @@ import {
   Scale,
   Info,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   Camera,
   Check,
@@ -322,6 +324,9 @@ export default function HealthLogPage() {
   const [obsTab, setObsTab] = useState<
     "gi" | "urinary" | "mobility" | "skin_ear" | "breathing" | "seizure" | "medication"
   >("gi");
+  // Presentation-only: progressive disclosure — keep the check-in calm by default,
+  // hiding secondary controls + adaptive packs behind one "Add more detail" expander.
+  const [showMoreDetail, setShowMoreDetail] = useState(false);
 
   const [form, setForm] = useState<HealthLogInput>({
     pet_id: activePet?.id ?? pets[0]?.id ?? "",
@@ -717,6 +722,7 @@ export default function HealthLogPage() {
             )}
 
             <div className="flex flex-col">
+              {/* Essentials — always visible: Appetite, Energy, Stool, Water */}
               <EmojiMetricRow
                 label="Appetite"
                 icon={<Utensils size={18} aria-hidden />}
@@ -730,15 +736,15 @@ export default function HealthLogPage() {
                 onChange={(v) => setField("appetite", v)}
               />
               <EmojiMetricRow
-                label="Water"
-                icon={<Droplets size={18} aria-hidden />}
-                value={form.water}
+                label="Energy"
+                icon={<Zap size={18} aria-hidden />}
+                value={form.energy}
                 options={[
-                  { value: "less" as const, face: "sad" },
+                  { value: "low" as const, face: "sad" },
                   { value: "normal" as const, face: "smile" },
-                  { value: "more" as const, face: "meh" },
+                  { value: "high" as const, face: "meh" },
                 ]}
-                onChange={(v) => setField("water", v)}
+                onChange={(v) => setField("energy", v)}
               />
               <EmojiMetricRow
                 label="Stool"
@@ -753,226 +759,248 @@ export default function HealthLogPage() {
                 onChange={(v) => setField("stool", v)}
               />
               <EmojiMetricRow
-                label="Urination"
-                icon={<Waves size={18} aria-hidden />}
-                value={form.urination}
+                label="Water"
+                icon={<Droplets size={18} aria-hidden />}
+                value={form.water}
                 options={[
-                  { value: "straining" as const, face: "sad" },
-                  { value: "less" as const, face: "meh" },
+                  { value: "less" as const, face: "sad" },
                   { value: "normal" as const, face: "smile" },
                   { value: "more" as const, face: "meh" },
                 ]}
-                onChange={(v) => setField("urination", v)}
+                onChange={(v) => setField("water", v)}
               />
 
-              {/* Vomiting — stepper (real vomiting_count) */}
-              <div
-                className="flex items-center gap-3"
-                style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
-              >
-                <span className="flex shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
-                  <Activity size={18} />
-                </span>
-                <span className="flex-1 text-[14.5px] font-medium text-[#1d1d1b]">Vomiting</span>
-                <div className="flex shrink-0 items-center justify-end gap-2.5" style={{ width: 165 }}>
-                  <button
-                    type="button"
-                    onClick={() => setField("vomiting_count", Math.max(0, form.vomiting_count - 1))}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border text-lg font-medium text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0]"
-                    style={{ borderColor: "#e6e5e0" }}
+              {/* Secondary controls — hidden until "Add more detail" */}
+              {showMoreDetail && (
+                <>
+                  <EmojiMetricRow
+                    label="Urination"
+                    icon={<Waves size={18} aria-hidden />}
+                    value={form.urination}
+                    options={[
+                      { value: "straining" as const, face: "sad" },
+                      { value: "less" as const, face: "meh" },
+                      { value: "normal" as const, face: "smile" },
+                      { value: "more" as const, face: "meh" },
+                    ]}
+                    onChange={(v) => setField("urination", v)}
+                  />
+
+                  {/* Vomiting — stepper (real vomiting_count) */}
+                  <div
+                    className="flex items-center gap-3"
+                    style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
                   >
-                    −
-                  </button>
-                  <span className="w-6 text-center text-sm font-semibold text-[#1d1d1b]">{form.vomiting_count}</span>
-                  <button
-                    type="button"
-                    onClick={() => setField("vomiting_count", Math.min(100, form.vomiting_count + 1))}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border text-lg font-medium text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0]"
-                    style={{ borderColor: "#e6e5e0" }}
+                    <span className="flex shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
+                      <Activity size={18} />
+                    </span>
+                    <span className="flex-1 text-[14.5px] font-medium text-[#1d1d1b]">Vomiting</span>
+                    <div className="flex shrink-0 items-center justify-end gap-2.5" style={{ width: 165 }}>
+                      <button
+                        type="button"
+                        onClick={() => setField("vomiting_count", Math.max(0, form.vomiting_count - 1))}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border text-lg font-medium text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0]"
+                        style={{ borderColor: "#e6e5e0" }}
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold text-[#1d1d1b]">{form.vomiting_count}</span>
+                      <button
+                        type="button"
+                        onClick={() => setField("vomiting_count", Math.min(100, form.vomiting_count + 1))}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border text-lg font-medium text-[#1d1d1b] transition-colors hover:bg-[#f5f4f0]"
+                        style={{ borderColor: "#e6e5e0" }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <EmojiMetricRow
+                    label="Breathing"
+                    icon={<Wind size={18} aria-hidden />}
+                    tone="watch"
+                    value={breathingValue}
+                    options={[
+                      { value: "labored" as const, face: "sad" },
+                      { value: "coughing" as const, face: "meh" },
+                      { value: "normal" as const, face: "smile" },
+                    ]}
+                    onChange={(v) =>
+                      setSignals({
+                        breathing: {
+                          ...(form.context_signals?.breathing ?? {}),
+                          coughing: v === "coughing",
+                          labored: v === "labored",
+                        },
+                      })
+                    }
+                  />
+                  <EmojiMetricRow
+                    label="Mobility"
+                    icon={<Footprints size={18} aria-hidden />}
+                    tone="watch"
+                    value={mobilityValue}
+                    options={[
+                      { value: "limping" as const, face: "sad" },
+                      { value: "stiff" as const, face: "meh" },
+                      { value: "normal" as const, face: "smile" },
+                    ]}
+                    onChange={(v) =>
+                      setSignals({
+                        mobility: {
+                          ...(form.context_signals?.mobility ?? {}),
+                          limping: v === "limping",
+                          reluctance_to_move: v === "stiff",
+                        },
+                      })
+                    }
+                  />
+
+                  {/* Weight — input pill + sparkline + delta */}
+                  <div
+                    className="flex items-center gap-3"
+                    style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
                   >
-                    +
-                  </button>
-                </div>
-              </div>
+                    <span className="flex shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
+                      <Scale size={18} />
+                    </span>
+                    <span className="flex-1 text-[14.5px] font-medium text-[#1d1d1b]">Weight</span>
+                    <div className="flex items-center gap-[9px]">
+                      <span
+                        className="flex items-center"
+                        style={{ background: "#f5f4f0", border: "1px solid #e6e5e0", borderRadius: 8, padding: "5px 9px" }}
+                      >
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          placeholder="—"
+                          aria-label="Weight (kg, optional)"
+                          value={form.weight_kg != null ? String(form.weight_kg) : ""}
+                          onChange={(e) =>
+                            setField("weight_kg", e.target.value ? Number(e.target.value) : null)
+                          }
+                          style={{
+                            width: 38,
+                            border: "none",
+                            background: "none",
+                            fontSize: 14,
+                            fontWeight: 600,
+                            outline: "none",
+                            color: "#1d1d1b",
+                          }}
+                        />
+                        <span style={{ fontSize: 12.5, color: "#9a9b93", marginLeft: 3 }}>kg</span>
+                      </span>
+                      {readout.changes.some((c) => c.field === "weight") ? (
+                        <>
+                          <svg width="30" height="16" viewBox="0 0 30 16" fill="none" aria-hidden>
+                            <polyline
+                              points="2,9 9,6 16,10 23,7 28,8"
+                              stroke="#15a06a"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          {(() => {
+                            const wc = readout.changes.find((c) => c.field === "weight");
+                            return wc ? (
+                              <span
+                                className="flex items-center gap-[2px] font-semibold"
+                                style={{ fontSize: 13, color: "#e0890a" }}
+                              >
+                                {wc.text.replace(/^Weight\s+/i, "").replace(/\s+since last log$/i, "")}
+                              </span>
+                            ) : null;
+                          })()}
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
 
-              <EmojiMetricRow
-                label="Energy"
-                icon={<Zap size={18} aria-hidden />}
-                value={form.energy}
-                options={[
-                  { value: "low" as const, face: "sad" },
-                  { value: "normal" as const, face: "smile" },
-                  { value: "high" as const, face: "meh" },
-                ]}
-                onChange={(v) => setField("energy", v)}
-              />
-              <EmojiMetricRow
-                label="Breathing"
-                icon={<Wind size={18} aria-hidden />}
-                tone="watch"
-                value={breathingValue}
-                options={[
-                  { value: "labored" as const, face: "sad" },
-                  { value: "coughing" as const, face: "meh" },
-                  { value: "normal" as const, face: "smile" },
-                ]}
-                onChange={(v) =>
-                  setSignals({
-                    breathing: {
-                      ...(form.context_signals?.breathing ?? {}),
-                      coughing: v === "coughing",
-                      labored: v === "labored",
-                    },
-                  })
-                }
-              />
-              <EmojiMetricRow
-                label="Mobility"
-                icon={<Footprints size={18} aria-hidden />}
-                tone="watch"
-                value={mobilityValue}
-                options={[
-                  { value: "limping" as const, face: "sad" },
-                  { value: "stiff" as const, face: "meh" },
-                  { value: "normal" as const, face: "smile" },
-                ]}
-                onChange={(v) =>
-                  setSignals({
-                    mobility: {
-                      ...(form.context_signals?.mobility ?? {}),
-                      limping: v === "limping",
-                      reluctance_to_move: v === "stiff",
-                    },
-                  })
-                }
-              />
-
-              {/* Weight — input pill + sparkline + delta */}
-              <div
-                className="flex items-center gap-3"
-                style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
-              >
-                <span className="flex shrink-0" style={{ color: "#7a7b73" }} aria-hidden>
-                  <Scale size={18} />
-                </span>
-                <span className="flex-1 text-[14.5px] font-medium text-[#1d1d1b]">Weight</span>
-                <div className="flex items-center gap-[9px]">
-                  <span
-                    className="flex items-center"
-                    style={{ background: "#f5f4f0", border: "1px solid #e6e5e0", borderRadius: 8, padding: "5px 9px" }}
+                  {/* Meds — real meds_given checkbox */}
+                  <label
+                    className="flex cursor-pointer items-center gap-[11px] text-[14.5px] text-[#1d1d1b]"
+                    style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
                   >
                     <input
-                      type="number"
-                      min={0}
-                      step="0.1"
-                      placeholder="—"
-                      aria-label="Weight (kg, optional)"
-                      value={form.weight_kg != null ? String(form.weight_kg) : ""}
-                      onChange={(e) =>
-                        setField("weight_kg", e.target.value ? Number(e.target.value) : null)
-                      }
-                      style={{
-                        width: 38,
-                        border: "none",
-                        background: "none",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        outline: "none",
-                        color: "#1d1d1b",
-                      }}
+                      type="checkbox"
+                      className="sr-only"
+                      checked={form.meds_given}
+                      onChange={(e) => setField("meds_given", e.target.checked)}
                     />
-                    <span style={{ fontSize: 12.5, color: "#9a9b93", marginLeft: 3 }}>kg</span>
-                  </span>
-                  {readout.changes.some((c) => c.field === "weight") ? (
-                    <>
-                      <svg width="30" height="16" viewBox="0 0 30 16" fill="none" aria-hidden>
-                        <polyline
-                          points="2,9 9,6 16,10 23,7 28,8"
-                          stroke="#15a06a"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {(() => {
-                        const wc = readout.changes.find((c) => c.field === "weight");
-                        return wc ? (
-                          <span
-                            className="flex items-center gap-[2px] font-semibold"
-                            style={{ fontSize: 13, color: "#e0890a" }}
-                          >
-                            {wc.text.replace(/^Weight\s+/i, "").replace(/\s+since last log$/i, "")}
-                          </span>
-                        ) : null;
-                      })()}
-                    </>
-                  ) : null}
-                </div>
-              </div>
+                    <CheckBox checked={form.meds_given} />
+                    <span className="flex items-center gap-2">
+                      <span style={{ color: "#7a7b73" }} aria-hidden>
+                        <Pill size={18} />
+                      </span>
+                      Gave medication / fluids today
+                    </span>
+                  </label>
+                </>
+              )}
+            </div>
 
-              {/* Meds — real meds_given checkbox */}
-              <label
-                className="flex cursor-pointer items-center gap-[11px] text-[14.5px] text-[#1d1d1b]"
-                style={{ padding: "7px 0", borderTop: "1px solid #f3f2ed" }}
+            {/* Specific observations block — secondary detail */}
+            {showMoreDetail && (
+              <div
+                style={{ border: "1px solid #efeee9", borderRadius: 12, padding: "13px 14px", marginTop: 16 }}
               >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={form.meds_given}
-                  onChange={(e) => setField("meds_given", e.target.checked)}
-                />
-                <CheckBox checked={form.meds_given} />
-                <span className="flex items-center gap-2">
-                  <span style={{ color: "#7a7b73" }} aria-hidden>
-                    <Pill size={18} />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>Specific observations</span>{" "}
+                    <span style={{ fontSize: 12.5, color: "#9a9b93" }}>(optional)</span>
+                  </div>
+                </div>
+                <div className="text-[#9a9b93]" style={{ fontSize: 12.5, marginTop: 3 }}>
+                  Add anything important you noticed today.
+                </div>
+                <div className="relative" style={{ marginTop: 11 }}>
+                  <textarea
+                    value={form.notes ?? ""}
+                    maxLength={300}
+                    onChange={(e) => setField("notes", e.target.value)}
+                    placeholder="e.g., picky at dinner, more sleepy this morning..."
+                    style={{
+                      width: "100%",
+                      height: 74,
+                      resize: "none",
+                      border: "1px solid #e6e5e0",
+                      borderRadius: 9,
+                      padding: 10,
+                      fontSize: 13.5,
+                      color: "#1d1d1b",
+                      outline: "none",
+                    }}
+                  />
+                  <span
+                    className="absolute"
+                    style={{ right: 10, bottom: 9, fontSize: 11.5, color: "#b6b7af" }}
+                  >
+                    {notesCount}/300
                   </span>
-                  Gave medication / fluids today
-                </span>
-              </label>
-            </div>
-
-            {/* Specific observations block */}
-            <div
-              style={{ border: "1px solid #efeee9", borderRadius: 12, padding: "13px 14px", marginTop: 16 }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>Specific observations</span>{" "}
-                  <span style={{ fontSize: 12.5, color: "#9a9b93" }}>(optional)</span>
                 </div>
               </div>
-              <div className="text-[#9a9b93]" style={{ fontSize: 12.5, marginTop: 3 }}>
-                Add anything important you noticed today.
-              </div>
-              <div className="relative" style={{ marginTop: 11 }}>
-                <textarea
-                  value={form.notes ?? ""}
-                  maxLength={300}
-                  onChange={(e) => setField("notes", e.target.value)}
-                  placeholder="e.g., picky at dinner, more sleepy this morning..."
-                  style={{
-                    width: "100%",
-                    height: 74,
-                    resize: "none",
-                    border: "1px solid #e6e5e0",
-                    borderRadius: 9,
-                    padding: 10,
-                    fontSize: 13.5,
-                    color: "#1d1d1b",
-                    outline: "none",
-                  }}
-                />
-                <span
-                  className="absolute"
-                  style={{ right: 10, bottom: 9, fontSize: 11.5, color: "#b6b7af" }}
-                >
-                  {notesCount}/300
-                </span>
-              </div>
-            </div>
+            )}
+
+            {/* Calm progressive-disclosure toggle */}
+            <button
+              type="button"
+              onClick={() => setShowMoreDetail((v) => !v)}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[#dcefe2] bg-[#f7fbf9] px-4 py-2.5 text-[13.5px] font-semibold text-[#0b7a4d] transition-colors hover:bg-[#eef6f1]"
+            >
+              {showMoreDetail ? (
+                <>Hide extra detail <ChevronUp className="h-4 w-4" aria-hidden /></>
+              ) : (
+                <>Add more detail <ChevronDown className="h-4 w-4" aria-hidden /></>
+              )}
+            </button>
           </div>
 
-          {/* COLUMN 2 — Adaptive packs */}
+          {/* COLUMN 2 — Adaptive packs (hidden until "Add more detail") */}
+          {showMoreDetail && (
           <div className="flex-1" style={WHITE_CARD}>
             <div className="flex items-center justify-between">
               <div style={{ fontSize: 17, fontWeight: 700 }}>Adaptive packs</div>
@@ -1314,6 +1342,7 @@ export default function HealthLogPage() {
               </button>
             ) : null}
           </div>
+          )}
 
           {/* COLUMN 3 — What the Brain will remember */}
           <div className="w-full lg:w-[300px] lg:flex-none" style={WHITE_CARD}>
