@@ -297,9 +297,10 @@ function PackCheckboxes({
 
 const WHITE_CARD: React.CSSProperties = {
   background: "#fff",
-  border: "1px solid #ebeae5",
-  borderRadius: 16,
-  padding: "20px 22px",
+  border: "1px solid #ececea",
+  borderRadius: 20,
+  padding: "22px 24px",
+  boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.045)",
 };
 
 const SAVE_GRADIENT = "linear-gradient(180deg,#17a06d,#0a7048)";

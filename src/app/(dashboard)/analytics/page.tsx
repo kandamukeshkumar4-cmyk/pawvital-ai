@@ -330,7 +330,12 @@ function HealthSignalsContent() {
           {/* OVERALL STATUS STRIP */}
           <section
             className="flex items-stretch overflow-hidden"
-            style={{ background: "#fdfcf9", border: "1px solid #ecebe5", borderRadius: 14 }}
+            style={{
+              background: "#fff",
+              border: "1px solid #ececea",
+              borderRadius: 20,
+              boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.045)",
+            }}
             aria-label="Health memory summary"
           >
             <div
