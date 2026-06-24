@@ -11,22 +11,25 @@
 - Full symptom-chat route harness passed: 414 tests.
 - `npm ci`, `npm audit`, `npm run build`, and full `npx jest` passed in the NTFS worktree.
 - Bumblebee v0.1.1 final project scan found 0 findings.
+- Pushed branch `codex/launch-backend-stabilization` to GitHub and opened draft PR 728: https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/728.
+- Confirmed PR 728 has no review comments, no reviews, no review threads, and no GitHub checks reported.
 
 ## In progress
 
-- Full verifier is not complete. Code-fixable launch tooling is implemented; production env/migration/deploy steps are blocked on human-only credentials and portal state.
+- Full verifier is not complete. Code-fixable launch tooling is implemented and published in draft PR 728; production env/migration/deploy steps are blocked on human-only credentials and portal state.
 
 ## Blocked (human-only)
 
 - Production Vercel Supabase env must point REST/Auth and `DATABASE_URL` at project `aammaxdsjhezmbvdkqee`.
 - `NVIDIA_API_KEY` must be present in production Vercel env.
 - Supabase DB credentials are required before applying launch migrations; do not commit secrets.
+- PR 728 is still draft and `mergeStateStatus` is `BLOCKED`; do not merge until the required review/merge gate is satisfied.
 - Production deploy can only run from a clean checkout at `origin/master`; this feature branch is not deployable by guard design.
 
 ## Next
 
-- Run broader verifier gates after dependency/runtime setup is available in the NTFS worktree.
-- After env blockers are fixed, run `npm run launch-preflight`, `npm run launch:migrations -- --dry-run`, apply migrations only against Supabase project `aammaxdsjhezmbvdkqee`, and run production smoke from clean `origin/master`.
+- Await required reviewer verdict for PR 728; if clean, convert the PR out of draft only when merge gates allow it.
+- After env blockers are fixed, run `npm run launch-preflight`, `npm run launch:migrations -- --dry-run`, apply migrations only against Supabase project `aammaxdsjhezmbvdkqee`, merge/mirror from `master`, deploy from clean `origin/master`, and run production smoke.
 
 ## Verifier results (last run)
 
@@ -37,9 +40,10 @@
 - `npm audit` -> found 0 vulnerabilities.
 - `npm run build` -> passed. Remaining output was existing Next/Turbopack warning about broad NFT tracing from `next.config.ts` import trace and existing `metadataBase` warnings.
 - `npx jest --runInBand` after rebase -> 298 suites passed, 1 skipped; 4029 tests passed, 4 skipped.
-- `npm run launch-preflight` -> blocked only on human-only production env after local Vercel project link was restored: missing Supabase URL, `DATABASE_URL`, anon key, service-role key, and `NVIDIA_API_KEY`.
+- `npm run launch-preflight` on 2026-06-24 after PR creation -> blocked only on human-only production env after local Vercel project link was restored: missing Supabase URL, `DATABASE_URL`, anon key, service-role key, and `NVIDIA_API_KEY`; demo/API/migration checks passed.
 - `npm run launch:migrations -- --dry-run` -> blocked cleanly on missing `DATABASE_URL` with the exact human action.
 - Wrong-project `DATABASE_URL` migration smoke -> blocked before DB connection with the approved-project error.
 - Positive preflight with production-shaped non-secret env -> `launch-preflight: OK`.
 - Launch preflight now includes `[PASS] demo-mode.gates` and `[PASS] api-regression.launch-critical`.
 - Bumblebee final scan after rebase -> exit 0, 0 findings; records `C:\Users\Windows 11\.codex\tmp\bumblebee\pv-launch-backend-rebased-20260624-112408\records.ndjson`.
+- PR 728 current GitHub state -> draft, open, `mergeable=MERGEABLE`, `mergeStateStatus=BLOCKED`, no status checks, no comments/reviews/review threads.
