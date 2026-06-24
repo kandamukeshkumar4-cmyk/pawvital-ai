@@ -171,6 +171,7 @@ import {
   emergencyTraceSuppressedEvent,
   shouldEmitEmergencyTraceSuppressed,
 } from "@/lib/dog-brain/analytics";
+import { composeWhyAsking } from "@/lib/symptom-chat/why-asking-explanation";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -2515,6 +2516,14 @@ export async function POST(request: Request) {
         : null;
     // The surfaced question is Brain-memory-driven this turn (telemetry flag only).
     brainTraceWasEmitted = brainQuestionTrace !== null;
+    // Display-only: enrich the "Why I'm asking" banner into a contextual, chained
+    // explanation. Never changes question selection or any clinical control state.
+    const whyAsking = composeWhyAsking({
+      questionId: effectiveQuestionId,
+      baseReason: askingBecause,
+      session,
+      brainEvidenceSummary: brainQuestionTrace?.evidence_summary ?? null,
+    });
     const promptVetRecord = shouldPromptVetRecordUpload(
       session,
       effectiveQuestionId
@@ -2549,7 +2558,7 @@ export async function POST(request: Request) {
       forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
       turnDeadline,
       turnDepth,
-      askingBecause,
+      askingBecause: whyAsking,
       brainQuestionTrace,
       promptVetRecord,
     });
