@@ -168,6 +168,8 @@ import {
   recordDogBrainEvent,
   brainContextLoadedEvent,
   brainQuestionTraceEmittedEvent,
+  emergencyTraceSuppressedEvent,
+  shouldEmitEmergencyTraceSuppressed,
 } from "@/lib/dog-brain/analytics";
 import {
   isAsyncWorkerReplay,
@@ -810,6 +812,10 @@ export async function POST(request: Request) {
   // in the deferred telemetry block below. Never affect the response/payload.
   let brainContextPrioritySymptomCount: number | null = null;
   let brainTraceWasEmitted = false;
+  // Telemetry-only: set true immediately before each emergency-response return so
+  // the deferred block can record that an emergency pre-empted the Brain trace.
+  // Never read by clinical logic; never alters the emergency response.
+  let emergencyResponseReturned = false;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
   let liveUpdateChain: Promise<void> = Promise.resolve();
   const queueTriageLiveUpdate = (
@@ -1427,6 +1433,7 @@ export async function POST(request: Request) {
                 };
               }
 
+              emergencyResponseReturned = true;
               return NextResponse.json(
                 buildVisionGuardrailEmergencyResponse({
                   petName: pet.name,
@@ -1607,6 +1614,7 @@ export async function POST(request: Request) {
         reason: "deterministic_emergency_first_turn",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json(
         buildRedFlagEmergencyResponse({
           petName: pet.name,
@@ -2363,6 +2371,7 @@ export async function POST(request: Request) {
         reason: "red_flags_detected",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json(
         buildRedFlagEmergencyResponse({
           petName: pet.name,
@@ -2402,6 +2411,7 @@ export async function POST(request: Request) {
         reason: "clinical_escalation",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json({
         type: "emergency" as const,
         message: buildDeterministicEmergencyMessage(
@@ -2582,6 +2592,16 @@ export async function POST(request: Request) {
         await recordDogBrainEvent(
           brainQuestionTraceEmittedEvent({ source: "brain_memory", evidenceCount: 1 }),
         );
+      }
+      // An emergency response pre-empted a Brain trace this turn (counts only).
+      if (
+        shouldEmitEmergencyTraceSuppressed({
+          emergencyResponseReturned,
+          brainTraceWasEmitted,
+          brainContextPrioritySymptomCount,
+        })
+      ) {
+        await recordDogBrainEvent(emergencyTraceSuppressedEvent());
       }
     });
     await queueTriageLiveUpdate(

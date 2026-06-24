@@ -118,6 +118,27 @@ export function emergencyTraceSuppressedEvent(): TriageTelemetryEvent {
   };
 }
 
+/**
+ * Decide whether a turn should emit the emergency-suppressed trace event. Pure.
+ *
+ * True ONLY when an emergency response was actually returned this turn AND Dog
+ * Brain memory with priority symptoms was loaded — i.e. a Brain question trace
+ * COULD have been surfaced but the emergency pre-empted it — AND no Brain trace
+ * was emitted. The route owns the inputs and calls this in its deferred
+ * telemetry block; this never affects the emergency response itself.
+ */
+export function shouldEmitEmergencyTraceSuppressed(input: {
+  emergencyResponseReturned: boolean;
+  brainTraceWasEmitted: boolean;
+  brainContextPrioritySymptomCount: number | null;
+}): boolean {
+  return (
+    input.emergencyResponseReturned &&
+    !input.brainTraceWasEmitted &&
+    (input.brainContextPrioritySymptomCount ?? 0) > 0
+  );
+}
+
 export function dogBrainFollowupCreatedEvent(): TriageTelemetryEvent {
   return { name: DOG_BRAIN_EVENTS.followupCreated };
 }

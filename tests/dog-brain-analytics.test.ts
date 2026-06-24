@@ -15,6 +15,7 @@ import {
   brainContextLoadedEvent,
   brainQuestionTraceEmittedEvent,
   emergencyTraceSuppressedEvent,
+  shouldEmitEmergencyTraceSuppressed,
   dogBrainFollowupCreatedEvent,
   dogBrainFollowupOutcomeRecordedEvent,
   supplementTrialStartedEvent,
@@ -150,6 +151,39 @@ describe("Dog Brain analytics builders — enums & counts", () => {
     events.forEach(assertPrivacySafe);
     expect(events[1].properties).toEqual({ outcomeBucket: "worse" });
     expect(events[4].properties).toEqual({ outcomeBucket: "side_effect" });
+  });
+});
+
+describe("shouldEmitEmergencyTraceSuppressed — gate for the suppressed event", () => {
+  const base = {
+    emergencyResponseReturned: true,
+    brainTraceWasEmitted: false,
+    brainContextPrioritySymptomCount: 2,
+  };
+
+  it("emits only when an emergency returned with Brain priority memory and no trace", () => {
+    expect(shouldEmitEmergencyTraceSuppressed(base)).toBe(true);
+  });
+
+  it("stays silent when no emergency response was returned this turn", () => {
+    expect(
+      shouldEmitEmergencyTraceSuppressed({ ...base, emergencyResponseReturned: false }),
+    ).toBe(false);
+  });
+
+  it("stays silent when there was no Brain memory to suppress", () => {
+    expect(
+      shouldEmitEmergencyTraceSuppressed({ ...base, brainContextPrioritySymptomCount: null }),
+    ).toBe(false);
+    expect(
+      shouldEmitEmergencyTraceSuppressed({ ...base, brainContextPrioritySymptomCount: 0 }),
+    ).toBe(false);
+  });
+
+  it("stays silent when a Brain trace was actually emitted (not suppressed)", () => {
+    expect(
+      shouldEmitEmergencyTraceSuppressed({ ...base, brainTraceWasEmitted: true }),
+    ).toBe(false);
   });
 });
 
