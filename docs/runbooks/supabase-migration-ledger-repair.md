@@ -128,13 +128,35 @@ supabase db push        # applies pending migrations to the linked remote
 - If repair reports a permission error → **stop**, needs project-admin.
 - Never run any of the above against `oripsqtuvyvhdhcnkgbz` (JobsearchAi).
 
-## Evidence (fill with real output — do not leave blank to claim "done")
+## Evidence — VERIFIED 2026-06-24 (no repair needed)
 
-- [ ] Verified on project: `aammaxdsjhezmbvdkqee` at `<UTC timestamp>`
-- [ ] Table + columns: `<paste>`
-- [ ] Indexes (3 expected): `<paste>`
-- [ ] RLS enabled = `true`; policy `dog_brain_supplement_trials_owner_all` present: `<paste>`
-- [ ] `schema_migrations` contains `20260622000000`: `<yes/no>` → repaired? `<yes/no>`
+Verified directly via `pg` against project `aammaxdsjhezmbvdkqee` (owner supplied
+the current DB password — the Vercel `DATABASE_URL` password was stale and has
+since been refreshed; see note below).
+
+- [x] **Verified on project:** `aammaxdsjhezmbvdkqee` at 2026-06-24 UTC
+- [x] **Table + columns:** `dog_brain_supplement_trials` exists with all **13**
+  columns — `id, user_id, pet_id, supplement_name, reason_signal_key, status,
+  started_at, follow_up_due_at, outcome, outcome_at, notes, created_at,
+  updated_at` (matches the migration DDL exactly).
+- [x] **Indexes (3 + PK):** `dog_brain_supplement_trials_pkey`,
+  `uniq_supplement_trial_open` (partial unique),
+  `idx_dog_brain_supplement_trials_user_pet`,
+  `idx_dog_brain_supplement_trials_due`.
+- [x] **RLS enabled =** `true` (`pg_class.relrowsecurity`); policy
+  `dog_brain_supplement_trials_owner_all` present (`cmd=ALL`, both `USING` and
+  `WITH CHECK`).
+- [x] **CHECK constraints:** `status ∈ {ask_vet, active, stopped, follow_up_due,
+  outcome_recorded}`; `outcome ∈ {better, same, worse, side_effect}`.
+- [x] **`schema_migrations` contains** `20260622000000` **and** `20260622000100`:
+  **yes** → **repair NOT needed** (both versions already in the ledger).
+
+> **Vercel `DATABASE_URL` note:** the production env var's password was stale
+> (auth failed) but harmless — it is only read by the inactive
+> `azure-postgres-provider.ts` adapter and by `supabase-env-guard.ts`, which
+> compares the project host/ref (still correct), not the password. The app
+> accesses Postgres via the Supabase JS client with current keys. The env var was
+> refreshed to the correct connection string on 2026-06-24 (applies on next deploy).
 
 ### Prior evidence (workspace memory, not re-verified this iteration)
 Memory `pawvital-pr702-supplement-loop` records the migration was **APPLIED +
