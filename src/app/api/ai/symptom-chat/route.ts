@@ -13,7 +13,6 @@ import {
   getMissingQuestions,
   getQuestionText,
   getExtractionSchema,
-  hasMinimumDiagnosticInfo,
   isReadyForDiagnosis,
   buildDiagnosisContext,
   type TriageSession,
@@ -172,6 +171,7 @@ import {
   shouldEmitEmergencyTraceSuppressed,
 } from "@/lib/dog-brain/analytics";
 import { composeWhyAsking } from "@/lib/symptom-chat/why-asking-explanation";
+import { isReportReadinessBlocked } from "@/lib/symptom-chat/report-readiness";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -1047,7 +1047,12 @@ export async function POST(request: Request) {
         });
       }
 
-      if (!hasMinimumDiagnosticInfo(session)) {
+      // 409 ONLY when neither readiness gate is satisfied. Honoring
+      // isReadyForDiagnosis (inside isReportReadinessBlocked) prevents the
+      // contradiction where the chat promised "preparing your report" but the
+      // generate path then refused. Emergency-grade criticals are still blocked
+      // above by findReportBlockingCriticalInfo. See report-readiness.ts.
+      if (isReportReadinessBlocked(session)) {
         statusCode = 409;
         return NextResponse.json(
           {
