@@ -7542,6 +7542,29 @@ describe("VET-900 comprehensive scenarios", () => {
     });
   });
 
+  describe("launch-critical API contract", () => {
+    it("returns 401 for unauthenticated symptom-chat calls before model work", async () => {
+      mockRequireAuthenticatedApiUser.mockResolvedValueOnce({
+        response: Response.json(
+          { error: "Sign in to use the AI symptom checker" },
+          { status: 401 }
+        ),
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is vomiting")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(payload.error).toContain("Sign in");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+      expect(mockVerifyWithGLM).not.toHaveBeenCalled();
+    });
+  });
+
   describe("subscription usage limits", () => {
     it("blocks a new free-tier conversation at the monthly threshold with an upgrade prompt", async () => {
       mockCreateServerSupabaseClient.mockResolvedValueOnce(

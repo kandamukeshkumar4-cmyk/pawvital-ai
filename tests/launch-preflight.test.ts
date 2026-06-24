@@ -9,6 +9,8 @@ function makeRepoFixture() {
   const root = mkdtempSync(path.join(tmpdir(), "pawvital-preflight-"));
   mkdirSync(path.join(root, ".vercel"), { recursive: true });
   mkdirSync(path.join(root, "supabase", "migrations"), { recursive: true });
+  mkdirSync(path.join(root, "src", "lib"), { recursive: true });
+  mkdirSync(path.join(root, "tests"), { recursive: true });
   writeFileSync(
     path.join(root, ".vercel", "project.json"),
     JSON.stringify({
@@ -23,6 +25,57 @@ function makeRepoFixture() {
   writeFileSync(
     path.join(root, "supabase-product-intelligence-schema.sql"),
     "CREATE TABLE IF NOT EXISTS public.daily_readiness_snapshots(id uuid);\n",
+  );
+  writeFileSync(
+    path.join(root, "src", "lib", "admin-auth.ts"),
+    [
+      'process.env.NODE_ENV === "production"',
+      'process.env.VERCEL_ENV === "production"',
+      'error.message === "DEMO_MODE"',
+      "return null;",
+      "demo-admin@pawvital.local",
+    ].join("\n"),
+  );
+  writeFileSync(
+    path.join(root, "src", "lib", "api-auth.ts"),
+    [
+      'error.message === "DEMO_MODE"',
+      'code: "DEMO_MODE"',
+      "{ status: 503 }",
+      "Authentication required",
+    ].join("\n"),
+  );
+  writeFileSync(
+    path.join(root, "tests", "admin-auth.test.ts"),
+    [
+      "fails closed on demo-mode auth fallback in production",
+      "retains the demo admin fallback outside production",
+    ].join("\n"),
+  );
+  writeFileSync(
+    path.join(root, "tests", "ai-endpoint-auth.test.ts"),
+    [
+      "blocks unauthenticated costly access",
+      "expect(mockGenerateNvidiaJson).not.toHaveBeenCalled()",
+    ].join("\n"),
+  );
+  writeFileSync(
+    path.join(root, "tests", "symptom-chat.route.test.ts"),
+    [
+      "returns 401 for unauthenticated symptom-chat calls before model work",
+      "expect(mockExtractWithQwen).not.toHaveBeenCalled()",
+      "expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled()",
+      "expect(mockVerifyWithGLM).not.toHaveBeenCalled()",
+    ].join("\n"),
+  );
+  writeFileSync(
+    path.join(root, "tests", "dog-brain-signals-route.test.ts"),
+    [
+      "rejects invalid pet ids before auth or database work",
+      "returns 401 for unauthenticated valid pet requests before database work",
+      "expect(mockRequireAuthenticatedApiUser).not.toHaveBeenCalled()",
+      "expect(mockRequireAuthenticatedApiUser).toHaveBeenCalledTimes(1)",
+    ].join("\n"),
   );
   return root;
 }
@@ -96,6 +149,63 @@ describe("launch preflight", () => {
         "supabase.database-url",
         "supabase.anon-key",
         "supabase.service-role-key",
+      ]),
+    );
+  });
+
+  it("passes when production demo-mode gates are present", () => {
+    const checks = core.checkDemoModeGates(makeRepoFixture());
+
+    expect(checks).toEqual([
+      expect.objectContaining({
+        id: "demo-mode.gates",
+        status: "pass",
+      }),
+    ]);
+  });
+
+  it("blocks when admin demo-mode production fallback coverage is missing", () => {
+    const root = makeRepoFixture();
+    writeFileSync(
+      path.join(root, "tests", "admin-auth.test.ts"),
+      "retains the demo admin fallback outside production\n",
+    );
+
+    const checks = core.checkDemoModeGates(root);
+
+    expect(checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "demo.admin-auth-tests",
+          status: "blocker",
+        }),
+      ]),
+    );
+  });
+
+  it("passes when launch-critical API regression tests are present", () => {
+    const checks = core.checkLaunchCriticalApiRegressionTests(makeRepoFixture());
+
+    expect(checks).toEqual([
+      expect.objectContaining({
+        id: "api-regression.launch-critical",
+        status: "pass",
+      }),
+    ]);
+  });
+
+  it("blocks when symptom-chat auth regression coverage is missing", () => {
+    const root = makeRepoFixture();
+    writeFileSync(path.join(root, "tests", "symptom-chat.route.test.ts"), "");
+
+    const checks = core.checkLaunchCriticalApiRegressionTests(root);
+
+    expect(checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "api-regression.symptom-chat-auth",
+          status: "blocker",
+        }),
       ]),
     );
   });

@@ -214,6 +214,164 @@ function checkVercelProject(repoRoot) {
   return [pass("vercel.project-link", ".vercel/project.json points at the expected production project.")];
 }
 
+function includesAll(text, snippets) {
+  return snippets.every((snippet) => text.includes(snippet));
+}
+
+function checkDemoModeGates(repoRoot) {
+  const adminAuthPath = join(repoRoot, "src", "lib", "admin-auth.ts");
+  const apiAuthPath = join(repoRoot, "src", "lib", "api-auth.ts");
+  const adminAuthTestPath = join(repoRoot, "tests", "admin-auth.test.ts");
+  const aiEndpointAuthTestPath = join(repoRoot, "tests", "ai-endpoint-auth.test.ts");
+  const checks = [];
+
+  const adminAuthText = existsSync(adminAuthPath) ? readFileSync(adminAuthPath, "utf8") : "";
+  const apiAuthText = existsSync(apiAuthPath) ? readFileSync(apiAuthPath, "utf8") : "";
+  const adminAuthTestText = existsSync(adminAuthTestPath) ? readFileSync(adminAuthTestPath, "utf8") : "";
+  const aiEndpointAuthTestText = existsSync(aiEndpointAuthTestPath)
+    ? readFileSync(aiEndpointAuthTestPath, "utf8")
+    : "";
+
+  if (
+    !includesAll(adminAuthText, [
+      "process.env.NODE_ENV === \"production\"",
+      "process.env.VERCEL_ENV === \"production\"",
+      "error.message === \"DEMO_MODE\"",
+      "return null;",
+      "demo-admin@pawvital.local",
+    ])
+  ) {
+    checks.push(
+      block(
+        "demo.admin-auth",
+        "Admin demo fallback is not proven to fail closed in production.",
+        "Restore the production admin-auth DEMO_MODE guard before launch.",
+        { path: adminAuthPath },
+      ),
+    );
+  }
+
+  if (
+    !includesAll(apiAuthText, [
+      "error.message === \"DEMO_MODE\"",
+      "code: \"DEMO_MODE\"",
+      "{ status: 503 }",
+      "Authentication required",
+    ])
+  ) {
+    checks.push(
+      block(
+        "demo.api-auth",
+        "Backend API demo-mode auth envelope is missing or no longer fails closed.",
+        "Restore the shared API auth DEMO_MODE 503 and unauthenticated 401 contract before launch.",
+        { path: apiAuthPath },
+      ),
+    );
+  }
+
+  if (
+    !includesAll(adminAuthTestText, [
+      "fails closed on demo-mode auth fallback in production",
+      "retains the demo admin fallback outside production",
+    ])
+  ) {
+    checks.push(
+      block(
+        "demo.admin-auth-tests",
+        "Admin demo-mode production fallback regression coverage is missing.",
+        "Restore tests proving production blocks DEMO_MODE admin fallback and non-production keeps local demo admin.",
+        { path: adminAuthTestPath },
+      ),
+    );
+  }
+
+  if (
+    !includesAll(aiEndpointAuthTestText, [
+      "blocks unauthenticated costly access",
+      "expect(mockGenerateNvidiaJson).not.toHaveBeenCalled()",
+    ])
+  ) {
+    checks.push(
+      block(
+        "demo.ai-costly-route-tests",
+        "Costly AI route auth regression coverage is missing.",
+        "Restore tests proving unauthenticated AI routes do not call NVIDIA generation.",
+        { path: aiEndpointAuthTestPath },
+      ),
+    );
+  }
+
+  if (checks.length > 0) return checks;
+
+  return [
+    pass(
+      "demo-mode.gates",
+      "Production demo-mode gates and costly-route auth regression coverage are present.",
+      {
+        files: [adminAuthPath, apiAuthPath, adminAuthTestPath, aiEndpointAuthTestPath],
+      },
+    ),
+  ];
+}
+
+function checkLaunchCriticalApiRegressionTests(repoRoot) {
+  const symptomChatTestPath = join(repoRoot, "tests", "symptom-chat.route.test.ts");
+  const dogBrainSignalsTestPath = join(repoRoot, "tests", "dog-brain-signals-route.test.ts");
+  const symptomChatTestText = existsSync(symptomChatTestPath)
+    ? readFileSync(symptomChatTestPath, "utf8")
+    : "";
+  const dogBrainSignalsTestText = existsSync(dogBrainSignalsTestPath)
+    ? readFileSync(dogBrainSignalsTestPath, "utf8")
+    : "";
+  const checks = [];
+
+  if (
+    !includesAll(symptomChatTestText, [
+      "returns 401 for unauthenticated symptom-chat calls before model work",
+      "expect(mockExtractWithQwen).not.toHaveBeenCalled()",
+      "expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled()",
+      "expect(mockVerifyWithGLM).not.toHaveBeenCalled()",
+    ])
+  ) {
+    checks.push(
+      block(
+        "api-regression.symptom-chat-auth",
+        "Launch-critical symptom-chat unauthenticated 401/no-model-work regression coverage is missing.",
+        "Restore the symptom-chat launch smoke regression before launch.",
+        { path: symptomChatTestPath },
+      ),
+    );
+  }
+
+  if (
+    !includesAll(dogBrainSignalsTestText, [
+      "rejects invalid pet ids before auth or database work",
+      "returns 401 for unauthenticated valid pet requests before database work",
+      "expect(mockRequireAuthenticatedApiUser).not.toHaveBeenCalled()",
+      "expect(mockRequireAuthenticatedApiUser).toHaveBeenCalledTimes(1)",
+    ])
+  ) {
+    checks.push(
+      block(
+        "api-regression.dog-brain-signals",
+        "Launch-critical dog-brain signals 400/401 regression coverage is missing.",
+        "Restore dog-brain signals launch smoke regression coverage before launch.",
+        { path: dogBrainSignalsTestPath },
+      ),
+    );
+  }
+
+  if (checks.length > 0) return checks;
+
+  return [
+    pass(
+      "api-regression.launch-critical",
+      "Launch-critical API regression tests are present for symptom-chat and dog-brain signals.",
+      { files: [symptomChatTestPath, dogBrainSignalsTestPath] },
+    ),
+  ];
+}
+
 function sha256(text) {
   return createHash("sha256").update(text).digest("hex");
 }
@@ -261,6 +419,8 @@ function buildLaunchPreflight(env = process.env, options = {}) {
     ...checkSupabaseLaunchEnv(env, expectedRef),
     ...checkNvidiaLaunchEnv(env),
     ...checkVercelProject(repoRoot),
+    ...checkDemoModeGates(repoRoot),
+    ...checkLaunchCriticalApiRegressionTests(repoRoot),
   ];
   const migrations = buildMigrationPlan(repoRoot);
   if (migrations.length === 0) {
@@ -325,6 +485,8 @@ module.exports = {
   buildLaunchPreflight,
   buildMigrationPlan,
   checkNvidiaLaunchEnv,
+  checkDemoModeGates,
+  checkLaunchCriticalApiRegressionTests,
   checkSupabaseLaunchEnv,
   checkVercelProject,
   collectMigrationFiles,
