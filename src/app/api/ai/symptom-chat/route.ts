@@ -168,6 +168,8 @@ import {
   recordDogBrainEvent,
   brainContextLoadedEvent,
   brainQuestionTraceEmittedEvent,
+  emergencyTraceSuppressedEvent,
+  shouldEmitEmergencyTraceSuppressed,
 } from "@/lib/dog-brain/analytics";
 import {
   isAsyncWorkerReplay,
@@ -811,6 +813,10 @@ export async function POST(request: Request) {
   let brainContextPrioritySymptomCount: number | null = null;
   let brainEvidenceItemCount = 0;
   let brainTraceWasEmitted = false;
+  // Telemetry-only: set true immediately before each emergency-response return so
+  // the deferred block can record that an emergency pre-empted the Brain trace.
+  // Never read by clinical logic; never alters the emergency response.
+  let emergencyResponseReturned = false;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
   let liveUpdateChain: Promise<void> = Promise.resolve();
   const queueTriageLiveUpdate = (
@@ -1431,6 +1437,7 @@ export async function POST(request: Request) {
                 };
               }
 
+              emergencyResponseReturned = true;
               return NextResponse.json(
                 buildVisionGuardrailEmergencyResponse({
                   petName: pet.name,
@@ -1611,6 +1618,7 @@ export async function POST(request: Request) {
         reason: "deterministic_emergency_first_turn",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json(
         buildRedFlagEmergencyResponse({
           petName: pet.name,
@@ -2367,6 +2375,7 @@ export async function POST(request: Request) {
         reason: "red_flags_detected",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json(
         buildRedFlagEmergencyResponse({
           petName: pet.name,
@@ -2406,6 +2415,7 @@ export async function POST(request: Request) {
         reason: "clinical_escalation",
       });
 
+      emergencyResponseReturned = true;
       return NextResponse.json({
         type: "emergency" as const,
         message: buildDeterministicEmergencyMessage(
@@ -2590,16 +2600,18 @@ export async function POST(request: Request) {
           }),
         );
       }
-      // TODO(dog-brain analytics): emergency_question_trace_suppressed is not
-      // emitted here. Detecting an emergency turn from this deferred block would
-      // require threading a flag through the 3+ emergency EARLY-RETURNS
-      // (deterministic-first-turn, ER_NOW, route-override) — clinical-route churn
-      // we deliberately avoid. The behavior is already correct (the emergency
-      // path returns no brain_question_trace); only the telemetry event is
-      // missing. Narrow future patch: set a single `let emergencyTurn = false`
-      // flag at each emergency-response construction site, then emit
-      // emergencyTraceSuppressedEvent() here when it is true — gated by the
-      // symptom-chat route suite.
+      // An emergency response pre-empted a Brain trace this turn (counts only).
+      // Implements the previously-deferred emergency_question_trace_suppressed
+      // emit: a telemetry-only flag is set at each emergency-response return.
+      if (
+        shouldEmitEmergencyTraceSuppressed({
+          emergencyResponseReturned,
+          brainTraceWasEmitted,
+          brainContextPrioritySymptomCount,
+        })
+      ) {
+        await recordDogBrainEvent(emergencyTraceSuppressedEvent());
+      }
     });
     await queueTriageLiveUpdate(
       liveUpdateTarget,
