@@ -11,6 +11,7 @@ import {
   brainPrioritySymptomEvidence,
   type BrainSymptomEvidence,
 } from "@/lib/dog-brain/question-priority";
+import { rankDetectedSignals } from "@/lib/dog-brain/memory-ranking";
 
 export interface DogBrainContextData {
   /** Supportive narrative for the report prompt; null = skip context. */
@@ -321,9 +322,25 @@ export async function loadDogBrainContextWithSignals({
     // uses the 14 newest internally) — no extra query, no duplicate ownership
     // check. Replaces the former standalone loadDogBrainPrioritySymptoms loader.
     const detectedSignals = detectDogBrainSignals(logs).signals;
-    const prioritySymptoms = brainPrioritySymptomsFromSignals(detectedSignals);
+    // Rank the supportive tiebreak list so the most useful long-memory facts
+    // (recent / repeated / follow-up- or supplement-linked) surface ahead of
+    // isolated old notes. Severity stays dominant inside both consumers, so this
+    // only breaks ties WITHIN a severity tier — it never touches urgency. Reuses
+    // the follow-ups and supplement trials already fetched above (no extra query).
+    const rankedSignals = rankDetectedSignals(detectedSignals, {
+      followups: (followups ?? []).map((f) => ({
+        prompt: f.prompt,
+        status: f.status,
+      })),
+      supplementTrials: trials.map((t) => ({
+        outcome: t.outcome,
+        status: t.status,
+      })),
+      vetRecordText: vetRecords.map((v) => v.context_text ?? "").join(" "),
+    });
+    const prioritySymptoms = brainPrioritySymptomsFromSignals(rankedSignals);
     const prioritySymptomEvidence =
-      brainPrioritySymptomEvidence(detectedSignals);
+      brainPrioritySymptomEvidence(rankedSignals);
 
     return {
       context: sections.length === 0 ? null : sections.join("\n\n"),

@@ -3,6 +3,13 @@ import { z } from "zod";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import { requireOwnedPet } from "@/lib/api/pet-guard";
 import { isMissingTable } from "@/lib/api/table-missing";
+import {
+  recordDogBrainEvent,
+  supplementTrialStartedEvent,
+  supplementTrialMarkedActiveEvent,
+  supplementTrialOutcomeRecordedEvent,
+  toOutcomeBucket,
+} from "@/lib/dog-brain/analytics";
 
 const StartSchema = z.object({
   pet_id: z.string().uuid(),
@@ -132,6 +139,8 @@ export async function POST(request: Request) {
       }
       throw error;
     }
+    // Privacy-safe lifecycle event (a count) — never the supplement name/notes.
+    void recordDogBrainEvent(supplementTrialStartedEvent());
     return NextResponse.json({ data }, { status: 201 });
   } catch (e) {
     console.error("[DogBrainSupplements] POST error", e);
@@ -185,6 +194,7 @@ export async function PATCH(request: Request) {
           { status: 409 },
         );
       }
+      void recordDogBrainEvent(supplementTrialMarkedActiveEvent());
       return NextResponse.json({ data });
     }
 
@@ -221,6 +231,12 @@ export async function PATCH(request: Request) {
     // Zero rows matched: status is ask_vet (vet approval not done), outcome_recorded,
     // stopped, not owned, or missing. Refuse with 409 — never silently 200/500.
     if (!data) return NextResponse.json({ error: "Not found, not owned, or not in an active trial" }, { status: 409 });
+    // Privacy-safe outcome bucket only (better/same/worse/side_effect) — no notes.
+    void recordDogBrainEvent(
+      supplementTrialOutcomeRecordedEvent({
+        outcome: toOutcomeBucket(outcomeData.outcome),
+      }),
+    );
     return NextResponse.json({ data });
   } catch (e) {
     console.error("[DogBrainSupplements] PATCH error", e);

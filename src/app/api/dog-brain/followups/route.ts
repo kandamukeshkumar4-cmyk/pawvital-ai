@@ -8,6 +8,10 @@ import {
   generalApiLimiter,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import {
+  recordDogBrainEvent,
+  dogBrainFollowupCreatedEvent,
+} from "@/lib/dog-brain/analytics";
 
 // Durable Dog Brain follow-up queue: when a watch/alert pattern appears, a
 // follow-up is scheduled ("3 days since stool changed — better or worse?") and
@@ -135,6 +139,9 @@ export async function POST(request: Request) {
       }
       throw error;
     }
+    // Privacy-safe usage event only (a count) — never the prompt text. Fire-and-
+    // forget; recordDogBrainEvent is a no-op without App Insights and never throws.
+    void recordDogBrainEvent(dogBrainFollowupCreatedEvent());
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
     console.error("[DogBrainFollowups] POST failed:", error);

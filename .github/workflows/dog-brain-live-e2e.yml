@@ -1,0 +1,76 @@
+# Dog Brain live E2E — MANUAL ONLY.
+#
+# Proves the full memory loop against a real (sandbox/staging) deployment:
+# seed → memory-driven question → emergency trace suppression → cleanup → 0 residual.
+#
+# Deliberately NOT triggered on push/pull_request — it creates and deletes real
+# rows via the service-role key, so it must be run intentionally by an operator
+# against a SANDBOX project, never automatically on every PR.
+name: dog-brain-live-e2e
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment base URL to test (e.g. https://staging.pawvital-ai.vercel.app)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dog-brain-live-e2e
+  cancel-in-progress: false
+
+jobs:
+  live-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: dog-brain-e2e # gate behind a protected environment + its secrets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Preflight — required secrets present
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SANDBOX_EMAIL: ${{ secrets.E2E_SANDBOX_EMAIL }}
+          E2E_SANDBOX_PASSWORD: ${{ secrets.E2E_SANDBOX_PASSWORD }}
+        run: |
+          missing=0
+          for v in SUPABASE_SERVICE_ROLE_KEY SUPABASE_URL E2E_SANDBOX_EMAIL E2E_SANDBOX_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::missing secret $v"; missing=1; fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "Configure the dog-brain-e2e environment secrets before running."; exit 1
+          fi
+
+      - name: Run Dog Brain live E2E
+        env:
+          E2E_BASE_URL: ${{ inputs.base_url }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SANDBOX_EMAIL: ${{ secrets.E2E_SANDBOX_EMAIL }}
+          E2E_SANDBOX_PASSWORD: ${{ secrets.E2E_SANDBOX_PASSWORD }}
+        run: npx ts-node --esm tests/e2e/dog-brain-live-e2e.ts
+
+      - name: Upload artifacts (screenshots + result)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dog-brain-e2e-artifacts
+          path: artifacts/dog-brain-e2e/
+          if-no-files-found: ignore
+          retention-days: 14

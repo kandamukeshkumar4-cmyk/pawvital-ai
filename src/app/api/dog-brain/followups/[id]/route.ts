@@ -7,6 +7,11 @@ import {
   generalApiLimiter,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import {
+  recordDogBrainEvent,
+  dogBrainFollowupOutcomeRecordedEvent,
+  toOutcomeBucket,
+} from "@/lib/dog-brain/analytics";
 
 const ParamsSchema = z.object({ id: z.string().uuid() });
 const PatchSchema = z.object({
@@ -61,6 +66,12 @@ export async function PATCH(
       throw error;
     }
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Privacy-safe outcome bucket only (better/same/worse/unknown) — no notes.
+    void recordDogBrainEvent(
+      dogBrainFollowupOutcomeRecordedEvent({
+        outcome: toOutcomeBucket(parsed.data.status),
+      }),
+    );
     return NextResponse.json({ data });
   } catch (error) {
     console.error("[DogBrainFollowups] PATCH failed:", error);

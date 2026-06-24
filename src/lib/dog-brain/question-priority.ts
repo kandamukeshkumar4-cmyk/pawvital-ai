@@ -18,7 +18,7 @@ import type { DetectedSignal, SignalType } from "@/lib/dog-brain/types";
 //    makes the downstream selector byte-identical to its pre-Brain behavior.
 // =============================================================================
 
-const BRAIN_SIGNAL_SYMPTOM_KEYS: Record<SignalType, readonly string[]> = {
+export const BRAIN_SIGNAL_SYMPTOM_KEYS: Record<SignalType, readonly string[]> = {
   appetite_drop: ["not_eating"],
   // Daily-log stool is normal/soft/diarrhea/none/blood — never constipation — so
   // a stool_change signal always points at loose/bloody stool, not constipation.

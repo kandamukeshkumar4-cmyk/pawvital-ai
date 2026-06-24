@@ -28,7 +28,17 @@ export type SafeEventName =
   | "ai.model.called"
   | "sidecar.health.checked"
   | "azure.service.called"
-  | "feature.flag.checked";
+  | "feature.flag.checked"
+  // Dog Brain loop usage — counts/enums only, never owner notes or raw symptom
+  // text. Emitted via src/lib/dog-brain/analytics.ts.
+  | "dogbrain.context.loaded"
+  | "dogbrain.question_trace.emitted"
+  | "dogbrain.question_trace.emergency_suppressed"
+  | "dogbrain.followup.created"
+  | "dogbrain.followup.outcome_recorded"
+  | "dogbrain.supplement_trial.started"
+  | "dogbrain.supplement_trial.marked_active"
+  | "dogbrain.supplement_trial.outcome_recorded";
 
 // ---------------------------------------------------------------------------
 // Allow-listed property keys — PII boundary enforced at the type level.
@@ -49,7 +59,10 @@ export type SafePropertyKey =
   | "azureService"
   | "sessionId" // opaque ID only — never an owner or user identifier
   | "errorCode"
-  | "demoMode";
+  | "demoMode"
+  // Dog Brain enum dimensions — bounded vocabularies only (see analytics.ts).
+  | "questionSource" // complaint | brain_memory | pending_clarification | emergency | generic
+  | "outcomeBucket"; // better | same | worse | side_effect | unknown
 
 export type SafeProperties = Partial<
   Record<SafePropertyKey, string | number | boolean>
