@@ -94,6 +94,10 @@ next-env.d.ts
 !/scripts/check-emergency-sentinels.mjs
 !/scripts/check-supabase-env.mjs
 !/scripts/check-supabase-health.mjs
+!/scripts/launch-migrations-core.cjs
+!/scripts/launch-preflight-core.cjs
+!/scripts/launch-preflight.mjs
+!/scripts/apply-launch-migrations.mjs
 !/scripts/check-keyvault-env-template.mjs
 !/scripts/check-shadow-planner-gate.mjs
 !/scripts/owner-language-eval.mjs
