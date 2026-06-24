@@ -114,19 +114,25 @@ describe("launch preflight", () => {
       DATABASE_URL:
         "postgresql://postgres:secret@db.zyxwvutsrqponmlkjihg.supabase.co:5432/postgres",
     };
-    const result = core.buildLaunchPreflight(env, { repoRoot: makeRepoFixture() });
+    const result = core.buildLaunchPreflight(env, {
+      repoRoot: makeRepoFixture(),
+    });
 
     expect(result.ok).toBe(false);
     expect(result.blockers.map((check: { id: string }) => check.id)).toContain(
       "supabase.split-brain",
     );
-    expect(result.humanActions.join("\n")).toContain(core.EXPECTED_SUPABASE_PROJECT_REF);
+    expect(result.humanActions.join("\n")).toContain(
+      core.EXPECTED_SUPABASE_PROJECT_REF,
+    );
   });
 
   it("blocks missing NVIDIA_API_KEY", () => {
     const env = completeEnv();
     delete (env as { NVIDIA_API_KEY?: string }).NVIDIA_API_KEY;
-    const result = core.buildLaunchPreflight(env, { repoRoot: makeRepoFixture() });
+    const result = core.buildLaunchPreflight(env, {
+      repoRoot: makeRepoFixture(),
+    });
 
     expect(result.ok).toBe(false);
     expect(result.blockers.map((check: { id: string }) => check.id)).toContain(
@@ -184,7 +190,8 @@ describe("launch preflight", () => {
   });
 
   it("passes when launch-critical API regression tests are present", () => {
-    const checks = core.checkLaunchCriticalApiRegressionTests(makeRepoFixture());
+    const checks =
+      core.checkLaunchCriticalApiRegressionTests(makeRepoFixture());
 
     expect(checks).toEqual([
       expect.objectContaining({
@@ -220,7 +227,9 @@ describe("launch migration plan", () => {
       "20260601000000_alpha.sql",
       "supabase-product-intelligence-schema.sql",
     ]);
-    expect(plan.every((item: { status: string }) => item.status === "pending")).toBe(true);
+    expect(
+      plan.every((item: { status: string }) => item.status === "pending"),
+    ).toBe(true);
   });
 
   it("detects already-applied and checksum-mismatch migrations", () => {
@@ -248,16 +257,70 @@ describe("launch migration runner safety", () => {
 
   it("keeps dry-run ledger reads side-effect free when the ledger is absent", async () => {
     const query = jest.fn().mockRejectedValueOnce(
-      Object.assign(new Error("relation pawvital_schema_migrations does not exist"), {
-        code: "42P01",
-      }),
+      Object.assign(
+        new Error("relation pawvital_schema_migrations does not exist"),
+        {
+          code: "42P01",
+        },
+      ),
     );
 
-    const rows = await migrations.readApplied({ query }, { ensureLedgerTable: false });
+    const rows = await migrations.readApplied(
+      { query },
+      { ensureLedgerTable: false },
+    );
 
     expect(rows).toEqual([]);
     expect(query).toHaveBeenCalledTimes(1);
     expect(query.mock.calls[0][0]).toContain("SELECT filename, checksum");
     expect(query.mock.calls[0][0]).not.toContain("CREATE TABLE");
+  });
+
+  it("adopts fully-applied database state instead of re-running unledgered migrations", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ exists: true }] })
+      .mockResolvedValueOnce({ rows: [{ exists: true }] });
+
+    const [item] = await migrations.annotatePlanWithDatabaseState({ query }, [
+      {
+        filename: "20260618_vet_dog_brain_context_signals.sql",
+        path: "unused",
+        checksum: "abc123",
+        status: "pending",
+      },
+    ]);
+
+    expect(item.status).toBe("adopted_database_state");
+    expect(item.databaseState.status).toBe("already_applied");
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it("blocks partial unledgered database state before applying SQL", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ exists: true }] })
+      .mockResolvedValueOnce({ rows: [{ exists: false }] })
+      .mockResolvedValueOnce({ rows: [{ exists: true }] })
+      .mockResolvedValueOnce({ rows: [{ exists: false }] })
+      .mockResolvedValueOnce({ rows: [{ exists: true }] })
+      .mockResolvedValueOnce({ rows: [{ exists: false }] });
+
+    const [item] = await migrations.annotatePlanWithDatabaseState({ query }, [
+      {
+        filename: "20260619_vet_record_summaries_and_followups.sql",
+        path: "unused",
+        checksum: "abc123",
+        status: "pending",
+      },
+    ]);
+
+    expect(item.status).toBe("database_state_conflict");
+    expect(item.databaseState.status).toBe("partial");
+    expect(
+      item.databaseState.checks.some(
+        (check: { present: boolean }) => !check.present,
+      ),
+    ).toBe(true);
   });
 });
