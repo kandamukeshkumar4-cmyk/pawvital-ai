@@ -36,11 +36,14 @@ interface SymptomChatResponse {
   type?: string;
   message?: string;
   brain_question_trace?: { evidence_summary?: string } | null;
+  // The deterministic engine's state — MUST be threaded back each turn or the
+  // conversation restarts and the complaint never exhausts (so no Brain trace).
+  session?: unknown;
 }
 
 const ARTIFACT_DIR = join(process.cwd(), "artifacts", "dog-brain-e2e");
 const SANDBOX_PET_NAME = "E2E Bruno (sandbox)";
-const MAX_MEMORY_TURNS = 8;
+const MAX_MEMORY_TURNS = 12;
 
 function requireEnv(): {
   baseUrl: string;
@@ -163,12 +166,19 @@ async function postSymptomChat(
   baseUrl: string,
   petId: string,
   messages: { role: "user" | "assistant"; content: string }[],
+  session: unknown,
 ): Promise<SymptomChatResponse> {
   const res = await request.post(`${baseUrl}/api/ai/symptom-chat`, {
     data: {
+      action: "chat", // brain-context load (and thus the trace) is gated on this
       messages,
       pet: { id: petId, name: SANDBOX_PET_NAME, species: "dog", breed: "Mixed" },
+      // Thread the prior turn's session so the conversation actually progresses.
+      ...(session ? { session } : {}),
     },
+    // The symptom-chat turn calls the NIM model and can exceed Playwright's
+    // default 30s API timeout on a cold serverless start; give it real headroom.
+    timeout: 90_000,
   });
   if (!res.ok()) {
     throw new Error(`symptom-chat HTTP ${res.status()}: ${await res.text()}`);
@@ -238,22 +248,50 @@ async function main() {
     await page.getByRole("button", { name: /sign in|log in/i }).first().click();
     await page.waitForLoadState("networkidle");
 
+    // Trigger the Dog Brain loop with one authenticated daily-log POST so the
+    // server materializes signals/follow-ups from the seeded history before the
+    // symptom-checker turn reads them (matches the real owner flow).
+    await context.request
+      .post(`${env.baseUrl}/api/health-log`, {
+        data: {
+          pet_id: seeded.petId,
+          appetite: "reduced",
+          water: "normal",
+          stool: "diarrhea",
+          urination: "normal",
+          vomiting_count: 1,
+          energy: "low",
+          meds_given: false,
+          notes: "[e2e] today",
+        },
+        timeout: 60_000,
+      })
+      .catch(() => undefined);
+
     // Poll the symptom checker until a memory-driven question surfaces. The
     // current complaint wins first (Phase 1), so brain memory appears after the
     // complaint's own questions are exhausted — hence the multi-turn poll.
+    // Complaint is about STOOL while the seeded memory's strongest recent
+    // pattern is VOMITING — so the brain branch surfaces the memory-driven
+    // vomiting question (with a trace) once the complaint's own questions run,
+    // rather than the complaint itself owning every question.
     const messages: { role: "user" | "assistant"; content: string }[] = [
-      { role: "user", content: "He vomited twice today and seems a bit off." },
+      { role: "user", content: "He has loose stool again today and is off his food." },
     ];
     let memoryTrace: string | null = null;
+    let session: unknown = undefined;
     for (let turn = 0; turn < MAX_MEMORY_TURNS; turn++) {
-      const resp = await postSymptomChat(context.request, env.baseUrl, seeded.petId, messages);
+      const resp = await postSymptomChat(context.request, env.baseUrl, seeded.petId, messages, session);
+      session = resp.session; // thread the engine state into the next turn
       const trace = resp.brain_question_trace?.evidence_summary;
       if (typeof trace === "string" && trace.length > 0) {
         memoryTrace = trace;
         break;
       }
       messages.push({ role: "assistant", content: resp.message ?? "(question)" });
-      messages.push({ role: "user", content: "No, nothing like that." });
+      // Neutral, non-alarming answer that advances the flow without tripping an
+      // unconfirmed critical-sign escalation (which would end the turn early).
+      messages.push({ role: "user", content: "No blood, it's been about two days, otherwise he seems okay." });
     }
     if (!memoryTrace) {
       throw new Error(
@@ -266,12 +304,18 @@ async function main() {
     await page.screenshot({ path: join(ARTIFACT_DIR, "symptom-checker.png"), fullPage: true });
 
     // Emergency must SUPPRESS the trace.
-    const emergency = await postSymptomChat(context.request, env.baseUrl, seeded.petId, [
-      {
-        role: "user",
-        content: "He collapsed and is having a seizure that won't stop and his gums are pale.",
-      },
-    ]);
+    const emergency = await postSymptomChat(
+      context.request,
+      env.baseUrl,
+      seeded.petId,
+      [
+        {
+          role: "user",
+          content: "He collapsed and is having a seizure that won't stop and his gums are pale.",
+        },
+      ],
+      undefined, // standalone emergency turn — no prior session
+    );
     const emergencyTrace = emergency.brain_question_trace?.evidence_summary;
     if (typeof emergencyTrace === "string" && emergencyTrace.length > 0) {
       throw new Error("ASSERTION FAILED: emergency turn did NOT suppress brain_question_trace");
