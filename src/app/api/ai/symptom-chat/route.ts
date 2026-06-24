@@ -809,6 +809,7 @@ export async function POST(request: Request) {
   // Privacy-safe Dog Brain analytics flags — set on the main path, emitted once
   // in the deferred telemetry block below. Never affect the response/payload.
   let brainContextPrioritySymptomCount: number | null = null;
+  let brainEvidenceItemCount = 0;
   let brainTraceWasEmitted = false;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
   let liveUpdateChain: Promise<void> = Promise.resolve();
@@ -1014,8 +1015,11 @@ export async function POST(request: Request) {
         }
         brainPrioritySymptoms = prioritySymptoms;
         brainPrioritySymptomEvidence = prioritySymptomEvidence;
-        // Brain memory was consulted this turn (count only — never the content).
+        // Brain memory was consulted this turn (counts only — never the content).
         brainContextPrioritySymptomCount = prioritySymptoms.length;
+        // Distinct owner-evidence items backing the Brain's question selection —
+        // the real "evidenceCount" for the trace event (was hardcoded 1).
+        brainEvidenceItemCount = Object.keys(prioritySymptomEvidence).length;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2580,9 +2584,22 @@ export async function POST(request: Request) {
       }
       if (brainTraceWasEmitted) {
         await recordDogBrainEvent(
-          brainQuestionTraceEmittedEvent({ source: "brain_memory", evidenceCount: 1 }),
+          brainQuestionTraceEmittedEvent({
+            source: "brain_memory",
+            evidenceCount: brainEvidenceItemCount,
+          }),
         );
       }
+      // TODO(dog-brain analytics): emergency_question_trace_suppressed is not
+      // emitted here. Detecting an emergency turn from this deferred block would
+      // require threading a flag through the 3+ emergency EARLY-RETURNS
+      // (deterministic-first-turn, ER_NOW, route-override) — clinical-route churn
+      // we deliberately avoid. The behavior is already correct (the emergency
+      // path returns no brain_question_trace); only the telemetry event is
+      // missing. Narrow future patch: set a single `let emergencyTurn = false`
+      // flag at each emergency-response construction site, then emit
+      // emergencyTraceSuppressedEvent() here when it is true — gated by the
+      // symptom-chat route suite.
     });
     await queueTriageLiveUpdate(
       liveUpdateTarget,
