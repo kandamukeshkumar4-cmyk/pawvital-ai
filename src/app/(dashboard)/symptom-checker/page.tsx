@@ -980,6 +980,23 @@ export default function SymptomCheckerPage() {
             ? data.persistence.message
             : null
         );
+      } else {
+        // The report did not come back (e.g. 409 not-ready, an upstream error, or
+        // a timeout). Surface it instead of silently doing nothing, and keep the
+        // "Generate Report" affordance visible so the owner can retry.
+        const notReady = res.status === 409 || data?.code === "SESSION_NOT_READY";
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: notReady
+              ? "I need a moment more to pull this together. Please tap “Generate Report” to try again."
+              : "I couldn't finish generating the report just now. Please tap “Generate Report” to try again.",
+            type: "error",
+            timestamp: new Date(),
+          },
+        ]);
+        setReadyForReport(true);
       }
     } catch {
       setMessages((prev) => [
