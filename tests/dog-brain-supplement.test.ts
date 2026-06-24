@@ -480,7 +480,7 @@ describe("dog_brain_supplement_trials (minimal backend)", () => {
             return { select: () => ({ eq: () => ({ eq: () => ({ limit: async () => ({ data: [{ id: "p1" }] }) }) }) }) };
           }
           if (table === "daily_health_logs") {
-            return { select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: [{ log_date: "2026-01-01", appetite: "normal", water: "normal", stool: "normal", urination: "normal", vomiting_count: 0, energy: "normal", meds_given: false }] }) }) }) }) }) };
+            return { select: () => ({ eq: () => ({ eq: () => ({ gte: () => ({ order: () => ({ limit: async () => ({ data: [{ log_date: "2026-01-01", appetite: "normal", water: "normal", stool: "normal", urination: "normal", vomiting_count: 0, energy: "normal", meds_given: false }] }) }) }) }) }) }) };
           }
           if (table === "symptom_checks") {
             return { select: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: [{ id: 'c1', created_at: '2026-01-01', symptoms: 'cough', severity: 'watch' }] }) }) }) }) };
