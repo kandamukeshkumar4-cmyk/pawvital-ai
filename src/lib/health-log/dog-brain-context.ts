@@ -56,11 +56,25 @@ const EMPTY_DOG_BRAIN_DATA: DogBrainContextData = {
  * richer output, zero additional Supabase round-trips vs. two separate calls.
  */
 
-// 90-day Dog Brain memory window (supportive report context only — never feeds
-// deterministic triage/urgency). Roughly one log/day → ~90 logs covers 90 days.
-const MAX_LOGS = 90;
+// Dog Brain memory window: a real 90-CALENDAR-DAY lookback (not just the latest
+// 90 rows). MAX_LOG_ROWS is a hard cap so a pet that logs many times per day can
+// never trigger a runaway query. Supportive report context only — never feeds
+// deterministic triage/urgency.
+const MEMORY_WINDOW_DAYS = 90;
+const MAX_LOG_ROWS = 400;
 const MAX_CHECKS = 30;
 const MAX_JOURNAL = 30;
+
+/**
+ * First in-window calendar day (YYYY-MM-DD), `MEMORY_WINDOW_DAYS` before `now`.
+ * A log whose `log_date >=` this string is inside the window; lexicographic
+ * comparison is correct for the YYYY-MM-DD format. Pure; exported for tests.
+ */
+export function memoryWindowStartDate(now: Date = new Date()): string {
+  const start = new Date(now);
+  start.setUTCDate(start.getUTCDate() - MEMORY_WINDOW_DAYS);
+  return start.toISOString().slice(0, 10);
+}
 
 function formatDate(iso: string): string {
   return iso.slice(0, 10);
@@ -217,8 +231,11 @@ export async function loadDogBrainContextWithSignals({
           .select("*")
           .eq("user_id", userId)
           .eq("pet_id", petId)
+          // Real calendar window: the last MEMORY_WINDOW_DAYS days, capped at
+          // MAX_LOG_ROWS rows (so multiple-logs-per-day stays bounded).
+          .gte("log_date", memoryWindowStartDate())
           .order("log_date", { ascending: false })
-          .limit(MAX_LOGS),
+          .limit(MAX_LOG_ROWS),
         supabase
           .from("symptom_checks")
           .select("id, created_at, symptoms, severity")
@@ -267,7 +284,7 @@ export async function loadDogBrainContextWithSignals({
     const logs = (logsResult.data ?? []) as HealthLog[];
     if (logs.length > 0) {
       // Long-window (full 90-day) trend summary — not just the last 14 days.
-      const logSummary = summarizeDailyLogsForContext(logs, petName, MAX_LOGS);
+      const logSummary = summarizeDailyLogsForContext(logs, petName, MAX_LOG_ROWS);
       if (logSummary) sections.push(logSummary);
 
       // Pack signals from the recent window (last ~14 days, newest first) — the

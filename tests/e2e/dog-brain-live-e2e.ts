@@ -13,10 +13,16 @@
  *   - Env-gated: with required secrets absent it logs SKIP and exits 0 (never
  *     writes anything). Intended to run only from the manual workflow_dispatch
  *     CI job, never automatically on every PR.
- *   - All seeded rows + the sandbox auth user are deleted in `finally`, then a
- *     residual count is asserted to be 0. A non-zero residual fails the run.
+ *   - Crash-safe cleanup: every created resource is recorded in a `SeedTracker`
+ *     the instant it exists (auth user id captured immediately after createUser,
+ *     pet id immediately after insert). The `finally` block cleans up from that
+ *     tracker, so a seed that throws halfway — e.g. the pet insert fails AFTER
+ *     the auth user was created — still deletes the orphaned auth user. A
+ *     residual count is then asserted to be 0; a non-zero residual fails the run.
  *   - It touches whatever project the SUPABASE_SERVICE_ROLE_KEY belongs to —
  *     point it at a sandbox/staging project, never shared prod data.
+ *   - The CLI entry (`main()`) is guarded so importing this module for unit
+ *     tests never performs any writes.
  *
  * STATUS: authored, NOT yet executed against a live deployment. Selectors for
  *   the login form are resilient (role/type based) but should be validated on
@@ -24,13 +30,22 @@
  *   (robust). See docs/dog-brain/INVESTOR_DEMO_HARDENING_STATE.md.
  *
  * Run: SUPABASE_SERVICE_ROLE_KEY=… E2E_BASE_URL=… E2E_SANDBOX_EMAIL=… \
- *      E2E_SANDBOX_PASSWORD=… npx ts-node --esm scripts/e2e/dog-brain-live-e2e.ts
+ *      E2E_SANDBOX_PASSWORD=… npx ts-node --esm tests/e2e/dog-brain-live-e2e.ts
  */
 
 import { chromium, type APIRequestContext } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * Records every resource the seed creates, the instant it is created, so the
+ * finally-block cleanup can delete partial state even if seed() throws midway.
+ */
+export interface SeedTracker {
+  userId?: string;
+  petId?: string;
+}
 
 interface SymptomChatResponse {
   type?: string;
@@ -73,7 +88,7 @@ function isoDaysAgo(days: number): string {
 }
 
 /** 90-day storyline: baseline → soft stool → reduced appetite → vomiting today. */
-function buildLogRows(userId: string, petId: string) {
+export function buildLogRows(userId: string, petId: string) {
   const rows: Record<string, unknown>[] = [];
   for (let d = 90; d >= 0; d--) {
     let appetite = "normal";
@@ -108,7 +123,12 @@ function buildLogRows(userId: string, petId: string) {
   return rows;
 }
 
-async function seed(admin: SupabaseClient, email: string, password: string) {
+export async function seed(
+  admin: SupabaseClient,
+  email: string,
+  password: string,
+  tracker: SeedTracker,
+): Promise<{ userId: string; petId: string }> {
   const { data: created, error: userErr } = await admin.auth.admin.createUser({
     email,
     password,
@@ -118,6 +138,9 @@ async function seed(admin: SupabaseClient, email: string, password: string) {
     throw new Error(`seed: createUser failed: ${userErr?.message ?? "no user"}`);
   }
   const userId = created.user.id;
+  // Record the auth user IMMEDIATELY — if any later step throws, cleanup must
+  // still know this id so the user is never orphaned.
+  tracker.userId = userId;
 
   // profiles row may be created by a trigger; upsert defensively (FK target).
   await admin.from("profiles").upsert({ id: userId }, { onConflict: "id" });
@@ -131,6 +154,8 @@ async function seed(admin: SupabaseClient, email: string, password: string) {
     throw new Error(`seed: pet insert failed: ${petErr?.message ?? "no pet"}`);
   }
   const petId = pet.id as string;
+  // Record the pet id immediately, before the dependent inserts below.
+  tracker.petId = petId;
 
   const { error: logErr } = await admin
     .from("daily_health_logs")
@@ -186,35 +211,55 @@ async function postSymptomChat(
   return (await res.json()) as SymptomChatResponse;
 }
 
-async function cleanup(admin: SupabaseClient, userId: string, petId: string) {
-  await admin.from("dog_brain_supplement_trials").delete().eq("pet_id", petId);
-  await admin.from("dog_brain_followups").delete().eq("pet_id", petId);
-  await admin.from("daily_health_logs").delete().eq("pet_id", petId);
-  await admin.from("pets").delete().eq("id", petId);
-  await admin.auth.admin.deleteUser(userId);
+/**
+ * Delete whatever the tracker says was created — tolerant of partial seeds. Safe
+ * to call with only a userId (pet insert never happened), only a petId, or both.
+ * Proves 0 residual for every id that exists. Never throws on a missing id.
+ */
+export async function cleanup(
+  admin: SupabaseClient,
+  tracker: SeedTracker,
+): Promise<void> {
+  const { petId, userId } = tracker;
 
-  // Prove 0 residual.
-  let residual = 0;
-  for (const table of [
-    "dog_brain_supplement_trials",
-    "dog_brain_followups",
-    "daily_health_logs",
-  ]) {
-    const { count } = await admin
-      .from(table)
-      .select("id", { count: "exact", head: true })
-      .eq("pet_id", petId);
-    residual += count ?? 0;
+  if (petId) {
+    await admin.from("dog_brain_supplement_trials").delete().eq("pet_id", petId);
+    await admin.from("dog_brain_followups").delete().eq("pet_id", petId);
+    await admin.from("daily_health_logs").delete().eq("pet_id", petId);
+    await admin.from("pets").delete().eq("id", petId);
   }
-  const { count: petCount } = await admin
-    .from("pets")
-    .select("id", { count: "exact", head: true })
-    .eq("id", petId);
-  residual += petCount ?? 0;
+  // Always delete the auth user last (its rows cascade, but we already removed
+  // them explicitly above for the residual proof).
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId);
+  }
+
+  // Prove 0 residual for the pet's rows (only meaningful once a pet existed).
+  let residual = 0;
+  if (petId) {
+    for (const table of [
+      "dog_brain_supplement_trials",
+      "dog_brain_followups",
+      "daily_health_logs",
+    ]) {
+      const { count } = await admin
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("pet_id", petId);
+      residual += count ?? 0;
+    }
+    const { count: petCount } = await admin
+      .from("pets")
+      .select("id", { count: "exact", head: true })
+      .eq("id", petId);
+    residual += petCount ?? 0;
+  }
   if (residual !== 0) {
     throw new Error(`CLEANUP FAILED: ${residual} residual row(s) remain — manual purge required`);
   }
-  console.log("[e2e] cleanup OK — 0 residual rows");
+  console.log(
+    `[e2e] cleanup OK — 0 residual rows (user=${userId ? "removed" : "n/a"}, pet=${petId ? "removed" : "n/a"})`,
+  );
 }
 
 async function main() {
@@ -232,10 +277,12 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  let seeded: { userId: string; petId: string } | null = null;
+  // The tracker is populated by seed() as each resource is created, so the
+  // finally block can clean up even a half-finished seed (no orphaned user).
+  const tracker: SeedTracker = {};
   const browser = await chromium.launch();
   try {
-    seeded = await seed(admin, env.email, env.password);
+    const seeded = await seed(admin, env.email, env.password, tracker);
     console.log(`[e2e] seeded user=${seeded.userId} pet=${seeded.petId}`);
 
     const context = await browser.newContext();
@@ -328,14 +375,19 @@ async function main() {
     );
     console.log("[e2e] PASS");
   } finally {
-    if (seeded) {
-      await cleanup(admin, seeded.userId, seeded.petId);
+    // Clean up whatever exists — even a partial seed (only a user, only a pet).
+    if (tracker.userId || tracker.petId) {
+      await cleanup(admin, tracker);
     }
     await browser.close();
   }
 }
 
-main().catch((err) => {
-  console.error("[e2e] FAILED:", err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+// CLI entry only — never auto-run when imported by a unit test (which would
+// otherwise try to launch a browser / hit the network with no env configured).
+if (!process.env.JEST_WORKER_ID) {
+  main().catch((err) => {
+    console.error("[e2e] FAILED:", err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}
