@@ -35,9 +35,17 @@ export const MODELS = {
     fallback: "meta/llama-3.3-70b-instruct",
     role: "Question Verification" as const,
   },
+  // Report runs inside Vercel's 60s function cap (extraction THEN diagnosis).
+  // deepseek-v3.2 (fast MoE, ~37B active) is the report PRIMARY: the prior
+  // primary nemotron-ultra-253b is a dense REASONING model — slowest in the
+  // stack and a poor fit for a 60s-capped JSON report (thinking tokens add
+  // latency and risk JSON truncation; cf. the extraction note above). deepseek
+  // was already the proven diagnosis fallback and the diagnosis env priority
+  // already lists NVIDIA_DEEPSEEK_API_KEY first, so model+key are now aligned.
+  // The 253B model is retained as the fallback — no capability loss, reversible.
   diagnosis: {
-    name: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-    fallback: "deepseek-ai/deepseek-v3.2",
+    name: "deepseek-ai/deepseek-v3.2",
+    fallback: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
     role: "Diagnosis Report" as const,
   },
   safety: {

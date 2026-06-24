@@ -48,8 +48,8 @@ describe("model-router registry", () => {
       timeoutMs: 45000,
     });
     expect(router.getModelRoute("diagnosis")).toMatchObject({
-      primaryModel: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-      fallbackModel: "deepseek-ai/deepseek-v3.2",
+      primaryModel: "deepseek-ai/deepseek-v3.2",
+      fallbackModel: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
       timeoutMs: 150000,
     });
     expect(router.getModelRoute("vision_deep")).toMatchObject({

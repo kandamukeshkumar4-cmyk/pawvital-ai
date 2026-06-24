@@ -1347,7 +1347,9 @@ export async function generateReport({
           clinicalCaseContext,
         });
         const rawReport = await diagnoseWithDeepSeek(reportPrompt);
-        console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
+        console.log(
+          "[Engine] Diagnosis: DeepSeek V3.2 (primary) → Nemotron Ultra 253B (fallback)",
+        );
 
         const report = parseReportJSON(rawReport);
         if (

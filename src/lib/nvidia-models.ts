@@ -293,8 +293,10 @@ export async function reviewQuestionPlanWithNemotron(
 }
 
 /**
- * Generate clinical diagnosis report using Nemotron Ultra 253B.
- * Falls back to DeepSeek V3.2. Deep reasoning for differential diagnosis ranking.
+ * Generate the clinical diagnosis report using DeepSeek V3.2 (fast MoE primary),
+ * falling back to Nemotron Ultra 253B. Writes the owner-facing narrative from the
+ * deterministic matrix ranking — it does NOT decide urgency / red flags /
+ * differential order (those are floored deterministically; see report-pipeline).
  */
 export async function diagnoseWithDeepSeek(prompt: string): Promise<string> {
   return complete({
