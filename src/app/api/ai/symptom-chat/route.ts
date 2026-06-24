@@ -172,6 +172,7 @@ import {
 } from "@/lib/dog-brain/analytics";
 import { composeWhyAsking } from "@/lib/symptom-chat/why-asking-explanation";
 import { isReportReadinessBlocked } from "@/lib/symptom-chat/report-readiness";
+import { redactSecrets } from "@/lib/redact-secrets";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -2569,7 +2570,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";
-    console.error("Symptom chat error:", error);
+    // Redact before logging — a thrown error's message can incidentally embed a
+    // session/JWT (observed once on an old deploy). redactSecrets keeps the
+    // stack but masks token-shaped values so they never reach runtime logs.
+    console.error("Symptom chat error:", redactSecrets(error));
     return NextResponse.json(
       {
         type: "error",
