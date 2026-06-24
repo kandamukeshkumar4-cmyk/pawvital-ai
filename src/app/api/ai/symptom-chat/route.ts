@@ -811,6 +811,7 @@ export async function POST(request: Request) {
   // Privacy-safe Dog Brain analytics flags — set on the main path, emitted once
   // in the deferred telemetry block below. Never affect the response/payload.
   let brainContextPrioritySymptomCount: number | null = null;
+  let brainEvidenceItemCount = 0;
   let brainTraceWasEmitted = false;
   // Telemetry-only: set true immediately before each emergency-response return so
   // the deferred block can record that an emergency pre-empted the Brain trace.
@@ -1020,8 +1021,11 @@ export async function POST(request: Request) {
         }
         brainPrioritySymptoms = prioritySymptoms;
         brainPrioritySymptomEvidence = prioritySymptomEvidence;
-        // Brain memory was consulted this turn (count only — never the content).
+        // Brain memory was consulted this turn (counts only — never the content).
         brainContextPrioritySymptomCount = prioritySymptoms.length;
+        // Distinct owner-evidence items backing the Brain's question selection —
+        // the real "evidenceCount" for the trace event (was hardcoded 1).
+        brainEvidenceItemCount = Object.keys(prioritySymptomEvidence).length;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
@@ -2590,10 +2594,15 @@ export async function POST(request: Request) {
       }
       if (brainTraceWasEmitted) {
         await recordDogBrainEvent(
-          brainQuestionTraceEmittedEvent({ source: "brain_memory", evidenceCount: 1 }),
+          brainQuestionTraceEmittedEvent({
+            source: "brain_memory",
+            evidenceCount: brainEvidenceItemCount,
+          }),
         );
       }
       // An emergency response pre-empted a Brain trace this turn (counts only).
+      // Implements the previously-deferred emergency_question_trace_suppressed
+      // emit: a telemetry-only flag is set at each emergency-response return.
       if (
         shouldEmitEmergencyTraceSuppressed({
           emergencyResponseReturned,

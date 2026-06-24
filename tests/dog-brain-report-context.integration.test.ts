@@ -24,6 +24,7 @@ function tableChain(rows: unknown[]) {
   const chain: Record<string, unknown> = {};
   chain.select = () => chain;
   chain.eq = () => chain;
+  chain.gte = () => chain; // calendar-window filter on daily_health_logs
   chain.order = () => chain;
   chain.limit = async () => ({ data: rows, error: null });
   return chain;
