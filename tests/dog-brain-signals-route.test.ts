@@ -44,6 +44,24 @@ describe("GET /api/dog-brain/signals", () => {
     expect(mockRequireAuthenticatedApiUser).not.toHaveBeenCalled();
   });
 
+  it("returns 401 for unauthenticated valid pet requests before database work", async () => {
+    mockRequireAuthenticatedApiUser.mockResolvedValueOnce({
+      response: Response.json({ error: "Authentication required" }, { status: 401 }),
+    });
+
+    const { GET } = await import("../src/app/api/dog-brain/signals/route");
+    const response = await GET(
+      new Request(
+        "http://localhost/api/dog-brain/signals?pet_id=11111111-1111-4111-8111-111111111111",
+      ),
+    );
+    const payload = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(401);
+    expect(payload.error).toContain("Authentication required");
+    expect(mockRequireAuthenticatedApiUser).toHaveBeenCalledTimes(1);
+  });
+
   it("returns detected owner-log signals for an owned pet", async () => {
     const petQuery = query({ data: { id: "11111111-1111-4111-8111-111111111111" }, error: null });
     const logsQuery = query({
