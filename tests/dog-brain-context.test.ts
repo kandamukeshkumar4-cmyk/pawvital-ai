@@ -4,10 +4,13 @@ import { buildVetTimeline } from "@/lib/analytics/vet-timeline";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import type { JournalEntry } from "@/types/journal";
 import { detectDogBrainSignals } from "@/lib/dog-brain/signals";
+import type { DetectedSignal } from "@/lib/dog-brain/types";
 import {
   brainPrioritySymptomsFromSignals,
   brainPrioritySymptomEvidence,
 } from "@/lib/dog-brain/question-priority";
+import { buildDogBrainVetHandoffSection } from "@/lib/health-log/dog-brain-context";
+import { HYPOTHESIS_SAFETY_BOUNDARY } from "@/lib/clinical/root-cause-hypotheses";
 
 /** Minimal HealthLog factory */
 function log(overrides: Partial<HealthLog> = {}): HealthLog {
@@ -189,6 +192,74 @@ describe("brainPrioritySymptomEvidence from detected signals", () => {
     ];
     const signals = detectDogBrainSignals(normalLogs).signals;
     expect(brainPrioritySymptomEvidence(signals)).toEqual({});
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Curated vet-handoff knowledge section (wires the deterministic clinical
+// knowledge layer into the supportive report context — never into triage).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("buildDogBrainVetHandoffSection — non-diagnostic knowledge wiring", () => {
+  const DISCLAIMER =
+    "Owner-reported observations, not clinical measurements; supportive context " +
+    "only — do not override clinical assessment.";
+
+  // Newest 3 logs (detector RECENT_WINDOW) with several digestive signs, so the
+  // detector emits evidence-bearing stool_change + vomiting_trend + appetite_drop.
+  const digestiveLogs = [
+    log({ log_date: "2026-06-18", stool: "diarrhea", vomiting_count: 2, appetite: "reduced" }),
+    log({ log_date: "2026-06-17", stool: "diarrhea", vomiting_count: 1, appetite: "reduced" }),
+    log({ log_date: "2026-06-16", stool: "soft", vomiting_count: 1, appetite: "normal" }),
+  ];
+
+  it("renders an evidence-backed, non-diagnostic pattern note for digestive signs", () => {
+    const signals = detectDogBrainSignals(digestiveLogs).signals;
+    const out = buildDogBrainVetHandoffSection(signals, DISCLAIMER);
+
+    expect(out).toContain("digestive pattern");
+    // Carries the safety boundary and the non-override disclaimer verbatim.
+    expect(out).toContain(HYPOTHESIS_SAFETY_BOUNDARY);
+    expect(out.toLowerCase()).toContain("do not override clinical assessment");
+    expect(out.toLowerCase()).toContain("non-diagnostic");
+  });
+
+  it("never emits diagnosis, dosage, price, brand, or a disease name", () => {
+    const signals = detectDogBrainSignals(digestiveLogs).signals;
+    const out = buildDogBrainVetHandoffSection(signals, DISCLAIMER);
+
+    // Reject diagnostic CLAIMS and disease names — but not the negated safety
+    // phrasing ("non-diagnostic" / "not a diagnosis"), which we require above.
+    expect(out.toLowerCase()).not.toMatch(/likely has|diagnosis is|diagnosis:|most likely it'?s/);
+    expect(out.toLowerCase()).not.toMatch(/gastroenteritis|cancer|parvo|diabetes|pancreatitis|arthritis/);
+    expect(out).not.toMatch(/\b\d+(\.\d+)?\s*(mg|mcg|ml|iu|tsp|tbsp|capsules?|tablets?)\b/i);
+    expect(out).not.toMatch(/\$\s*\d/);
+    expect(out).not.toMatch(/[®™]/);
+  });
+
+  it("omits the knowledge urgency floor so it can't be read as triage urgency", () => {
+    const signals = detectDogBrainSignals(digestiveLogs).signals;
+    const out = buildDogBrainVetHandoffSection(signals, DISCLAIMER);
+    // The raw floor enum tokens must never leak into owner/LLM-facing context.
+    expect(out).not.toMatch(/self_monitor|call_vet|urgency_floor/);
+  });
+
+  it("returns empty string when no signals are present (all-normal logs)", () => {
+    const normalLogs = [
+      log({ log_date: "2026-06-18" }),
+      log({ log_date: "2026-06-17" }),
+      log({ log_date: "2026-06-16" }),
+    ];
+    const signals = detectDogBrainSignals(normalLogs).signals;
+    expect(buildDogBrainVetHandoffSection(signals, DISCLAIMER)).toBe("");
+  });
+
+  it("is evidence-gated — signals without dog-specific evidence yield nothing", () => {
+    const signalsNoEvidence: DetectedSignal[] = [
+      { signal_type: "stool_change", severity: "watch", owner_message: "", dedupe_key: "s1" },
+      { signal_type: "vomiting_trend", severity: "watch", owner_message: "", dedupe_key: "v1" },
+    ];
+    expect(buildDogBrainVetHandoffSection(signalsNoEvidence, DISCLAIMER)).toBe("");
   });
 });
 

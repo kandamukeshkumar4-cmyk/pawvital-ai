@@ -6,12 +6,17 @@ import {
   type FollowupContextRow,
 } from "./context";
 import { detectDogBrainSignals } from "@/lib/dog-brain/signals";
+import type { DetectedSignal, SignalType } from "@/lib/dog-brain/types";
 import {
   brainPrioritySymptomsFromSignals,
   brainPrioritySymptomEvidence,
   type BrainSymptomEvidence,
 } from "@/lib/dog-brain/question-priority";
 import { rankDetectedSignals } from "@/lib/dog-brain/memory-ranking";
+import {
+  buildRootCauseHypotheses,
+  HYPOTHESIS_SAFETY_BOUNDARY,
+} from "@/lib/clinical/root-cause-hypotheses";
 
 export interface DogBrainContextData {
   /** Supportive narrative for the report prompt; null = skip context. */
@@ -110,6 +115,52 @@ function contextSignalsSummary(signals: ContextSignals): string {
   }
 
   return parts.length > 0 ? parts.join("; ") : "";
+}
+
+/**
+ * Render the curated, NON-DIAGNOSTIC vet-handoff knowledge for the detected Dog
+ * Brain signals as a supportive context block. Pure; no I/O.
+ *
+ * Wires the deterministic clinical knowledge layer (`buildRootCauseHypotheses`)
+ * into the symptom-checker report context. It NEVER touches deterministic triage:
+ * the output is appended to the supportive `context` string only (read by
+ * buildNarrativeReportPrompt, never by triage logic), carries the same
+ * non-override disclaimer as every other section, and deliberately omits the
+ * knowledge layer's owner-facing urgency floor so it can never be mistaken for
+ * the authoritative urgency. Returns "" when there is no evidence-backed pattern
+ * (the aggregator is evidence-gated — no dog-specific evidence ⇒ no output).
+ */
+export function buildDogBrainVetHandoffSection(
+  detectedSignals: DetectedSignal[],
+  disclaimer: string,
+): string {
+  const presentSignalKeys = detectedSignals.map((s) => s.signal_type);
+  const evidenceSummaries: Partial<Record<SignalType, string>> = {};
+  for (const s of detectedSignals) {
+    const text = (s.vet_handoff_text ?? s.owner_message ?? "").trim();
+    if (text && !evidenceSummaries[s.signal_type]) {
+      evidenceSummaries[s.signal_type] = text;
+    }
+  }
+
+  const hypotheses = buildRootCauseHypotheses({
+    presentSignalKeys,
+    evidenceSummaries,
+  }).slice(0, 3);
+  if (hypotheses.length === 0) return "";
+
+  const lines = hypotheses.map((h) => {
+    const missing = h.missing_information.length
+      ? ` Still worth checking: ${h.missing_information.join(", ")}.`
+      : "";
+    return `- ${h.hypothesis_label}: helpful to tell the vet or ask next — ${h.next_best_question}${missing}`;
+  });
+
+  return [
+    `Dog Brain pattern notes — DETERMINISTIC, NON-DIAGNOSTIC. Owner-reported patterns only; never a diagnosis and never an urgency decision (${disclaimer}):`,
+    ...lines,
+    HYPOTHESIS_SAFETY_BOUNDARY,
+  ].join("\n");
 }
 
 export async function loadDogBrainContextWithSignals({
@@ -341,6 +392,14 @@ export async function loadDogBrainContextWithSignals({
     const prioritySymptoms = brainPrioritySymptomsFromSignals(rankedSignals);
     const prioritySymptomEvidence =
       brainPrioritySymptomEvidence(rankedSignals);
+
+    // Curated, non-diagnostic vet-handoff knowledge for the detected signals.
+    // Supportive context only — never feeds deterministic triage/urgency.
+    const vetHandoffSection = buildDogBrainVetHandoffSection(
+      detectedSignals,
+      disclaimer,
+    );
+    if (vetHandoffSection) sections.push(vetHandoffSection);
 
     return {
       context: sections.length === 0 ? null : sections.join("\n\n"),
