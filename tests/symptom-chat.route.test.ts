@@ -2518,6 +2518,68 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("water_intake");
   });
 
+  it.each([
+    ["he's been really low energy", "very_low"],
+    ["barely moving honestly", "barely_moving"],
+    ["he's been a bit tired", "slightly_reduced"],
+    ["energy is normal, acting playful", "normal"],
+  ])(
+    "recovers a pending energy_level answer from natural language (%s) when extraction returns nothing",
+    async (message, expectedChoice) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      // Extractor (LLM) yields nothing AND the deterministic switch has no
+      // energy_level case, so recovery must fall to question-aware coercion.
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: [], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "energy_level";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.energy_level).toBe(
+        expectedChoice
+      );
+      expect(payload.session.answered_questions).toContain("energy_level");
+      expect(payload.session.last_question_asked).not.toBe("energy_level");
+    }
+  );
+
+  it("recovers a pending boolean vomiting_present answer when extraction returns nothing", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["lethargy"]);
+    session.last_question_asked = "vomiting_present";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "no he isn't"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.vomiting_present).toBe(false);
+    expect(payload.session.answered_questions).toContain("vomiting_present");
+    expect(payload.session.last_question_asked).not.toBe("vomiting_present");
+  });
+
   it.each(["not-json", ""])(
     "recovers a pending water-intake answer when extraction output is %p",
     async (extractionPayload) => {

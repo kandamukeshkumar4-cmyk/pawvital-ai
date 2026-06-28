@@ -566,6 +566,47 @@ export function coerceChoiceAnswerFromIntent(
     }
   }
 
+  if (questionId === "energy_level") {
+    // Map natural-language energy descriptions onto the question's own
+    // controlled choices (normal / slightly_reduced / very_low / barely_moving).
+    // Order matters: most severe phrasing wins so we never under-state low energy.
+    if (
+      /\b(barely moving|can't move|cant move|won't move|wont move|not moving|barely responsive|completely flat|won't get up|wont get up|can't get up|cant get up|unresponsive|comatose|limp|collapsed)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["barely", "moving"], ["barely"]]);
+    }
+
+    if (
+      /\b(very low|really low|extremely low|no energy|zero energy|very lethargic|extremely lethargic|so lethargic|really lethargic|very tired|extremely tired|exhausted|super sluggish|very sluggish|completely lethargic|lethargic|sluggish|low energy|lethargy|low on energy|listless|weak)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["very", "low"], ["very"]]);
+    }
+
+    if (
+      /\b(slightly reduced|a bit low|a little low|a bit tired|a little tired|somewhat tired|less energy than usual|slightly tired|bit sluggish|a little sluggish|not as energetic|less active|slightly less energy|kind of tired|a bit off)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [
+        ["slightly", "reduced"],
+        ["slightly"],
+        ["reduced"],
+      ]);
+    }
+
+    if (
+      /\b(normal energy|energy is normal|energy seems normal|acting normal|normal|playful|energetic|active|lively|bouncing|full of energy|running around|same as usual|like usual|like normal)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["normal"]]);
+    }
+  }
+
   if (questionId === "stool_consistency") {
     if (
       /\bwatery\b/.test(lower) ||

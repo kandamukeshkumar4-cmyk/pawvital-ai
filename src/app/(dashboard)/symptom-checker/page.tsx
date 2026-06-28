@@ -366,6 +366,11 @@ export default function SymptomCheckerPage() {
   );
   const fetchAsyncResultRef = useRef<(() => Promise<void>) | null>(null);
   const fetchInFlightRef = useRef(false);
+  // Synchronous re-entrancy guard for sendMessage. React state (loading /
+  // awaitingAsyncResult) updates asynchronously, so a fast double Enter can fire
+  // sendMessage twice before the state flips, producing duplicate user/assistant
+  // messages. This ref flips synchronously to block the second call.
+  const sendingRef = useRef(false);
   const {
     localizeAssistantText,
     localizeReport,
@@ -681,6 +686,12 @@ export default function SymptomCheckerPage() {
       gateOverrideTokenOverride,
       appendUserMessage = true,
     } = options;
+    // Synchronous double-send guard: block a second invocation that races in
+    // before React's loading/awaitingAsyncResult state has flipped. Cleared in
+    // the finally below. Checked at the very top so a fast/repeated Enter cannot
+    // append a duplicate user + assistant message pair.
+    if (sendingRef.current) return;
+
     const messageText = text ?? input.trim();
     const imageToSend = imageOverride ?? selectedImage;
     const imageMetaToSend = imageMetaOverride ?? selectedImageMeta;
@@ -717,6 +728,7 @@ export default function SymptomCheckerPage() {
 
     setSessionStarted(true);
     setLoading(true);
+    sendingRef.current = true;
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(),
@@ -945,6 +957,7 @@ export default function SymptomCheckerPage() {
       ]);
     } finally {
       clearTimeout(timeoutId);
+      sendingRef.current = false;
       setLoading(false);
       inputRef.current?.focus();
     }
