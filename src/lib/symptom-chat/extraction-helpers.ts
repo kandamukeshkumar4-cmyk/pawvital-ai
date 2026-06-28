@@ -134,7 +134,6 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "blood in poop": "blood_in_stool",
     "blood in poo": "blood_in_stool",
     "bloody stool": "blood_in_stool",
-    letharg: "lethargy",
     cough: "coughing",
     "can't breathe": "difficulty_breathing",
     "trouble breathing": "difficulty_breathing",
@@ -246,6 +245,14 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     if (lower.includes(keyword) && !symptoms.includes(symptom)) {
       symptoms.push(symptom);
     }
+  }
+
+  // Lethargy uses a whole-word match instead of a bare "letharg" substring so
+  // that only genuine lethargy/lethargic mentions seed the symptom. This keeps
+  // the generic energy-question fallback from being mis-triggered by text that
+  // merely contains the fragment without actually reporting low energy.
+  if (/\blethargic\b/.test(lower) || /\blethargy\b/.test(lower)) {
+    pushSymptom("lethargy");
   }
 
   if (
