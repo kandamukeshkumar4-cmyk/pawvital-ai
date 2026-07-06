@@ -5,8 +5,12 @@
  */
 import { redactSecrets } from "@/lib/redact-secrets";
 
+// Intentionally fake: JWT-shaped so redactSecrets still exercises the real
+// pattern, but the signature segment spells out "example-dummy…" so the repo
+// secret scanner recognizes it as a placeholder (see .github/secret-scan.mjs
+// isPlaceholder) rather than a leaked credential.
 const FAKE_JWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTYiLCJ1c2VyIjoieCJ9.s5dPq3Ab_C9-deadbeefdeadbeef";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTYiLCJ1c2VyIjoieCJ9.example-dummy-not-a-real-signature";
 
 describe("redactSecrets", () => {
   it("masks a JWT embedded in an error message", () => {

@@ -157,3 +157,6 @@ output/
 
 .design-ref/
 REDESIGN_SPEC.md
+
+# Scratch/test artifacts — never commit (a real Supabase session JWT leaked here once)
+/tmp/
