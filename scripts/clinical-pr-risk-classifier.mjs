@@ -226,6 +226,44 @@ export function collectChangedFiles({
   return normalizeChangedFiles(result.stdout.split(/\r?\n/));
 }
 
+// Files removed by the diff. A `git diff --name-only` lists deleted paths, so a
+// caller that needs to distinguish "entering the tree" from "leaving the tree"
+// (e.g. temp-artifact hygiene) must subtract these. Removing a scratch/temp file
+// is the desired end state, not a violation.
+export function collectDeletedFiles({
+  deletedFiles,
+  baseRef,
+  headRef = "HEAD",
+  cwd = process.cwd(),
+} = {}) {
+  if (Array.isArray(deletedFiles)) {
+    return normalizeChangedFiles(deletedFiles);
+  }
+
+  const resolvedBaseRef = baseRef ?? resolveDefaultBaseRef(cwd);
+  ensureRemoteRefAvailable(resolvedBaseRef, cwd);
+  const result = spawnSync(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--diff-filter=D",
+      `${resolvedBaseRef}...${headRef}`,
+    ],
+    {
+      cwd,
+      encoding: "utf8",
+    }
+  );
+
+  if (result.status !== 0) {
+    const stderr = result.stderr?.trim() || "git diff failed";
+    throw new Error(stderr);
+  }
+
+  return normalizeChangedFiles(result.stdout.split(/\r?\n/));
+}
+
 function buildFinding(code, severity, files, message) {
   return {
     code,

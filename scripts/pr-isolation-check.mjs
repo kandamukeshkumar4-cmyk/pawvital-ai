@@ -7,6 +7,7 @@ import {
   PROTECTED_INFRA_PATTERNS,
   PROTECTED_WORKFLOW_PATTERNS,
   collectChangedFiles,
+  collectDeletedFiles,
   normalizeChangedFiles,
   pathMatchesAnyPattern,
   readRequiredCliValue,
@@ -71,8 +72,18 @@ function summaryPhrases(result) {
 export function checkPrIsolation(options = {}) {
   const changedFiles = collectChangedFiles(options);
   const ownedPathPatterns = normalizeChangedFiles(options.ownedPathPatterns ?? []);
-  const tempArtifacts = changedFiles.filter((filePath) =>
-    pathMatchesAnyPattern(filePath, TEMP_ARTIFACT_PATTERNS)
+  // Deletions are subtracted from temp-artifact detection: removing a scratch or
+  // leaked temp file is the desired end state, not a violation. When the caller
+  // supplies an explicit changed-file list, deletions are only those it declares
+  // via `deletedFiles`; otherwise they come from the same git diff as the changes.
+  const deletedFiles = Array.isArray(options.changedFiles)
+    ? normalizeChangedFiles(options.deletedFiles ?? [])
+    : collectDeletedFiles(options);
+  const deletedFileSet = new Set(deletedFiles);
+  const tempArtifacts = changedFiles.filter(
+    (filePath) =>
+      pathMatchesAnyPattern(filePath, TEMP_ARTIFACT_PATTERNS) &&
+      !deletedFileSet.has(filePath)
   );
   const protectedWorkflowFiles = changedFiles.filter((filePath) =>
     pathMatchesAnyPattern(filePath, PROTECTED_WORKFLOW_PATTERNS)
@@ -196,6 +207,7 @@ export function renderPrIsolationSummary(result) {
 function parseArgs(argv) {
   const options = {
     changedFiles: [],
+    deletedFiles: [],
     ownedPathPatterns: [],
     json: false,
     baseRef: undefined,
@@ -212,6 +224,14 @@ function parseArgs(argv) {
 
     if (current === "--file") {
       options.changedFiles.push(readRequiredCliValue(argv, index, "--file"));
+      index += 1;
+      continue;
+    }
+
+    if (current === "--deleted-file") {
+      options.deletedFiles.push(
+        readRequiredCliValue(argv, index, "--deleted-file")
+      );
       index += 1;
       continue;
     }
@@ -250,6 +270,7 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   const result = checkPrIsolation({
     changedFiles: options.changedFiles.length > 0 ? options.changedFiles : undefined,
+    deletedFiles: options.deletedFiles.length > 0 ? options.deletedFiles : undefined,
     ownedPathPatterns: options.ownedPathPatterns,
     baseRef: options.baseRef,
     headRef: options.headRef,

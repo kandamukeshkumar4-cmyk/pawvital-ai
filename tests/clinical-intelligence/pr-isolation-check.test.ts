@@ -41,6 +41,73 @@ describe("PR isolation check", () => {
     );
   });
 
+  it("does not fail when a temp artifact is being deleted, not added", () => {
+    // Removing a scratch/leaked temp file is the desired end state. The gate
+    // guards against temp artifacts *entering* the merged tree, so a pure
+    // deletion (declared via --deleted-file) must not be flagged.
+    const result = spawnSync(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        "--json",
+        "--owned-path",
+        "tmp/**",
+        "--file",
+        "tmp/test_session.json",
+        "--deleted-file",
+        "tmp/test_session.json",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      }
+    );
+
+    expect(result.status).toBe(0);
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.status).toBe("pass");
+    expect(parsed.tempArtifacts).toEqual([]);
+    expect(parsed.failures).toEqual([]);
+  });
+
+  it("still fails when a temp file is added alongside a deleted one", () => {
+    // The deletion exemption is per-path: an *added* temp artifact is still a
+    // hard failure even when another temp path is simultaneously removed.
+    const result = spawnSync(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        "--json",
+        "--owned-path",
+        "tmp/**",
+        "--file",
+        "tmp/old-leak.json",
+        "--file",
+        "tmp/new-scratch.tmp",
+        "--deleted-file",
+        "tmp/old-leak.json",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      }
+    );
+
+    expect(result.status).toBe(1);
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.status).toBe("fail");
+    expect(parsed.tempArtifacts).toEqual(["tmp/new-scratch.tmp"]);
+    expect(parsed.failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "temp_artifact",
+        }),
+      ])
+    );
+  });
+
   it("fails on root-level scratch temp artifacts", () => {
     const result = spawnSync(
       process.execPath,
