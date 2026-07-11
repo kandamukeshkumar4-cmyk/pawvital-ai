@@ -25,23 +25,27 @@ const hankenGrotesk = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.pawvital.site"),
   title: "PawVital — Dog Symptom Checker",
   description:
-    "Dog symptom triage support with urgency guidance, a deterministic canine clinical matrix, and vet-ready handoff summaries.",
+    "Meet your dog's AI health brain — it learns your dog's patterns, spots symptoms early, and suggests the right supplements. Plus instant 2am triage, photo checks, breed-aware guidance, and shareable vet-ready reports. Know what to do, right now.",
   keywords: [
     "dog health",
     "dog symptom checker",
     "canine triage",
     "dog urgency guidance",
     "vet handoff summary",
+    "dog supplement safety",
+    "dog health tracking",
     "dog symptoms",
   ],
   openGraph: {
     title: "PawVital — Dog Symptom Checker",
     description:
-      "Evidence-based dog symptom triage support with clear urgency guidance and vet-ready handoff summaries.",
+      "Meet your dog's AI health brain — it learns your dog's patterns, spots symptoms early, and suggests the right supplements. Plus instant 2am triage, photo checks, breed-aware guidance, and shareable vet-ready reports. Know what to do, right now.",
     type: "website",
     siteName: "PawVital",
+    url: "https://www.pawvital.site",
     images: [
       {
         url: "/images/og-image.svg",
@@ -55,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PawVital — Dog Symptom Checker",
     description:
-      "Dog symptom triage support with evidence-based urgency guidance and vet-ready handoff summaries.",
+      "Meet your dog's AI health brain — it learns your dog's patterns, spots symptoms early, and suggests the right supplements. Plus instant 2am triage, photo checks, breed-aware guidance, and shareable vet-ready reports. Know what to do, right now.",
     images: ["/images/og-image.svg"],
   },
 };

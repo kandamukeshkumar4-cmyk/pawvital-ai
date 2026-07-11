@@ -48,10 +48,11 @@ export default function Hero() {
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-xl leading-relaxed">
-              PawVital combines deterministic canine triage logic with vetted
-              clinical references to help you understand urgency, prepare for a
-              vet visit, and avoid generic search-result guesswork. It does not
-              diagnose your dog or replace a veterinarian.
+              Meet your dog&apos;s AI health brain — it learns your dog&apos;s
+              patterns, spots symptoms early, and suggests the right supplements.
+              Get instant 2am triage, photo checks, breed-aware guidance, and
+              shareable vet-ready reports. It does not diagnose your dog or
+              replace a veterinarian.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
