@@ -16,88 +16,88 @@ import {
 export const metadata: Metadata = {
   title: "Investor One-Pager | PawVital AI",
   description:
-    "PawVital AI in one page: AI-guided dog symptom triage with a deterministic clinical safety core, a live product, and a subscription business model.",
+    "PawVital in one page: what it does, why the medical decisions are code instead of AI guesses, how it makes money, and what is actually built today.",
   robots: { index: false, follow: false },
 };
 
 const problemPoints = [
-  "Dog owners can't tell a wait-and-see symptom from an emergency, so they either over-pay for panic visits or dangerously delay care.",
-  "After-hours vet advice is scarce and expensive; general-purpose chatbots guess, hallucinate, and carry no clinical accountability.",
-  "Vets lose time reconstructing history from memory — owners arrive with no structured record of what happened and when.",
+  "A dog throwing up can be nothing, or it can be a blockage that kills him by morning. At home, both look identical. So owners either spend $400 at the emergency clinic to be told he's fine, or they wait — and sometimes he isn't fine.",
+  "There is nobody to ask at 11pm. The vet is closed. Search results give you \"totally normal\" and \"go now\" on the same page. General chatbots will invent an answer with total confidence and no accountability.",
+  "Owners walk into the exam room and say \"he's been a bit off lately.\" That's not a history, and the vet spends the first ten minutes of a fifteen-minute appointment trying to reconstruct one.",
 ];
 
 const productPillars = [
   {
     icon: Stethoscope,
-    title: "Deterministic triage core",
-    text: "The language model only runs the conversation. Every urgency call (routine / urgent / emergency) is made by a deterministic, test-covered clinical matrix with breed-adjusted risk — never by a free-form LLM answer.",
+    title: "The AI never makes the medical call",
+    text: "The model runs the conversation. It does not decide anything. Routine, urgent, or emergency comes out of a hard-coded clinical matrix with breed-adjusted risk — same input, same answer, every single time. That is checked by tests, not promised in a prompt.",
   },
   {
     icon: Brain,
-    title: "Dog Brain memory",
-    text: "A longitudinal per-dog memory ranks 60–90 days of follow-ups, supplement trials, and vet records to ask smarter questions each session — with hard guardrails that memory can never lower an emergency signal.",
+    title: "It remembers the dog",
+    text: "Most symptom tools start from zero every visit. PawVital reads back 60 to 90 days of follow-ups, supplement trials, and vet notes, so the second session asks sharper questions than the first. Memory can raise concern. It is structurally incapable of talking an emergency down.",
   },
   {
     icon: Camera,
-    title: "Multimodal intake",
-    text: "Photo analysis of wounds, rashes, and skin conditions through dedicated vision classifiers, feeding the same structured triage pipeline.",
+    title: "Show it instead of describing it",
+    text: "Nobody can describe a rash accurately. Owners photograph the wound, the lump, the ear — vision classifiers score it and feed the same triage pipeline the conversation does.",
   },
   {
     icon: FileText,
-    title: "Vet handoff, not vet replacement",
-    text: "Every session ends in a shareable, vet-ready report: transcript, urgency level, timeline, and suggested questions. We make the vet visit better — we never prescribe or diagnose.",
+    title: "It hands you off to a vet",
+    text: "Every session ends in a report you can hand across the counter: what happened, when, how urgent, and the questions worth asking. We do not diagnose and we do not prescribe. We make the appointment you were already going to have a better one.",
   },
 ];
 
 const moats = [
   {
-    title: "Safety architecture as a moat",
-    text: "Clinical decisions are code, not prompts: a deterministic matrix, hard-fail supplement guardrails (no dosage, brand, or disease claims can ship), and 2,300+ automated tests that prove memory and ranking can never alter an urgency verdict.",
+    title: "Safety lives in the code, not the prompt",
+    text: "Anyone can wrap a chat window around a model in a weekend. What takes months is making the medical logic deterministic and then proving it: hard-fail guardrails that block any dosage, brand name, or disease claim from ever reaching a user, and 2,300+ tests standing behind the rule that no amount of history can soften an urgency verdict.",
   },
   {
-    title: "Longitudinal data flywheel",
-    text: "Every session, follow-up, and outcome enriches the dog's structured history, making the next triage measurably smarter — a per-pet record competitors can't cold-start.",
+    title: "The record gets better the longer you stay",
+    text: "Every session, follow-up, and outcome deepens that dog's file. A competitor can copy the interface tomorrow. They cannot copy eighteen months of your dog's history, and that history is exactly what makes the next answer good.",
   },
   {
-    title: "Multi-model, cost-controlled AI stack",
-    text: "NVIDIA NIM open-weight models as the primary path with a second-opinion shadow pipeline logging divergence on every session — quality evaluation built in, no single-vendor lock-in.",
+    title: "No single model vendor can squeeze us",
+    text: "Open-weight models on NVIDIA NIM carry the primary path, with a second model quietly running every session in parallel and logging where the two disagree. That gives us a live quality signal and the freedom to swap providers on price or performance.",
   },
 ];
 
 const tractionPoints = [
-  "Live product in production — web app deployed and usable free, no account required for a first triage.",
-  "2,300+ automated tests across 100+ suites, including string-scan safety tests that structurally block dosage, brand, and disease-claim outputs.",
-  "Privacy-safe analytics layer: events carry only counts and enums — free text, symptoms, and photos are structurally impossible to log.",
-  "CI/CD with an AI clinical-safety review gate on every pull request; auto-deploy to production in minutes.",
+  "The product is live and in production. Anyone can run a real triage right now, free, without making an account.",
+  "2,300+ automated tests across 100+ suites, including scans that make it impossible to ship a dosage, a brand, or a disease claim.",
+  "Analytics carry counts and categories only. Symptoms, free text, and photos cannot be logged, by construction rather than by policy.",
+  "Every pull request goes through an automated clinical-safety review before it can merge, and deploys reach production in minutes.",
 ];
 
 const businessModel = [
   {
-    label: "Model",
-    value: "Consumer subscription — PawVital Pro at $9.97/month after a 7-day free trial; one plan covers every dog in the household.",
+    label: "Revenue",
+    value: "$9.97 a month after a 7-day trial. One subscription covers every dog in the house, because people with two dogs are exactly the people who need this most.",
   },
   {
-    label: "Acquisition",
-    value: "Free first triage with no signup as the top of funnel; urgency moments convert to subscriptions for history, memory, and reports.",
+    label: "Funnel",
+    value: "The first triage is free and needs no signup. People find us at the worst moment of their week, get a real answer, and subscribe for the history, the memory, and the vet reports.",
   },
   {
-    label: "Expansion",
-    value: "Vet-clinic handoff reports create a B2B2C channel; supplement and insurance partnerships layer on evidence-gated, guardrailed recommendations.",
+    label: "Next",
+    value: "Clinics want the handoff report — that opens a B2B channel where the vet brings us the owner. Supplement and insurance partners come after that, and only through the same guardrails everything else passes.",
   },
 ];
 
 const marketStats = [
   {
     stat: "~65M",
-    label: "U.S. households own a dog — the largest pet category (industry estimates)",
+    label: "U.S. households own a dog. It is the biggest pet category and the one people spend the most feeling on.",
   },
   {
     stat: "$150B+",
-    label: "annual U.S. pet industry spend, with vet care its fastest-growing segment",
+    label: "goes into U.S. pets each year, and vet care is the part growing fastest.",
   },
   {
-    stat: "24/7",
-    label: "demand window — most symptom anxiety happens outside clinic hours",
+    stat: "168 hrs",
+    label: "in a week that a dog can get sick. A clinic is open for maybe fifty of them.",
   },
 ];
 
@@ -128,15 +128,16 @@ export default function InvestorsPage() {
         {/* Hero */}
         <header className="text-center">
           <p className="text-sm font-bold uppercase tracking-wide text-amber-600">
-            Investor One-Pager
+            PawVital AI · One-Pager
           </p>
           <h1 className="mt-3 text-4xl font-extrabold text-gray-900 sm:text-5xl">
-            The AI triage layer for the family dog
+            It is 11pm and your dog just threw up for the third time.
           </h1>
-          <p className="mx-auto mt-4 max-w-3xl text-xl text-gray-600">
-            PawVital tells dog owners, in under a minute, whether a symptom is
-            routine, urgent, or an emergency — powered by conversational AI but
-            decided by a deterministic clinical engine that never guesses.
+          <p className="mx-auto mt-5 max-w-3xl text-xl text-gray-600">
+            Do you drive to the emergency clinic or go to bed? PawVital answers
+            that in about a minute. An AI asks the questions a vet would ask.
+            A deterministic clinical engine — not the AI — decides how urgent it
+            is.
           </p>
         </header>
 
@@ -144,7 +145,7 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <Activity className="h-6 w-6 text-blue-600" />
-            The problem
+            Why this exists
           </h2>
           <ul className="mt-4 space-y-3">
             {problemPoints.map((p) => (
@@ -160,7 +161,7 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <Stethoscope className="h-6 w-6 text-blue-600" />
-            The product
+            What we built
           </h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             {productPillars.map(({ icon: Icon, title, text }) => (
@@ -182,7 +183,7 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <TrendingUp className="h-6 w-6 text-blue-600" />
-            The market
+            How big this gets
           </h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {marketStats.map(({ stat, label }) => (
@@ -196,10 +197,11 @@ export default function InvestorsPage() {
             ))}
           </div>
           <p className="mt-4 text-gray-600">
-            We start with dogs only — the deepest, most emotionally engaged pet
-            segment — and go deliberately narrow so the clinical scope stays
-            validated. The same triage-plus-memory architecture extends to cats
-            and other companion animals as a roadmap expansion, not a pivot.
+            We do dogs. Only dogs. Narrow scope is how the clinical logic stays
+            defensible, and dog owners are the ones who panic hardest and pay
+            fastest. Cats and the rest of the household run on the same engine
+            when we are ready for them, which makes the second species a
+            configuration problem instead of a rebuild.
           </p>
         </section>
 
@@ -207,7 +209,7 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <Shield className="h-6 w-6 text-blue-600" />
-            Why we win
+            Why this is hard to copy
           </h2>
           <div className="mt-6 space-y-4">
             {moats.map(({ title, text }) => (
@@ -223,12 +225,12 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <DollarSign className="h-6 w-6 text-blue-600" />
-            Business model
+            How it makes money
           </h2>
           <div className="mt-6 space-y-4">
             {businessModel.map(({ label, value }) => (
               <div key={label} className="flex flex-col gap-1 rounded-2xl bg-gray-50 p-5 sm:flex-row sm:gap-4">
-                <span className="w-28 shrink-0 text-sm font-bold uppercase tracking-wide text-blue-600">
+                <span className="w-24 shrink-0 text-sm font-bold uppercase tracking-wide text-blue-600">
                   {label}
                 </span>
                 <span className="text-gray-700">{value}</span>
@@ -241,7 +243,7 @@ export default function InvestorsPage() {
         <section className="mt-14">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <CheckCircle2 className="h-6 w-6 text-blue-600" />
-            Where we are today
+            What is real today
           </h2>
           <ul className="mt-4 space-y-3">
             {tractionPoints.map((p) => (
@@ -251,16 +253,21 @@ export default function InvestorsPage() {
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-gray-600">
+            This is an engineering-complete product looking for its first real
+            cohort of owners. The build risk is behind us. What is in front of
+            us is distribution.
+          </p>
         </section>
 
         {/* CTA */}
         <section className="mt-14 rounded-3xl bg-gradient-to-br from-blue-600 to-blue-700 p-8 text-center sm:p-10">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">
-            See it live — no deck required
+            Don&apos;t take the page&apos;s word for it
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-blue-100">
-            The fastest way to evaluate PawVital is to run a triage yourself:
-            describe a symptom and watch the deterministic engine work.
+            Open it, describe a symptom, and watch what it asks you. Two minutes
+            tells you more than the rest of this page did.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <a
@@ -269,7 +276,7 @@ export default function InvestorsPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-blue-700 transition-colors hover:bg-blue-50"
             >
-              Try the live product
+              Try it right now
               <ArrowRight className="h-4 w-4" />
             </a>
             <Link
@@ -278,15 +285,15 @@ export default function InvestorsPage() {
               prefetch={false}
               className="inline-flex items-center gap-2 rounded-lg border border-white/40 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/10"
             >
-              Contact us
+              Talk to us
             </Link>
           </div>
         </section>
 
         <p className="mt-10 text-center text-sm text-gray-500">
-          PawVital provides triage support and vet-visit preparation. It is not
-          a diagnosis and does not replace professional veterinary care. Market
-          figures are third-party industry estimates.
+          PawVital helps owners judge urgency and prepare for a vet visit. It is
+          not a diagnosis and it does not replace a veterinarian. Market figures
+          are third-party industry estimates.
         </p>
       </main>
     </div>
